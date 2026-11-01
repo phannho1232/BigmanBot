@@ -2,7 +2,7 @@ const ALIASES: Record<string, string> = { pt: "pt-br", "zh-hant": "zh-tw", "zh-h
 
 /** The entry for the language set in Settings, else for its parent ("pt-br" → "pt"), else English. */
 export function byLanguage<T>(table: { en: T } & Partial<Record<string, T>>, language: string | undefined): T {
-  let candidate = language?.trim().toLowerCase() || "en";
+  let candidate = language?.trim().toLowerCase() || "vi";
   while (candidate) {
     const entry = table[ALIASES[candidate] ?? candidate];
     if (entry) return entry;
@@ -10,7 +10,7 @@ export function byLanguage<T>(table: { en: T } & Partial<Record<string, T>>, lan
     if (separator < 0) break;
     candidate = candidate.slice(0, separator);
   }
-  return table.en;
+  return (table as Record<string, T>).vi ?? table.en;
 }
 
 /** The locale dates and times are formatted in: the language set in Settings, else US English. */

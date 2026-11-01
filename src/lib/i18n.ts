@@ -2,7 +2,7 @@ import { productName } from "@/lib/brand";
 import { en, localeChoices, locales, type LocaleKey, type LocalePack } from "@/locales";
 
 export function resolveLocale(tag: string | undefined, available: ReadonlySet<string>): string {
-  if (!tag) return "en";
+  if (!tag) return "vi";
   let candidate = tag.toLowerCase();
   while (candidate) {
     if (available.has(candidate)) return candidate;
@@ -10,7 +10,7 @@ export function resolveLocale(tag: string | undefined, available: ReadonlySet<st
     if (separator < 0) break;
     candidate = candidate.slice(0, separator);
   }
-  return "en";
+  return "vi";
 }
 
 const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur"]);
@@ -46,9 +46,9 @@ export function activeLocale(): string {
   return active;
 }
 
-let active = "en";
-let activePack: LocalePack = en;
-setLocale(globalThis.navigator?.language);
+let active = "vi";
+let activePack: LocalePack = locales.vi ?? en;
+setLocale("vi");
 
 export function tFromServer(key: string | undefined, fallback: string | undefined): string | undefined {
   return key && Object.hasOwn(en, key) ? t(key as LocaleKey) : fallback;

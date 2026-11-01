@@ -5,6 +5,7 @@ type Greeting = (name: string, person?: string) => string;
 
 /** The first bot's seeded line is created by the server before the UI exists. */
 const GREETINGS: { en: Greeting } & Record<string, Greeting> = {
+  vi: (name, person) => `Xin chào${person ? ` ${person}` : ""}, mình là ${name}. Bạn muốn mình giúp việc gì nào?`,
   en: (name, person) => `Hi${person ? ` ${person}` : ""}, I'm ${name}. What would you like me to do?`,
   es: (name, person) => `Hola${person ? ` ${person}` : ""}, soy ${name}. ¿Qué te gustaría que hiciera?`,
   "pt-br": (name, person) => `Oi${person ? ` ${person}` : ""}, eu sou ${name}. O que você gostaria que eu fizesse?`,
@@ -13,6 +14,7 @@ const GREETINGS: { en: Greeting } & Record<string, Greeting> = {
 
 /** What the bot says the moment Set me up is pressed: no model is asked, so it is written here. */
 const SETUP_REQUEST_LINES: { en: string } & Record<string, string> = {
+  vi: "Tuyệt vời. Hãy cho mình biết bạn muốn được hỗ trợ việc gì theo cách của bạn, mình sẽ tự thiết lập cho phù hợp. Ví dụ: \"phân loại hộp thư đến mỗi sáng\" hoặc \"nghiên cứu đối thủ cạnh tranh mỗi tuần\".",
   en: "Great. Tell me what you'd like help with, in your own words, and I'll set myself up for it. For example: \"sort my inbox every morning\" or \"research our competitors every week\".",
   es: "Genial. Cuéntame con tus propias palabras en qué te gustaría que te ayude y me prepararé para ello. Por ejemplo: \"ordena mi bandeja de entrada cada mañana\" o \"investiga a nuestros competidores cada semana\".",
   "pt-br": "Ótimo. Me conte com suas palavras em que você gostaria de ajuda e eu me preparo para isso. Por exemplo: \"organize minha caixa de entrada toda manhã\" ou \"pesquise nossos concorrentes toda semana\".",
@@ -22,6 +24,8 @@ const SETUP_REQUEST_LINES: { en: string } & Record<string, string> = {
 /** The answers a blank bot's greeting offers on its setup card. Picking one sets the bot up for its words, as
  * `/setup <words>` would; the client sends the words, never a position, so these may change freely. */
 const SETUP_CHOICES: { en: readonly string[] } & Record<string, readonly string[]> = {
+  vi: ["Nghiên cứu và tìm hiểu chuyên sâu các chủ đề", "Theo dõi và giám sát công việc cho tôi", "Email, lịch làm việc và tin nhắn",
+    "Đặt lịch, mua sắm và việc vặt", "Dữ liệu, bảng tính và báo cáo"],
   en: ["Research and digging into topics", "Keeping an eye on things for me", "Email, calendar and messages",
     "Bookings, shopping and errands", "Data, spreadsheets and reports"],
   es: ["Investigar y profundizar en temas", "Estar pendiente de cosas por mí", "Correo, calendario y mensajes",

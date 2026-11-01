@@ -133,7 +133,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const language = effectiveLanguage(useLanguageChoice(), state.config?.language);
   const [, setLocaleEpoch] = useState(0);
   useEffect(() => {
-    setLocale(language || globalThis.navigator?.language);
+    setLocale(language || "vi");
     setLocaleEpoch((epoch) => epoch + 1);
   }, [language]);
   const [paletteOpen, setPaletteOpen] = useState(false);

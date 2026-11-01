@@ -318,7 +318,7 @@ export class Store {
     completeNewBotSelection: (selection: ModelSelection) => ModelSelection = (selection) => selection,
     /** Unknown counts as another driver, so Full and Custom fall back to Ask. */
     driverKindOf: (instanceId: string) => string | undefined = () => undefined,
-    initialLanguage: string | (() => string) = Intl.DateTimeFormat().resolvedOptions().locale,
+    initialLanguage: string | (() => string) = "vi",
     /** The person a new bot's greeting names, read as each bot is created; undefined where no one person owns the
      * server. */
     personName: () => string | undefined = () => undefined,
