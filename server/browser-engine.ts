@@ -8,7 +8,7 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import { writeFileAtomic } from "./atomic.ts";
 import { DATA_DIR } from "./config.ts";
 import { browserBundlePaths } from "./browser-bundle-release.ts";
-import { browserProcessesRunning, browserProcessTree, releaseBrowserProfile, stopBrowserProcesses } from "./browser-processes.ts";
+import { browserProcessesRunning, browserProcessTree, processAlive, releaseBrowserProfile, stopBrowserProcesses, windowsProfileLocked } from "./browser-processes.ts";
 import { BROWSER_VIEWPORT, viewportArgs, type PageSize } from "./browser-page-size.ts";
 import { browserRuntimeEnv, ownsBrowserViewport } from "./browser-runtime.ts";
 import { spawnBotWork } from "./oom-score.ts";
@@ -161,7 +161,21 @@ async function closeOnce(binaryPath: string, env: NodeJS.ProcessEnv, session: st
     }
   }
   // The tree came only from a pid file still naming this session's daemon, so a reused pid kills nothing.
-  return tree ? stopBrowserProcesses(tree) : false;
+  if (tree) return stopBrowserProcesses(tree);
+  // On Windows, a crashed agent-browser 0.36/0.37 daemon leaves its .pid/.port files behind, so `session list` keeps
+  // reporting it while `close` fails with ETIMEDOUT/ECONNREFUSED against the dead port.
+  const deadPid = closing !== null && /^\d+$/.test(closing) ? Number(closing) : NaN;
+  if (process.platform === "win32" && Number.isInteger(deadPid) && deadPid > 1 && !processAlive(deadPid) && daemonPid() === closing) {
+    await releaseBrowserProfile(env.AGENT_BROWSER_PROFILE);
+    if (env.AGENT_BROWSER_PROFILE && windowsProfileLocked(env.AGENT_BROWSER_PROFILE)) return false;
+    if (daemonPid() !== closing) return true;
+    for (const ext of [".pid", ".port", ".stream", ".engine", ".version", ".sock"] as const) {
+      try { unlinkSync(browserDaemonFile(env, ext)); } catch {}
+    }
+    const sessions = await runningBrowserSessions(binaryPath, closeEnv, Math.max(Date.now() + 2_000, deadline));
+    return sessions !== null && !sessions.includes(session);
+  }
+  return false;
 }
 
 /** Starts a session's browser with its launch settings in `env`, or keeps the running one on its page: `open` without a URL. */
@@ -193,7 +207,7 @@ export async function inRunningBrowser(binaryPath: string, env: NodeJS.ProcessEn
 
 /** Where agent-browser 0.36/0.37 keeps a running daemon's `<session>.pid` and `<session>.stream` (deleted on exit):
  * AGENT_BROWSER_SOCKET_DIR, else `$XDG_RUNTIME_DIR/agent-browser` or `~/.agent-browser`, plus `namespaces/<name>/run`. */
-export function browserDaemonFile(env: NodeJS.ProcessEnv, suffix: ".pid" | ".stream"): string {
+export function browserDaemonFile(env: NodeJS.ProcessEnv, suffix: ".pid" | ".stream" | ".port" | ".engine" | ".version" | ".sock"): string {
   const session = env.AGENT_BROWSER_SESSION ?? "";
   if (env.AGENT_BROWSER_SOCKET_DIR) return join(env.AGENT_BROWSER_SOCKET_DIR, `${session}${suffix}`);
   const home = (process.platform === "win32" ? env.USERPROFILE : env.HOME) || homedir();

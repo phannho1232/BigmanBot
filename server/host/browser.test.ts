@@ -447,11 +447,14 @@ describe("how long an unused browser stays open", () => {
 });
 
 describe("the bots' browser host by default", () => {
-  it("keeps agent-browser's prompt and status", () => {
-    const { host } = setup(undefined);
-    expect(host.browserSystemPrompt(undefined)).toBe(BUILT_IN_BROWSER_SYSTEM_PROMPT);
-    expect(host.signedInSitesRefusal("work")).toBeNull();
-    expect(host.engineSummary({ kind: "engine", version: "0.37.0", myChrome: true })).toEqual({ kind: "engine", version: "0.37.0", myChrome: true, engine: "agent-browser" });
+  it("uses the Chrome driver prompt and status by default, and keeps agent-browser when explicitly selected", () => {
+    const { host: chromeHost } = setup(undefined);
+    expect(chromeHost.browserSystemPrompt(undefined)).toBe(CHROME_BROWSER_SYSTEM_PROMPT);
+    expect(chromeHost.engineSummary({ kind: "engine", version: "0.37.0", myChrome: true })).toMatchObject({ engine: "chrome", myChrome: true });
+    const { host: legacyHost } = setup("agent-browser");
+    expect(legacyHost.browserSystemPrompt(undefined)).toBe(BUILT_IN_BROWSER_SYSTEM_PROMPT);
+    expect(legacyHost.signedInSitesRefusal("work")).toBeNull();
+    expect(legacyHost.engineSummary({ kind: "engine", version: "0.37.0", myChrome: true })).toEqual({ kind: "engine", version: "0.37.0", myChrome: true, engine: "agent-browser" });
   });
 });
 

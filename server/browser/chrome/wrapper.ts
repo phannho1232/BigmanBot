@@ -1,8 +1,8 @@
 // agent-browser runs AGENT_BROWSER_EXECUTABLE_PATH with its own arguments. It splits AGENT_BROWSER_ARGS at commas (0.37),
 // which cut the user agent at "(KHTML,", so the identity flags ride a generated launcher instead: a shell script that execs
 // Chrome (same process, same pid), or on Windows a batch file, which Rust's Command runs through cmd.exe.
-import { execFile } from "node:child_process";
-import { chmodSync, mkdirSync } from "node:fs";
+import { execFile, spawnSync } from "node:child_process";
+import { chmodSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { writeFileAtomic } from "../../atomic.ts";
@@ -100,6 +100,88 @@ export function writeLauncher(path: string, settings: LauncherSettings, platform
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   writeFileAtomic(path, launcherScript(settings, platform), { mode: 0o700 });
   if (platform !== "win32") chmodSync(path, 0o700);
+  else if (process.platform === "win32") writeWindowsGuiConfig(path, settings);
+}
+
+const WINDOWS_CSC = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe";
+
+const WINDOWS_GUI_SHIM_CS = `using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+
+static class ChromeGuiShim {
+  static string QuoteArg(string arg) {
+    if (arg.Length > 0 && arg.IndexOfAny(new char[] { ' ', '\\t', '\\n', '\\v', '\\"' }) < 0) return arg;
+    var sb = new StringBuilder();
+    sb.Append('\\"');
+    for (int i = 0; ; ++i) {
+      int bs = 0;
+      while (i < arg.Length && arg[i] == '\\\\') { ++i; ++bs; }
+      if (i == arg.Length) { sb.Append('\\\\', bs * 2); break; }
+      if (arg[i] == '\\"') { sb.Append('\\\\', bs * 2 + 1); sb.Append('\\"'); }
+      else { sb.Append('\\\\', bs); sb.Append(arg[i]); }
+    }
+    sb.Append('\\"');
+    return sb.ToString();
+  }
+
+  static int Main(string[] args) {
+    string exe = Assembly.GetExecutingAssembly().Location;
+    string cfg = Path.ChangeExtension(exe, ".cfg");
+    string[] lines = File.ReadAllLines(cfg, Encoding.UTF8);
+    if (lines.Length == 0 || string.IsNullOrWhiteSpace(lines[0])) return 70;
+    var all = new List<string>(args.Length + lines.Length);
+    foreach (string a in args) all.Add(QuoteArg(a));
+    for (int i = 1; i < lines.Length; ++i) {
+      if (lines[i].Length > 0) all.Add(QuoteArg(lines[i]));
+    }
+    var psi = new ProcessStartInfo(lines[0], string.Join(" ", all));
+    psi.UseShellExecute = false;
+    psi.CreateNoWindow = true;
+    psi.RedirectStandardOutput = true;
+    psi.RedirectStandardError = true;
+    using (var p = Process.Start(psi)) {
+      if (p == null) return 71;
+      var tOut = p.StandardOutput.BaseStream.CopyToAsync(Console.OpenStandardOutput());
+      var tErr = p.StandardError.BaseStream.CopyToAsync(Console.OpenStandardError());
+      p.WaitForExit();
+      Task.WaitAll(tOut, tErr);
+      return p.ExitCode;
+    }
+  }
+}
+`;
+
+function writeWindowsGuiConfig(cmdPath: string, settings: LauncherSettings): void {
+  const dir = dirname(cmdPath);
+  const cfgPath = join(dir, "chrome-launcher.cfg");
+  writeFileAtomic(cfgPath, [settings.chrome, ...launcherFlags(settings, "win32")].join("\n"), { mode: 0o600 });
+}
+
+/** Detached agent-browser 0.36/0.37 on Windows opens a visible cmd.exe console when AGENT_BROWSER_EXECUTABLE_PATH is a .cmd
+ * batch file; a `/target:winexe` GUI-subsystem shim spawns Chrome with CreateNoWindow so no console window ever opens. */
+export function ensureWindowsGuiLauncher(dataDir: string): string | null {
+  if (process.platform !== "win32" || !existsSync(WINDOWS_CSC)) return null;
+  const dir = join(dataDir, "browser");
+  const exePath = join(dir, "chrome-launcher.exe");
+  if (existsSync(exePath)) return exePath;
+  try {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const csPath = join(dir, `chrome-launcher-${process.pid}.cs`);
+    writeFileAtomic(csPath, WINDOWS_GUI_SHIM_CS, { mode: 0o600 });
+    try {
+      const res = spawnSync(WINDOWS_CSC, ["/nologo", "/target:winexe", `/out:${exePath}`, csPath], { windowsHide: true, timeout: 15_000 });
+      return res.status === 0 && existsSync(exePath) ? exePath : null;
+    } finally {
+      try { unlinkSync(csPath); } catch {}
+    }
+  } catch {
+    return null;
+  }
 }
 
 type Run = (file: string, args: string[], timeoutMs: number) => Promise<string>;

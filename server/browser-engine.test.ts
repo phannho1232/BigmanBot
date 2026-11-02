@@ -258,6 +258,23 @@ describe("deleting one browser session's saved logins", () => {
     expect(vi.mocked(spawn).mock.calls.filter((call) => call[1]?.[0] === "close")).toHaveLength(1);
   });
 
+  it.runIf(!posix)("clears stale daemon files on Windows when the recorded daemon PID is already dead and close fails", async () => {
+    const { options } = fixture(1);
+    const env = { ...options.env, AGENT_BROWSER_SESSION: "work" };
+    const pidFile = browserDaemonFile(env, ".pid");
+    const portFile = browserDaemonFile(env, ".port");
+    mkdirSync(join(pidFile, ".."), { recursive: true });
+    writeFileSync(pidFile, "2147483000");
+    writeFileSync(portFile, "54447");
+    vi.mocked(spawn).mockImplementation((_binary, args) => lifecycleChild(args, {
+      code: 1,
+      sessions: existsSync(pidFile) ? ["work"] : [],
+    }));
+    expect(await closeBrowserSession("fixture-browser", env, 1_000)).toBe(true);
+    expect(existsSync(pidFile)).toBe(false);
+    expect(existsSync(portFile)).toBe(false);
+  });
+
   it("waits for inventory stdout to finish after the process exits", async () => {
     const { options } = fixture();
     let polls = 0;

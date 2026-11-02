@@ -39,3 +39,6 @@ shared/app-frame/app-host.html text eol=lf
 
 # Imported by a vitest test: a CRLF checkout of its first lines broke the import on Windows.
 scripts/tighten-ratchets.mjs text eol=lf
+
+*.sh text eol=lf
+*.command text eol=lf

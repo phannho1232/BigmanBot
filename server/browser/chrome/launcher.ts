@@ -13,7 +13,7 @@ import { needsNoSandbox, type ChromeIdentity } from "./identity.ts";
 import { installChromeForTesting, type ChromeForTestingPin, type DownloadProgress } from "./install.ts";
 import { chromeHost, resolveChromePlan, type ChromeEngine, type ChromeHost, type ChromePlan, type FoundChrome } from "./resolve.ts";
 import { IdentitySidecars } from "./sidecar.ts";
-import { browserLanguage, browserTimeZone, languageList, launcherPath, primaryScreen, writeLauncher, type LauncherBox, type LauncherSettings, type Screen } from "./wrapper.ts";
+import { browserLanguage, browserTimeZone, ensureWindowsGuiLauncher, languageList, launcherPath, primaryScreen, writeLauncher, type LauncherBox, type LauncherSettings, type Screen } from "./wrapper.ts";
 
 type Ready = { kind: "ready"; chrome: FoundChrome; identity: ChromeIdentity; product: string; fingerprint: string; launcher?: LauncherSettings };
 type State =
@@ -73,6 +73,7 @@ export interface ChromeLauncherOptions {
 export class ChromeLauncher implements BrowserLaunch {
   /** The executable agent-browser is given; the same path for every browser this data dir starts. */
   readonly path: string;
+  private readonly executablePath: string;
   private state: State = { kind: "idle" };
   private preparing: Promise<void> | null = null;
   private screen: Promise<Screen> | null = null;
@@ -88,6 +89,7 @@ export class ChromeLauncher implements BrowserLaunch {
     this.host = options.host ?? chromeHost({ dataDir: options.dataDir, env, platform, arch: options.arch });
     this.sidecars = options.sidecars ?? new IdentitySidecars();
     this.path = launcherPath(options.dataDir, platform);
+    this.executablePath = platform === "win32" && options.wrapper !== false ? (ensureWindowsGuiLauncher(options.dataDir) ?? this.path) : this.path;
   }
 
   /** Every Chrome started from now on runs in the box this returns (a Team Cloud's); the launcher is written again. */
@@ -114,7 +116,7 @@ export class ChromeLauncher implements BrowserLaunch {
     if (this.state.kind === "failed" || this.plan().kind === "legacy") return {};
     void this.prepare();
     this.followTimeZone();
-    return { AGENT_BROWSER_EXECUTABLE_PATH: this.path, AGENT_BROWSER_HIDE_SCROLLBARS: "0" };
+    return { AGENT_BROWSER_EXECUTABLE_PATH: this.executablePath, AGENT_BROWSER_HIDE_SCROLLBARS: "0" };
   }
 
   /** The owner's app can give a Cloud its time zone at any time (server/time-zone.ts): the next Chrome this starts tells
@@ -201,7 +203,8 @@ export class ChromeLauncher implements BrowserLaunch {
   }
 
   private uses(spec: LaunchSpec): boolean {
-    return spec.env?.AGENT_BROWSER_EXECUTABLE_PATH === this.path && !attachesToChrome(spec.env);
+    const used = spec.env?.AGENT_BROWSER_EXECUTABLE_PATH;
+    return (used === this.path || used === this.executablePath) && !attachesToChrome(spec.env ?? {});
   }
 
   private fresh(state: Ready): boolean {

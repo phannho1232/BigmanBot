@@ -2,7 +2,7 @@
 // stops with the server, and a killed daemon leaves its Chrome running, re-parented to init. Every process is recorded with
 // its start time, so a pid the system has since given to another program is never signalled.
 import { execFile } from "node:child_process";
-import { readdirSync, readFileSync, readlinkSync, realpathSync, rmSync, unlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync, unlinkSync } from "node:fs";
 import { hostname } from "node:os";
 import { basename, isAbsolute, join, sep } from "node:path";
 
@@ -173,6 +173,95 @@ export async function orphanedBrowsers(home: string | undefined, profiles?: stri
 /** The lock a daemon's own Chrome held when last checked, and that daemon: while both live, a call lists no processes. */
 const heldProfiles = new Map<string, { target: string; daemon: number }>();
 
+function namesWindowsProfile(args: string, dir: string): boolean {
+  const lower = args.toLowerCase();
+  const target = dir.toLowerCase();
+  for (const flag of [`--user-data-dir=${target}`, `--user-data-dir="${target}"`]) {
+    for (let at = lower.indexOf(flag); at >= 0; at = lower.indexOf(flag, at + 1)) {
+      const next = lower[at + flag.length];
+      if (next === undefined || next === " " || next === "\"") return true;
+    }
+  }
+  return false;
+}
+
+/** Windows Chrome holds an exclusive handle on `<dir>\lockfile` while running; `unlinkSync` clears a stale file and fails with
+ * EBUSY/EPERM only while a live Chrome holds the profile. */
+export function windowsProfileLocked(dir: string): boolean {
+  const lock = join(dir, "lockfile");
+  if (!existsSync(lock)) return false;
+  try {
+    unlinkSync(lock);
+    return false;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ENOENT";
+  }
+}
+
+const heldWindowsProfiles = new Map<string, { browser: number; daemon: number }>();
+
+async function releaseWindowsBrowserProfile(dir: string): Promise<void> {
+  const key = dir.toLowerCase();
+  const held = heldWindowsProfiles.get(key);
+  if (held && processAlive(held.browser) && processAlive(held.daemon)) return;
+  heldWindowsProfiles.delete(key);
+  if (!windowsProfileLocked(dir)) return;
+  const raw = await execText("powershell.exe", [
+    "-NoProfile",
+    "-NonInteractive",
+    "-Command",
+    "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe' OR Name='chrome-headless-shell.exe' OR Name='cmd.exe' OR Name='chrome-launcher.exe' OR Name='agent-browser.exe'\" | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Compress",
+  ]);
+  if (!raw || !raw.trim()) return;
+  let rows: Array<{ ProcessId?: number; ParentProcessId?: number; Name?: string; CommandLine?: string }>;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    rows = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? [parsed as Record<string, unknown>] : [];
+  } catch {
+    return;
+  }
+  const byPid = new Map<number, { ppid: number; name: string }>();
+  for (const row of rows) {
+    if (Number.isInteger(row.ProcessId) && (row.ProcessId ?? 0) > 1) {
+      byPid.set(row.ProcessId!, { ppid: Number(row.ParentProcessId ?? 0), name: (row.Name ?? "").toLowerCase() });
+    }
+  }
+  // agent-browser launches Chrome via chrome-launcher (.cmd or .exe), so the daemon sits 1–2 parent hops above Chrome.
+  const windowsDaemonOf = async (startPid: number): Promise<number | null> => {
+    let cur = byPid.get(startPid)?.ppid ?? 0;
+    for (let depth = 0; cur > 1 && depth < 4; depth++) {
+      const known = byPid.get(cur);
+      if (known) {
+        if (known.name.startsWith("agent-browser")) return cur;
+        cur = known.ppid;
+        continue;
+      }
+      if (!processAlive(cur)) return null;
+      const img = await imageOf(cur);
+      if (img === null || img.startsWith("agent-browser")) return cur;
+      return null;
+    }
+    return null;
+  };
+  const browsers = rows.filter((row) =>
+    Number.isInteger(row.ProcessId)
+    && (row.ProcessId ?? 0) > 1
+    && ["chrome.exe", "chrome-headless-shell.exe"].includes((row.Name ?? "").toLowerCase())
+    && typeof row.CommandLine === "string"
+    && namesWindowsProfile(row.CommandLine, dir)
+    && !/(?:^|\s|")--type=/.test(row.CommandLine));
+  for (const row of browsers) {
+    const daemon = await windowsDaemonOf(row.ProcessId!);
+    if (daemon !== null) {
+      heldWindowsProfiles.set(key, { browser: row.ProcessId!, daemon });
+      return;
+    }
+    const image = (row.Name ?? "chrome.exe").toLowerCase();
+    if (!await stopBrowserProcesses({ daemon: row.ProcessId!, members: new Map([[row.ProcessId!, ""]]), groups: [], image })) return;
+  }
+  windowsProfileLocked(dir);
+}
+
 function namesProfile(args: string, dir: string): boolean {
   const flag = `--user-data-dir=${dir}`;
   for (let at = args.indexOf(flag); at >= 0; at = args.indexOf(flag, at + 1)) {
@@ -194,7 +283,11 @@ async function daemonOf(pid: number, table: Map<number, ListedProcess>): Promise
  * A Chrome whose daemon was killed keeps running, re-parented, and would take every later launch, so it is stopped; then the
  * lock goes. A daemon's own Chrome keeps it. The profile's contents are never touched. */
 export async function releaseBrowserProfile(dir: string | undefined): Promise<void> {
-  if (!dir || process.platform === "win32") return;
+  if (!dir) return;
+  if (process.platform === "win32") {
+    await releaseWindowsBrowserProfile(dir);
+    return;
+  }
   let target: string;
   try { target = readlinkSync(join(dir, "SingletonLock")); }
   catch { heldProfiles.delete(dir); return; }

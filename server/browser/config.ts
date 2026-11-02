@@ -24,7 +24,7 @@ export const browserEngineConfigSchema = z.object({
     { message: "browserEngine.attachCdpUrl must be a CDP port (1-65535) or an http(s)/ws(s) URL" }).optional(),
   idleTimeoutMinutes: z.number().int().min(1).max(60).optional(), // an unused browser closes after this; 10 when unset, 3 on MausBot Cloud
   egress: browserEgressConfigSchema.optional(),
-  /** "chrome" runs the bots' browsers on OpenMausBot's own Chrome driver, an early test; agent-browser is the default. */
+  /** "chrome" runs the bots' browsers on Bigman Bot's own Chrome driver, the default; "agent-browser" selects the legacy CLI engine. */
   engine: z.enum(["agent-browser", "chrome"]).optional(),
 });
 
@@ -36,5 +36,5 @@ export interface BrowserEngineConfig {
 }
 
 export function browserEngineKind(cfg: { browserEngine?: BrowserEngineConfig }): BrowserEngineKind {
-  return cfg.browserEngine?.engine === "chrome" ? "chrome" : "agent-browser";
+  return cfg.browserEngine?.engine === "agent-browser" ? "agent-browser" : "chrome";
 }

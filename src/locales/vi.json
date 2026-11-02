@@ -5181,5 +5181,8 @@
   "chat.setupCard.watch": "Theo dõi và giám sát công việc cho tôi",
   "chat.setupCard.inbox": "Email, lịch làm việc và tin nhắn",
   "chat.setupCard.errands": "Đặt lịch, mua sắm và việc vặt",
-  "chat.setupCard.data": "Dữ liệu, bảng tính và báo cáo"
+  "chat.setupCard.data": "Dữ liệu, bảng tính và báo cáo",
+  "settings.experimental.newBrowser": "Trình duyệt Chrome tốc độ cao (v2)",
+  "settings.experimental.newBrowserDetail": "Bật mặc định. Trình duyệt của bot chạy trực tiếp trên nhân Chrome tốc độ cao của {app} (30 FPS, điều khiển thời gian thực, hỗ trợ tải lên/tải xuống, hộp thoại và cửa sổ bật lên). Khi chuyển đổi công tắc này, các phiên trình duyệt đang mở sẽ đóng lại và đăng nhập ở hai chế độ lưu tách biệt nhau.",
+  "settings.experimental.newBrowserAria": "Dùng trình duyệt Chrome tốc độ cao (v2)"
 }
