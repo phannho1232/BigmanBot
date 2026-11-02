@@ -103,3 +103,16 @@ describe("the social media manager", () => {
     expect(template.memory["MEMORY.md"]).toContain("memory/social.md");
   });
 });
+
+describe("TikTok Shop specialist ready-made bots", () => {
+  it("ships the four TikTok Shop operator presets with structured shop memory and paused routines", () => {
+    for (const id of ["tiktok-shop-manager", "tiktok-seo-pricing", "tiktok-affiliate-koc", "tiktok-content-live"]) {
+      const bot = readyBot(id);
+      expect(bot, id).toBeDefined();
+      expect(bot!.routines?.length).toBeGreaterThan(0);
+      expect(Object.keys(bot!.notes ?? {}).length).toBeGreaterThan(1);
+    }
+    const manager = readyBotTemplate(defaults(), readyBot("tiktok-shop-manager")!);
+    expect(manager.memory["memory/tiktok-shop.md"]).toContain("Hero SKU");
+  });
+});

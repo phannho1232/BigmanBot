@@ -275,8 +275,11 @@ function StartingRole({ draft, defaultsMode }: { draft: BotCreationDraft; defaul
       draft.choosePreset(undefined);
       const role = BOT_ROLES.find(role => role.id === value);
       draft.chooseRole(role?.id);
-      const look = role && readyBot(role.id)?.look;
-      if (role) draft.patch({ ...roleProfilePatch(role), ...look });
+      const ready = role && readyBot(role.id);
+      if (role) {
+        draft.patch({ ...roleProfilePatch(role), ...ready?.look });
+        for (const [path, text] of Object.entries(ready?.notes ?? {})) draft.setMemory(path, text);
+      }
       return;
     }
     draft.patch(presetDraftPatch(preset));

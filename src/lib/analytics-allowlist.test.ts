@@ -69,7 +69,7 @@ describe("app, role and key lists", () => {
   it("knows the curated Composio apps and the built-in roles", () => {
     expect(APP).toEqual([...CURATED_CONNECTOR_SLUGS]);
     expect(BOT_TEMPLATE).toEqual(BOT_ROLES.map((role) => role.id));
-    expect(BOT_TEMPLATE).toEqual(["assistant", "inbox", "research", "coder", "community", "ops"]);
+    expect(BOT_TEMPLATE).toEqual(["tiktok-shop-manager", "tiktok-seo-pricing", "assistant", "inbox", "research", "coder", "community", "ops"]);
   });
 
   it("names a provider for every Settings key row", () => {

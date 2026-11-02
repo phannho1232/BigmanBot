@@ -411,6 +411,7 @@ import {
   savedLoginsPrompt,
   teamAvailabilityPart,
 } from "./system-prompt.ts";
+import { tiktokShopCorePart } from "./tiktok-shop-prompt.ts";
 import { shellTimeoutHookResult } from "./shell-timeout-hint.ts";
 import { spillToolResult } from "./tool-result-spill.ts";
 import { gatedLocalComputer } from "./local-computer.ts";
@@ -8495,6 +8496,7 @@ async function startTurn(
       applyAgentsBridge(threadId, integrations, cfg, bot, turnEngine(instance, providerConfigs(), registry.lastSnapshot(instance.instanceId), cwd));
       const confined = proactive.fence.confines(threadId); if (confined) for (const key of Object.keys(integrations) as Array<keyof typeof integrations>) if (!READ_AND_DRAFT_TOOLS.has(key)) delete integrations[key];
       const prompt = buildSystemPrompt(persona, liveBot?.soul ?? bot.soul ?? "", [
+        tiktokShopCorePart(),
         { id: "user-profile", label: "About the user", text: userProfileSystemPrompt(teamHost.profileFor(threadId, cfg.profile)) }, { id: "people", label: "People", text: teamMessages.prompt(bot.id, threadId, Boolean(integrations.agents)) },
         { id: "setup", label: "Setup", text: setupSystemPrompt(setupMode, {
           skills: skillAuthoring, chief: Boolean((liveBot ?? bot).chiefOfStaff),
@@ -10319,6 +10321,7 @@ async function runClaimedGroupMemberTurn(
   const engineRead = registry.engineRead(instance.instanceId); if (engineRead) await engineRead;
   applyAgentsBridge(threadId, integrations, cfg, bot, turnEngine(instance, providerConfigs(), registry.lastSnapshot(instance.instanceId), cwd));
   const roomSystem = buildSystemPrompt(system, store.bot(bot.id)?.soul ?? bot.soul ?? "", [
+    tiktokShopCorePart(),
     { id: "user-profile", label: "About the user", text: userProfileSystemPrompt(teamHost.profileFor(threadId, cfg.profile)) }, { id: "people", label: "People", text: teamMessages.prompt(bot.id, threadId, Boolean(integrations.agents)) },
     { id: "files", label: "File locations", text: workspace ? workspaceLocationsPrompt(bot.id, cwd, readyBot.cwd, { attachFile: Boolean(integrations.agents) && !CLOUD_HOME && !HOSTED_WORKSPACE }) : "" },
     { id: "shell", label: "Long-running commands", text: workspace ? longCommandsPrompt(roomComputerPromptKind) : "" },
