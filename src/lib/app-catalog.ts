@@ -56,6 +56,8 @@ const APP_CATEGORY_COPY: Record<string, string> = {
   marketing: "marketing",
   analytics: "analytics",
   social: "social",
+  automation: "automation",
+  finance: "finance",
 };
 
 const CONNECTOR_COPY: Record<string, string> = {
@@ -83,6 +85,16 @@ const CONNECTOR_COPY: Record<string, string> = {
   airtable: "airtable",
   figma: "figma",
   stripe: "stripe",
+  canva: "canva",
+  youtube: "youtube",
+  facebook: "facebook",
+  "google analytics": "googleAnalytics",
+  "google meet": "googleMeet",
+  zoom: "zoom",
+  "microsoft outlook": "outlook",
+  "microsoft onedrive": "onedrive",
+  "microsoft teams": "microsoftTeams",
+  linkedin: "linkedin",
 };
 
 export function appCategoryLabel(name: string): string {
