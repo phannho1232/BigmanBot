@@ -17,6 +17,7 @@ import { createLiveStreamClient, type LiveResume, type LiveStreamClient } from "
 import { BROWSER_HELD_ELSEWHERE } from "../../shared/browser-held";
 import { passkeyWallAt } from "../../shared/passkey-wall";
 import { browserScope, withBrowserScope } from "@/lib/team-browser";
+import { noteVietnamBrowserSite } from "@/lib/app-catalog";
 
 const button = "rounded-md p-1.5 text-ink-secondary hover:bg-inset hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed";
 const NO_NAV: BrowserNav = { url: "", loading: false, canGoBack: false, canGoForward: false };
@@ -186,6 +187,12 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
   }, []);
 
   useEffect(() => { browserControl.current?.keep(kept || signInOpen); }, [kept, signInOpen]);
+  useEffect(() => {
+    if (nav.url) noteVietnamBrowserSite(nav.url);
+    for (const tab of tabs) {
+      if (tab.url) noteVietnamBrowserSite(tab.url);
+    }
+  }, [nav.url, tabs]);
   const takeControl = () => { setKept(true); browserControl.current?.keep(true); browserControl.current?.takeControl(); };
   const handBack = () => { setKept(false); browserControl.current?.handBack(); };
   const openSignInPage = () => {

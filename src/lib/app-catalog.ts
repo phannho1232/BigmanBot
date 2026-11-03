@@ -146,7 +146,7 @@ export const VIETNAM_CURATED_CARDS: readonly VietnamCatalogCard[] = [
   { slug: "linkedin", label: "LinkedIn", blurb: "Xây dựng thương hiệu chuyên nghiệp và tuyển dụng B2B", domain: "linkedin.com", logo: null, categories: ["Social"] },
 ];
 
-export function curateVietnamCatalog(cards: readonly VietnamCatalogCard[]): VietnamCatalogCard[] {
+export function curateVietnamCatalog(cards: readonly (Partial<VietnamCatalogCard> & { slug: string })[]): VietnamCatalogCard[] {
   const bySlug = new Map(cards.map((card) => [card.slug.toLowerCase(), card]));
   return VIETNAM_CURATED_CARDS.map((curated) => {
     const remote = bySlug.get(curated.slug);
@@ -156,4 +156,219 @@ export function curateVietnamCatalog(cards: readonly VietnamCatalogCard[]): Viet
       ...(remote?.noAuth !== undefined ? { noAuth: remote.noAuth } : {}),
     };
   });
+}
+
+export interface VietnamBrowserApp {
+  slug: string;
+  label: string;
+  blurb: string;
+  url: string;
+  domain: string;
+  siteSuffix: string;
+  logo: string | null;
+  categories: string[];
+}
+
+const RAW_VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = [
+  {
+    slug: "vn-zalo-web",
+    label: "Zalo Web",
+    blurb: "Nhắn tin công việc, nhóm nội bộ và chăm sóc khách hàng qua Zalo",
+    url: "https://chat.zalo.me",
+    domain: "zalo.me",
+    siteSuffix: "zalo.me",
+    logo: null,
+    categories: ["Communication"],
+  },
+  {
+    slug: "vn-telegram-web",
+    label: "Telegram",
+    blurb: "Nhận báo cáo tự động, cảnh báo đơn hàng và nhắn tin nhóm tốc độ cao",
+    url: "https://web.telegram.org/k/",
+    domain: "telegram.org",
+    siteSuffix: "telegram.org",
+    logo: null,
+    categories: ["Communication"],
+  },
+  {
+    slug: "vn-tiktok-seller",
+    label: "TikTok Shop Seller VN",
+    blurb: "Quản lý đơn hàng, sản phẩm, Flash Sale và sức khỏe gian hàng",
+    url: "https://seller-vn.tiktok.com",
+    domain: "tiktok.com",
+    siteSuffix: "tiktok.com",
+    logo: null,
+    categories: ["Sales and CRM"],
+  },
+  {
+    slug: "vn-tiktok-affiliate",
+    label: "TikTok Affiliate Center",
+    blurb: "Tìm kiếm KOC/KOL, thiết lập hoa hồng và duyệt mẫu thử miễn phí",
+    url: "https://affiliate.tiktok.com",
+    domain: "tiktok.com",
+    siteSuffix: "tiktok.com",
+    logo: null,
+    categories: ["Marketing"],
+  },
+  {
+    slug: "vn-shopee-seller",
+    label: "Shopee Kênh Người Bán",
+    blurb: "Quản lý sản phẩm, đơn hàng, tồn kho và khuyến mãi trên sàn Shopee",
+    url: "https://banhang.shopee.vn",
+    domain: "shopee.vn",
+    siteSuffix: "shopee.vn",
+    logo: null,
+    categories: ["Sales and CRM"],
+  },
+  {
+    slug: "vn-meta-business",
+    label: "Meta Business Suite",
+    blurb: "Quản lý Fanpage Facebook, hộp thư khách hàng và quảng cáo Meta",
+    url: "https://business.facebook.com",
+    domain: "facebook.com",
+    siteSuffix: "facebook.com",
+    logo: null,
+    categories: ["Social"],
+  },
+  {
+    slug: "vn-lark-suite",
+    label: "Lark Suite & Lark Base",
+    blurb: "Không gian làm việc nhóm, tin nhắn nội bộ và bảng dữ liệu Lark Base",
+    url: "https://www.larksuite.com",
+    domain: "larksuite.com",
+    siteSuffix: "larksuite.com",
+    logo: null,
+    categories: ["Productivity"],
+  },
+  {
+    slug: "vn-kalodata",
+    label: "Kalodata Việt Nam",
+    blurb: "Phân tích doanh số TikTok Shop, nghiên cứu đối thủ và sản phẩm xu hướng",
+    url: "https://www.kalodata.com",
+    domain: "kalodata.com",
+    siteSuffix: "kalodata.com",
+    logo: null,
+    categories: ["Analytics"],
+  },
+  {
+    slug: "vn-kiotviet",
+    label: "KiotViet Quản lý",
+    blurb: "Quản lý bán hàng POS, đồng bộ tồn kho, giá vốn và doanh thu cửa hàng",
+    url: "https://www.kiotviet.vn",
+    domain: "kiotviet.vn",
+    siteSuffix: "kiotviet.vn",
+    logo: null,
+    categories: ["Sales and CRM"],
+  },
+  {
+    slug: "vn-thue-dien-tu",
+    label: "Hóa đơn Điện tử Thuế",
+    blurb: "Tra cứu, đối soát hóa đơn đầu vào và đầu ra trên Cổng Tổng cục Thuế",
+    url: "https://hoadondientu.gdt.gov.vn",
+    domain: "gdt.gov.vn",
+    siteSuffix: "gdt.gov.vn",
+    logo: null,
+    categories: ["Finance"],
+  },
+];
+
+const VIETNAM_BROWSER_LOGOS: Readonly<Record<string, string>> = {
+  "vn-meta-business": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%230064E0%22%2F%3E%3Cpath%20d%3D%22M45.2%2021c-3.6%200-6.4%202.2-8.9%205.9L33.8%2030.6c-1.8-2.8-3.8-5.3-5.9-7.1C25.8%2021.8%2023.5%2021%2021%2021c-5.8%200-10%204.8-10%2011.4C11%2039.2%2015.1%2044%2020.6%2044c3.4%200%206.2-1.8%208.9-5.6l2.5-3.6c1.8%202.7%203.7%205.1%205.7%206.8%202.1%201.7%204.4%202.4%206.9%202.4%205.9%200%2010.4-4.9%2010.4-11.6C55%2025.7%2050.8%2021%2045.2%2021zm-24.4%2018c-3%200-5.1-2.7-5.1-6.6%200-4%202.2-6.6%205.3-6.6%202.5%200%204.7%201.7%207.6%206.1l1.1%201.7-1.5%202.1c-2.3%203.3-4.6%203.3-7.4%203.3zm23.8%200c-2.6%200-4.8-1.7-7.7-6l-1.2-1.8%201.6-2.3c2.4-3.4%204.7-3.1%207.5-3.1%203.1%200%205.4%202.7%205.4%206.6%200%204-2.3%206.6-5.6%206.6z%22%20fill%3D%22%23fff%22%2F%3E%3C%2Fsvg%3E",
+  "vn-thue-dien-tu": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23B91C1C%22%2F%3E%3Cpath%20d%3D%22M18%2014h22l10%2010v26a4%204%200%200%201-4%204H18a4%204%200%200%201-4-4V18a4%204%200%200%201%204-4z%22%20fill%3D%22%23FFFBEB%22%2F%3E%3Cpath%20d%3D%22M40%2014v10h10%22%20fill%3D%22%23FDE68A%22%2F%3E%3Cpolygon%20points%3D%2232%2C21%2033.9%2C25.2%2038.5%2C25.7%2035%2C28.8%2036%2C33.3%2032%2C31%2028%2C33.3%2029%2C28.8%2025.5%2C25.7%2030.1%2C25.2%22%20fill%3D%22%23D97706%22%2F%3E%3Crect%20x%3D%2221%22%20y%3D%2237%22%20width%3D%2222%22%20height%3D%223%22%20rx%3D%221.5%22%20fill%3D%22%23B91C1C%22%2F%3E%3Crect%20x%3D%2221%22%20y%3D%2243%22%20width%3D%2215%22%20height%3D%223%22%20rx%3D%221.5%22%20fill%3D%22%23D97706%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2245%22%20r%3D%229%22%20fill%3D%22%2316A34A%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%222.5%22%2F%3E%3Cpath%20d%3D%22M40.2%2045l2.5%202.5%205-5%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E",
+};
+
+export const VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = RAW_VIETNAM_BROWSER_APPS.map((app) => ({
+  ...app,
+  logo: VIETNAM_BROWSER_LOGOS[app.slug] ?? app.logo,
+}));
+
+export const VN_BROWSER_SITES_KEY = "omb:vn-browser-sites";
+export const VN_BROWSER_SITES_EVENT = "omb:vn-browser-sites-changed";
+
+export function readConnectedVietnamSites(): string[] {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const raw = window.localStorage.getItem(VN_BROWSER_SITES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string" && item.length > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeConnectedVietnamSites(sites: string[]): string[] {
+  const unique = [...new Set(sites.map((s) => s.toLowerCase().trim()).filter(Boolean))];
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      window.localStorage.setItem(VN_BROWSER_SITES_KEY, JSON.stringify(unique));
+      window.dispatchEvent(new CustomEvent(VN_BROWSER_SITES_EVENT));
+    } catch {}
+  }
+  return unique;
+}
+
+function appUrlHost(app: VietnamBrowserApp): string {
+  try {
+    return new URL(app.url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return app.siteSuffix.toLowerCase();
+  }
+}
+
+export function isVietnamAppConnected(app: VietnamBrowserApp, connectedEntries: readonly string[]): boolean {
+  const appHost = appUrlHost(app);
+  return connectedEntries.some((entry) => {
+    const clean = entry.toLowerCase().replace(/^www\./, "");
+    return clean === app.slug
+      || clean === appHost
+      || clean.endsWith(`.${appHost}`)
+      || (appHost === app.siteSuffix && (clean === app.siteSuffix || clean.endsWith(`.${app.siteSuffix}`)));
+  });
+}
+
+export function noteVietnamBrowserSite(slugOrUrl: string): string[] {
+  const trimmed = slugOrUrl.trim().toLowerCase();
+  if (!trimmed) return readConnectedVietnamSites();
+  const bySlug = VIETNAM_BROWSER_APPS.find((app) => app.slug === trimmed);
+  if (bySlug) {
+    const current = readConnectedVietnamSites();
+    if (current.includes(bySlug.slug)) return current;
+    return writeConnectedVietnamSites([...current, bySlug.slug]);
+  }
+  let host = trimmed;
+  if (trimmed.includes("://")) {
+    try {
+      host = new URL(trimmed).hostname.toLowerCase();
+    } catch {
+      return readConnectedVietnamSites();
+    }
+  }
+  host = host.replace(/^www\./, "");
+  if (!host || host === "id.zalo.me") return readConnectedVietnamSites();
+  const matched = VIETNAM_BROWSER_APPS.filter((app) => {
+    const appHost = appUrlHost(app);
+    return host === appHost || host.endsWith(`.${appHost}`) || host === app.siteSuffix;
+  });
+  if (matched.length === 0) return readConnectedVietnamSites();
+  const current = readConnectedVietnamSites();
+  const next = [...current];
+  let changed = false;
+  for (const app of matched) {
+    if (!next.includes(app.slug)) {
+      next.push(app.slug);
+      changed = true;
+    }
+  }
+  return changed ? writeConnectedVietnamSites(next) : current;
+}
+
+export function removeVietnamBrowserSite(app: VietnamBrowserApp): string[] {
+  const appHost = appUrlHost(app);
+  const current = readConnectedVietnamSites();
+  const next = current.filter((entry) => {
+    const clean = entry.toLowerCase().replace(/^www\./, "");
+    return clean !== app.slug && clean !== appHost && clean !== app.siteSuffix && !clean.endsWith(`.${app.siteSuffix}`);
+  });
+  return next.length !== current.length ? writeConnectedVietnamSites(next) : current;
 }

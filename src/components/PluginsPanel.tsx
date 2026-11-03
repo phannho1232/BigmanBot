@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronRight, Loader2, RefreshCw, Search, Server, TriangleAlert, X } from "lucide-react";
 import { api, useStore, type Bot, type InstanceInfo } from "@/state/store";
+import { openExternalLink } from "@/lib/app-links";
+import { writeComputerPanelView } from "@/lib/computer-panel-view";
+import { requestPanelPage } from "@/lib/page-open";
 import { cn } from "@/lib/cn";
 import { glassPopupFrameStyle } from "@/lib/glass-popup";
 import { t } from "@/lib/i18n";
@@ -26,7 +29,7 @@ import {
 } from "@/lib/connector-status";
 import { BotAvatar } from "./Avatar";
 import { SidebarPopoverMenu } from "./SidebarPopoverMenu";
-import { appCategoryLabel, CATEGORY_SECTION_SIZE, catalogSections, connectorDescription, curateVietnamCatalog, inCategory, rankCategories } from "@/lib/app-catalog";
+import { appCategoryLabel, CATEGORY_SECTION_SIZE, catalogSections, connectorDescription, curateVietnamCatalog, inCategory, isVietnamAppConnected, noteVietnamBrowserSite, rankCategories, readConnectedVietnamSites, removeVietnamBrowserSite, VIETNAM_BROWSER_APPS, VN_BROWSER_SITES_EVENT, type VietnamBrowserApp } from "@/lib/app-catalog";
 import { McpServersPanel } from "./McpServersPanel";
 import { HighLevelCard } from "./HighLevelCard";
 import { PostizCard } from "./PostizCard";
@@ -191,6 +194,8 @@ export function PluginsPanel() {
   const [highLevelConnected, setHighLevelConnected] = useState<boolean | null>(null);
   const [xConnected, setXConnected] = useState<boolean | null>(null);
   const [postizConnected, setPostizConnected] = useState<boolean | null>(null);
+  const [vnBrowserReady, setVnBrowserReady] = useState(false);
+  const [signedInDomains, setSignedInDomains] = useState<string[]>([]);
 
   const polls = useRef(new Map<string, () => void>());
   const statusGenerations = useRef(new Map<string, number>());
@@ -294,14 +299,38 @@ export function PluginsPanel() {
         setConfigured(Boolean(r.configured));
         setMode(r.mode ?? "unavailable");
         setSetup(r.setup);
+        setSignedInDomains((prev) => [...new Set([...prev, ...readConnectedVietnamSites()])]);
+        setVnBrowserReady(true);
       })
       .catch((e) => {
         if (!alive) return;
         setCards((current) => current ?? []);
+        setVnBrowserReady(true);
         setError(lacksAdminScope(e) ? { key: "connectors.adminOnly" } : e.message);
       });
+    const activeBot = (state.bots ?? []).find((b) => b.id === state.selectedId && !b.hidden)
+      ?? (state.bots ?? []).find((b) => !b.hidden);
+    const syncVnSites = () => setSignedInDomains((prev) => [...new Set([...prev, ...readConnectedVietnamSites()])]);
+    syncVnSites();
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+      window.addEventListener(VN_BROWSER_SITES_EVENT, syncVnSites);
+    }
+    if (activeBot) {
+      api(`/api/browser-sites?bot=${encodeURIComponent(activeBot.id)}`)
+        .then((res: { sites?: Array<{ site?: string }> }) => {
+          if (!alive) return;
+          const domains = (res.sites ?? [])
+            .map((entry) => (typeof entry.site === "string" ? entry.site.toLowerCase() : ""))
+            .filter(Boolean);
+          setSignedInDomains([...new Set([...readConnectedVietnamSites(), ...domains])]);
+        })
+        .catch(() => {});
+    }
     return () => {
       alive = false;
+      if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
+        window.removeEventListener(VN_BROWSER_SITES_EVENT, syncVnSites);
+      }
     };
   }, [loadConnectionInventory]);
 
@@ -448,7 +477,19 @@ export function PluginsPanel() {
     .map((card, index) => ({ card, index }))
     .sort((a, b) => Number(isConnected(b.card.slug)) - Number(isConnected(a.card.slug)) || a.index - b.index)
     .map(({ card }) => card);
-  const connectedCount = Object.values(status).filter(hasActiveConnection).length + Number(whopConnected === true) + Number(highLevelConnected === true) + Number(xConnected === true) + Number(postizConnected === true);
+  const isVnAppConnected = (app: VietnamBrowserApp) =>
+    isVietnamAppConnected(app, signedInDomains);
+  const matchingVietnamApps = vnBrowserReady
+    ? VIETNAM_BROWSER_APPS.filter((app) =>
+      (filter === "connected" ? isVnAppConnected(app) : true)
+      && (category === null || app.categories.includes(category))
+      && (!search || `${app.label} ${app.slug} ${app.blurb} ${app.domain}`.toLowerCase().includes(search.toLowerCase().trim())))
+    : [];
+  const connectedVnApps = vnBrowserReady
+    ? VIETNAM_BROWSER_APPS.filter((app) => isVnAppConnected(app))
+    : [];
+  const connectedVnCount = connectedVnApps.length;
+  const connectedCount = Object.values(status).filter(hasActiveConnection).length + Number(whopConnected === true) + Number(highLevelConnected === true) + Number(xConnected === true) + Number(postizConnected === true) + connectedVnCount;
   const connectedEmptyCopy = connectedInventoryCopy(inventoryPhase);
   const close = () => dispatch({ type: "togglePlugins", open: false });
   const setupNotice = connectorSetupNotice({ configured, stale, setup, remoteClient });
@@ -478,7 +519,7 @@ export function PluginsPanel() {
   const allCards = sectioned ? allSection?.cards ?? [] : categoryCards;
   const allCapped = sectioned && !showAllApps && allCards.length > APPS_PREVIEW_COUNT;
   const allShown = allCapped ? allCards.slice(0, APPS_PREVIEW_COUNT) : allCards;
-  const connectedCards = (cards ?? []).filter((card) => hasActiveConnection(status[card.slug]));
+  const connectedCards: ToolkitCard[] = [...connectedVnApps, ...(cards ?? []).filter((card) => hasActiveConnection(status[card.slug]))];
   const pickCategory = (next: string | null) => {
     setCategory(next);
     setTab("marketplace");
@@ -686,6 +727,15 @@ export function PluginsPanel() {
 
           {filter !== "mcp" && (
             <div data-apps-grid className="@container flex flex-col gap-7 pt-1">
+              {matchingVietnamApps.length > 0 && (
+                <AppsSection
+                  key="vietnam-browser-apps"
+                  id="apps-section-vietnam"
+                  title="Ứng dụng Trọng tâm tại Việt Nam (Mở trực tiếp trên Chrome)"
+                >
+                  {matchingVietnamApps.map((app) => renderVietnamBrowserTile(app))}
+                </AppsSection>
+              )}
               {sections.filter((section) => section.kind !== "all").map((section) => section.kind === "connected" ? (
                 <AppsSection
                   key="connected"
@@ -738,7 +788,7 @@ export function PluginsPanel() {
                         </button>
                       </div>
                     )}
-                    {cards !== null && allShown.length === 0 && !nativeCardsShown && sections.length <= 1 && (
+                    {cards !== null && allShown.length === 0 && !nativeCardsShown && matchingVietnamApps.length === 0 && sections.length <= 1 && (
                       <div className="flex min-h-40 flex-col items-center justify-center text-center">
                         <div className="text-[14px] font-medium text-ink">
                           {filter === "connected" ? connectedEmptyCopy.title : t("connectors.noAppsFound")}
@@ -784,6 +834,70 @@ export function PluginsPanel() {
       </div>
     </div>
   );
+
+  function renderVietnamBrowserTile(app: VietnamBrowserApp) {
+    const signedIn = isVnAppConnected(app);
+    const openInBotBrowser = () => {
+      setSignedInDomains(noteVietnamBrowserSite(app.slug));
+      const activeBot = (state.bots ?? []).find((b) => b.id === state.selectedId && !b.hidden)
+        ?? (state.bots ?? []).find((b) => !b.hidden);
+      close();
+      if (activeBot) {
+        writeComputerPanelView(activeBot.id, "browser");
+        requestPanelPage(activeBot.id, app.url);
+        dispatch({ type: "toggleComputer", open: true });
+      } else {
+        openExternalLink(app.url);
+      }
+    };
+    return (
+      <div
+        key={app.slug}
+        data-app-tile={app.slug}
+        className="flex min-w-0 flex-col rounded-xl px-2 py-2 transition-colors hover:bg-raised/40"
+      >
+        <div className="flex items-center gap-3">
+          <ServiceIcon card={app} className="size-10 shrink-0 rounded-[10px]" />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-[14px] font-semibold leading-5 text-ink">{app.label}</span>
+              {signedIn && (
+                <Check size={13} strokeWidth={2.5} className="shrink-0 text-success" aria-label={t("apps.connected")} />
+              )}
+            </div>
+            <div className="truncate text-[13px] leading-[18px] text-ink-secondary" title={app.blurb}>
+              {app.blurb}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={openInBotBrowser}
+            className="inline-flex h-7 min-w-[64px] shrink-0 items-center justify-center gap-2 rounded-full bg-control/80 px-3 text-[13px] font-medium leading-5 text-ink transition-colors hover:bg-raised-hover"
+          >
+            {signedIn ? "Mở" : t("connectors.action.connect")}
+          </button>
+        </div>
+        {signedIn && (
+          <div className="ps-[52px]">
+            <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[12px] leading-5">
+              <Check size={12} className="shrink-0 text-success" />
+              <span className="min-w-0 truncate text-ink">
+                Chrome
+                <span className="text-ink-secondary"> · active</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSignedInDomains(removeVietnamBrowserSite(app))}
+                className="ms-auto shrink-0 rounded-full px-2 text-[12px] font-medium leading-5 text-ink-secondary transition-colors hover:bg-danger/10 hover:text-danger"
+              >
+                {t("connectors.disconnect")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   function renderTile(card: ToolkitCard) {
     const serviceStatus = status[card.slug];
@@ -852,9 +966,14 @@ export function PluginsPanel() {
           </div>
           <button
             type="button"
-            disabled={!configured || inventoryPhase !== "ready" || busy || included || Boolean(unavailableReason)}
+            disabled={inventoryPhase !== "ready" || busy || included || Boolean(unavailableReason)}
             title={unavailableReason ?? undefined}
             onClick={() => {
+              if (!configured) {
+                close();
+                dispatch(openKeySettings("composio"));
+                return;
+              }
               if (pending && !failed) {
                 const url = reusableConnectionUrl(pendingAuthorization);
                 if (url) {

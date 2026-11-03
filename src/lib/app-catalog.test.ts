@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORY_SECTION_SIZE, catalogSections, inCategory, rankCategories } from "./app-catalog";
+import { CATEGORY_SECTION_SIZE, catalogSections, curateVietnamCatalog, inCategory, rankCategories, VIETNAM_BROWSER_APPS } from "./app-catalog";
 
 const card = (slug: string, ...categories: string[]) => ({ slug, categories });
 
@@ -49,5 +49,7 @@ describe("catalogSections", () => {
 
   it("keeps the catalog section even when empty, and skips empty ones", () => {
     expect(catalogSections([], connected, ["Design"])).toEqual([{ kind: "all", cards: [] }]);
+    expect(VIETNAM_BROWSER_APPS).toHaveLength(10);
+    expect(curateVietnamCatalog([{ slug: "hackernews", label: "Hacker News" }])).toHaveLength(26);
   });
 });
