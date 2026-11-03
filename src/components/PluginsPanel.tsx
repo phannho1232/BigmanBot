@@ -26,7 +26,7 @@ import {
 } from "@/lib/connector-status";
 import { BotAvatar } from "./Avatar";
 import { SidebarPopoverMenu } from "./SidebarPopoverMenu";
-import { appCategoryLabel, CATEGORY_SECTION_SIZE, catalogSections, connectorDescription, inCategory, rankCategories } from "@/lib/app-catalog";
+import { appCategoryLabel, CATEGORY_SECTION_SIZE, catalogSections, connectorDescription, curateVietnamCatalog, inCategory, rankCategories } from "@/lib/app-catalog";
 import { McpServersPanel } from "./McpServersPanel";
 import { HighLevelCard } from "./HighLevelCard";
 import { PostizCard } from "./PostizCard";
@@ -288,9 +288,9 @@ export function PluginsPanel() {
     api("/api/connectors/catalog")
       .then((r) => {
         if (!alive) return;
-        setCards(r.cards ?? []);
+        setCards(curateVietnamCatalog(r.cards ?? []));
         setSource(r.source ?? "curated");
-        setPagination(r.pagination ?? null);
+        setPagination(null);
         setConfigured(Boolean(r.configured));
         setMode(r.mode ?? "unavailable");
         setSetup(r.setup);
