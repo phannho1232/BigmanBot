@@ -308,6 +308,26 @@ const RAW_VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = [
     categories: ["Productivity"],
   },
   {
+    slug: "vn-vietqr",
+    label: "VietQR",
+    blurb: "Tạo mã QR chuyển khoản ngân hàng NAPAS 247 theo số tiền, nội dung đơn hàng và tra cứu MST",
+    url: "https://vietqr.io",
+    domain: "vietqr.io",
+    siteSuffix: "vietqr.io",
+    logo: null,
+    categories: ["Finance"],
+  },
+  {
+    slug: "vn-sepay",
+    label: "SePay (Biến động số dư)",
+    blurb: "Theo dõi tiền vào ngân hàng thời gian thực và tự động đối soát đơn hàng đã thanh toán",
+    url: "https://my.sepay.vn",
+    domain: "sepay.vn",
+    siteSuffix: "sepay.vn",
+    logo: null,
+    categories: ["Finance"],
+  },
+  {
     slug: "vn-thue-dien-tu",
     label: "Hóa đơn Điện tử Thuế",
     blurb: "Tra cứu, đối soát hóa đơn đầu vào và đầu ra trên Cổng Tổng cục Thuế",
@@ -321,6 +341,8 @@ const RAW_VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = [
 
 const VIETNAM_BROWSER_LOGOS: Readonly<Record<string, string>> = {
   "vn-meta-business": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%230064E0%22%2F%3E%3Cpath%20d%3D%22M45.2%2021c-3.6%200-6.4%202.2-8.9%205.9L33.8%2030.6c-1.8-2.8-3.8-5.3-5.9-7.1C25.8%2021.8%2023.5%2021%2021%2021c-5.8%200-10%204.8-10%2011.4C11%2039.2%2015.1%2044%2020.6%2044c3.4%200%206.2-1.8%208.9-5.6l2.5-3.6c1.8%202.7%203.7%205.1%205.7%206.8%202.1%201.7%204.4%202.4%206.9%202.4%205.9%200%2010.4-4.9%2010.4-11.6C55%2025.7%2050.8%2021%2045.2%2021zm-24.4%2018c-3%200-5.1-2.7-5.1-6.6%200-4%202.2-6.6%205.3-6.6%202.5%200%204.7%201.7%207.6%206.1l1.1%201.7-1.5%202.1c-2.3%203.3-4.6%203.3-7.4%203.3zm23.8%200c-2.6%200-4.8-1.7-7.7-6l-1.2-1.8%201.6-2.3c2.4-3.4%204.7-3.1%207.5-3.1%203.1%200%205.4%202.7%205.4%206.6%200%204-2.3%206.6-5.6%206.6z%22%20fill%3D%22%23fff%22%2F%3E%3C%2Fsvg%3E",
+  "vn-vietqr": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%230F4C81%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%223.5%22%2F%3E%3Crect%20x%3D%2217%22%20y%3D%2217%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%221%22%20fill%3D%22%23EF4444%22%2F%3E%3Crect%20x%3D%2236%22%20y%3D%2212%22%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%223.5%22%2F%3E%3Crect%20x%3D%2241%22%20y%3D%2217%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%221%22%20fill%3D%22%23FFF%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2236%22%20width%3D%2216%22%20height%3D%2216%22%20rx%3D%223%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%223.5%22%2F%3E%3Crect%20x%3D%2217%22%20y%3D%2241%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%221%22%20fill%3D%22%23FFF%22%2F%3E%3Cpath%20d%3D%22M36%2036h7v7h-7zM46%2036h6v6h-6zM36%2046h6v6h-6zM45%2045h7v7h-7z%22%20fill%3D%22%2338BDF8%22%2F%3E%3C%2Fsvg%3E",
+  "vn-sepay": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%230284C7%22%2F%3E%3Cpath%20d%3D%22M18%2023c0-4.4%204-8%209.5-8h10c3.6%200%206.5%202.9%206.5%206.5h-5.5c0-1-.8-1.8-1.8-1.8h-9c-2.3%200-4%201.3-4%203.1%200%201.7%201.4%202.7%204.2%203.3l7.6%201.6c5.8%201.2%209%204.1%209%208.6%200%205.2-4.3%208.7-10.5%208.7H24c-4.1%200-7-2.9-7-7h5.5c0%201.3.9%202.2%202.3%202.2h9c2.9%200%204.9-1.5%204.9-3.6%200-1.8-1.3-2.9-4.5-3.6L26.6%2031c-5.4-1.2-8.6-3.9-8.6-8z%22%20fill%3D%22%23FFF%22%2F%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%2217%22%20r%3D%226%22%20fill%3D%22%2322C55E%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E",
   "vn-thue-dien-tu": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23B91C1C%22%2F%3E%3Cpath%20d%3D%22M18%2014h22l10%2010v26a4%204%200%200%201-4%204H18a4%204%200%200%201-4-4V18a4%204%200%200%201%204-4z%22%20fill%3D%22%23FFFBEB%22%2F%3E%3Cpath%20d%3D%22M40%2014v10h10%22%20fill%3D%22%23FDE68A%22%2F%3E%3Cpolygon%20points%3D%2232%2C21%2033.9%2C25.2%2038.5%2C25.7%2035%2C28.8%2036%2C33.3%2032%2C31%2028%2C33.3%2029%2C28.8%2025.5%2C25.7%2030.1%2C25.2%22%20fill%3D%22%23D97706%22%2F%3E%3Crect%20x%3D%2221%22%20y%3D%2237%22%20width%3D%2222%22%20height%3D%223%22%20rx%3D%221.5%22%20fill%3D%22%23B91C1C%22%2F%3E%3Crect%20x%3D%2221%22%20y%3D%2243%22%20width%3D%2215%22%20height%3D%223%22%20rx%3D%221.5%22%20fill%3D%22%23D97706%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2245%22%20r%3D%229%22%20fill%3D%22%2316A34A%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%222.5%22%2F%3E%3Cpath%20d%3D%22M40.2%2045l2.5%202.5%205-5%22%20stroke%3D%22%23FFF%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E",
 };
 

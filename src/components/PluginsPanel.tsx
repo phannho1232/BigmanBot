@@ -196,6 +196,28 @@ export function PluginsPanel() {
   const [postizConnected, setPostizConnected] = useState<boolean | null>(null);
   const [vnBrowserReady, setVnBrowserReady] = useState(false);
   const [signedInDomains, setSignedInDomains] = useState<string[]>([]);
+  const [vnPayments, setVnPayments] = useState<{
+    vietqr?: {
+      connected?: boolean;
+      accountLabel?: string;
+      accounts?: Array<{
+        id: string;
+        bankId: string;
+        accountNo: string;
+        accountName: string;
+        accountLabel: string;
+        qrPreviewUrl: string;
+      }>;
+    };
+    sepay?: { connected?: boolean; accountLabel?: string };
+  } | null>(null);
+  const [vnFormSlug, setVnFormSlug] = useState<string | null>(null);
+  const [vnBusySlug, setVnBusySlug] = useState<string | null>(null);
+  const [vnFormError, setVnFormError] = useState<string | null>(null);
+  const [vietQrBankId, setVietQrBankId] = useState("MB");
+  const [vietQrAccountNo, setVietQrAccountNo] = useState("");
+  const [vietQrAccountName, setVietQrAccountName] = useState("");
+  const [sePayToken, setSePayToken] = useState("");
 
   const polls = useRef(new Map<string, () => void>());
   const statusGenerations = useRef(new Map<string, number>());
@@ -312,6 +334,7 @@ export function PluginsPanel() {
       ?? (state.bots ?? []).find((b) => !b.hidden);
     const syncVnSites = () => setSignedInDomains((prev) => [...new Set([...prev, ...readConnectedVietnamSites()])]);
     syncVnSites();
+    api("/api/vietnam-payments").then((res) => { if (alive && res && typeof res === "object") setVnPayments(res); }).catch(() => {});
     if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
       window.addEventListener(VN_BROWSER_SITES_EVENT, syncVnSites);
     }
@@ -478,7 +501,9 @@ export function PluginsPanel() {
     .sort((a, b) => Number(isConnected(b.card.slug)) - Number(isConnected(a.card.slug)) || a.index - b.index)
     .map(({ card }) => card);
   const isVnAppConnected = (app: VietnamBrowserApp) =>
-    isVietnamAppConnected(app, signedInDomains);
+    (app.slug === "vn-vietqr" && Boolean(vnPayments?.vietqr?.connected))
+    || (app.slug === "vn-sepay" && Boolean(vnPayments?.sepay?.connected))
+    || isVietnamAppConnected(app, signedInDomains);
   const matchingVietnamApps = vnBrowserReady
     ? VIETNAM_BROWSER_APPS.filter((app) =>
       (filter === "connected" ? isVnAppConnected(app) : true)
@@ -837,6 +862,16 @@ export function PluginsPanel() {
 
   function renderVietnamBrowserTile(app: VietnamBrowserApp) {
     const signedIn = isVnAppConnected(app);
+    const chromeSignedIn = isVietnamAppConnected(app, signedInDomains);
+    const isPaymentApiApp = app.slug === "vn-vietqr" || app.slug === "vn-sepay";
+    const apiConnected = app.slug === "vn-vietqr"
+      ? Boolean(vnPayments?.vietqr?.connected)
+      : app.slug === "vn-sepay"
+        ? Boolean(vnPayments?.sepay?.connected)
+        : false;
+    const apiLabel = app.slug === "vn-vietqr"
+      ? (vnPayments?.vietqr?.accountLabel ?? "VietQR NAPAS 247")
+      : (vnPayments?.sepay?.accountLabel ?? "SePay API");
     const openInBotBrowser = () => {
       setSignedInDomains(noteVietnamBrowserSite(app.slug));
       const activeBot = (state.bots ?? []).find((b) => b.id === state.selectedId && !b.hidden)
@@ -869,15 +904,190 @@ export function PluginsPanel() {
               {app.blurb}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={openInBotBrowser}
-            className="inline-flex h-7 min-w-[64px] shrink-0 items-center justify-center gap-2 rounded-full bg-control/80 px-3 text-[13px] font-medium leading-5 text-ink transition-colors hover:bg-raised-hover"
-          >
-            {signedIn ? "Mở" : t("connectors.action.connect")}
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {(app.slug === "vn-vietqr" || (app.slug === "vn-sepay" && !apiConnected)) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setVnFormError(null);
+                  setVnFormSlug((cur) => (cur === app.slug ? null : app.slug));
+                }}
+                className="inline-flex h-7 shrink-0 items-center justify-center rounded-full bg-accent px-3 text-[13px] font-medium leading-5 text-accent-ink transition-opacity hover:opacity-90"
+              >
+                {vnFormSlug === app.slug ? "Đóng" : (app.slug === "vn-vietqr" && apiConnected ? "+ Thêm TK" : "Kết nối API")}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={openInBotBrowser}
+              className="inline-flex h-7 min-w-[64px] shrink-0 items-center justify-center gap-2 rounded-full bg-control/80 px-3 text-[13px] font-medium leading-5 text-ink transition-colors hover:bg-raised-hover"
+            >
+              {isPaymentApiApp ? "Mở Chrome" : signedIn ? "Mở" : t("connectors.action.connect")}
+            </button>
+          </div>
         </div>
-        {signedIn && (
+        {app.slug === "vn-vietqr" && apiConnected && (
+          <div className="mt-1.5 space-y-0.5 ps-[52px]">
+            {(Array.isArray(vnPayments?.vietqr?.accounts) && vnPayments.vietqr.accounts.length > 0
+              ? vnPayments.vietqr.accounts
+              : [{ id: "", accountLabel: apiLabel }]
+            ).map((acc) => (
+              <div key={acc.id || acc.accountLabel} className="flex min-w-0 items-center gap-2 text-[12px] leading-5">
+                <Check size={12} className="shrink-0 text-success" />
+                <span className="min-w-0 truncate text-ink" title={acc.accountLabel}>
+                  {acc.accountLabel}
+                  <span className="text-ink-secondary"> · active</span>
+                </span>
+                <button
+                  type="button"
+                  disabled={vnBusySlug === app.slug}
+                  onClick={() => {
+                    const endpoint = acc.id
+                      ? `/api/vietnam-payments/vietqr/${encodeURIComponent(acc.id)}`
+                      : "/api/vietnam-payments/vietqr";
+                    setVnBusySlug(app.slug);
+                    void api(endpoint, { method: "DELETE" })
+                      .then((res) => setVnPayments(res))
+                      .finally(() => setVnBusySlug(null));
+                  }}
+                  className="ms-auto shrink-0 rounded-full px-2 text-[12px] font-medium leading-5 text-ink-secondary transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+                >
+                  {t("connectors.disconnect")}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {app.slug === "vn-sepay" && apiConnected && (
+          <div className="ps-[52px]">
+            <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[12px] leading-5">
+              <Check size={12} className="shrink-0 text-success" />
+              <span className="min-w-0 truncate text-ink">
+                {apiLabel}
+                <span className="text-ink-secondary"> · active</span>
+              </span>
+              <button
+                type="button"
+                disabled={vnBusySlug === app.slug}
+                onClick={() => {
+                  setVnBusySlug(app.slug);
+                  void api("/api/vietnam-payments/sepay", { method: "DELETE" })
+                    .then((res) => setVnPayments(res))
+                    .finally(() => setVnBusySlug(null));
+                }}
+                className="ms-auto shrink-0 rounded-full px-2 text-[12px] font-medium leading-5 text-ink-secondary transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+              >
+                {t("connectors.disconnect")}
+              </button>
+            </div>
+          </div>
+        )}
+        {vnFormSlug === app.slug && (app.slug === "vn-vietqr" || !apiConnected) && (
+          <form
+            className="mt-2 flex flex-col gap-2 ps-[52px]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setVnFormError(null);
+              setVnBusySlug(app.slug);
+              const req = app.slug === "vn-vietqr"
+                ? api("/api/vietnam-payments/vietqr", {
+                    method: "POST",
+                    body: JSON.stringify({
+                      bankId: vietQrBankId,
+                      accountNo: vietQrAccountNo,
+                      accountName: vietQrAccountName,
+                    }),
+                  })
+                : api("/api/vietnam-payments/sepay", {
+                    method: "POST",
+                    body: JSON.stringify({ apiToken: sePayToken }),
+                  });
+              void req
+                .then((res) => {
+                  setVnPayments(res);
+                  setVnFormSlug(null);
+                  setVietQrAccountNo("");
+                  setSePayToken("");
+                })
+                .catch((err) => setVnFormError(err?.message || "Không thể kết nối."))
+                .finally(() => setVnBusySlug(null));
+            }}
+          >
+            {app.slug === "vn-vietqr" ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <select value={vietQrBankId} onChange={(e) => setVietQrBankId(e.target.value)} aria-label="Ngân hàng nhận QR" className="h-8 w-full rounded-lg bg-inset px-2.5 text-[12px] text-ink focus:outline-none focus:ring-1 focus:ring-accent sm:w-auto">
+                  <option value="MB">MB - MBBank (Quân Đội)</option>
+                  <option value="VCB">VCB - Vietcombank</option>
+                  <option value="TCB">TCB - Techcombank</option>
+                  <option value="ACB">ACB - Á Châu</option>
+                  <option value="BIDV">BIDV - Đầu tư & PT</option>
+                  <option value="ICB">ICB - VietinBank</option>
+                  <option value="VBA">VBA - Agribank</option>
+                  <option value="VPB">VPB - VPBank</option>
+                  <option value="TPB">TPB - TPBank</option>
+                  <option value="STB">STB - Sacombank</option>
+                  <option value="VIB">VIB - Quốc Tế</option>
+                  <option value="HDB">HDB - HDBank</option>
+                  <option value="SHB">SHB - Sài Gòn Hà Nội</option>
+                  <option value="MSB">MSB - Hàng Hải</option>
+                  <option value="OCB">OCB - Phương Đông</option>
+                  <option value="LPB">LPB - LPBank</option>
+                  <option value="EIB">EIB - Eximbank</option>
+                  <option value="SEAB">SEAB - SeABank</option>
+                  <option value="NAB">NAB - Nam Á Bank</option>
+                  <option value="ABB">ABB - ABBank</option>
+                  <option value="BAB">BAB - Bắc Á Bank</option>
+                  <option value="BVB">BVB - VietCapital (BVBank)</option>
+                  <option value="PBVN">PBVN - Public Bank</option>
+                  <option value="WVN">WVN - Woori Bank</option>
+                  <option value="SHBVN">SHBVN - Shinhan Bank</option>
+                  <option value="TIMO">TIMO - Ngân hàng số Timo</option>
+                  <option value="CAKE">CAKE - Cake by VPBank</option>
+                </select>
+                <input
+                  value={vietQrAccountNo}
+                  onChange={(e) => setVietQrAccountNo(e.target.value)}
+                  placeholder="Số tài khoản nhận QR"
+                  className="h-8 min-w-[140px] flex-1 rounded-lg bg-inset px-2.5 text-[12px] text-ink placeholder:text-ink-secondary focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+                <input
+                  value={vietQrAccountName}
+                  onChange={(e) => setVietQrAccountName(e.target.value)}
+                  placeholder="Tên chủ TK (IN HOA)"
+                  className="h-8 min-w-[140px] flex-1 rounded-lg bg-inset px-2.5 text-[12px] text-ink placeholder:text-ink-secondary focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+                <button
+                  type="submit"
+                  disabled={vnBusySlug === app.slug || !vietQrBankId.trim() || !vietQrAccountNo.trim() || !vietQrAccountName.trim()}
+                  className="inline-flex h-8 shrink-0 items-center rounded-lg bg-accent px-3 text-[12px] font-medium text-accent-ink disabled:opacity-40"
+                >
+                  {vnBusySlug === app.slug ? "Đang kiểm tra…" : "Xác thực & Lưu"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="password"
+                  value={sePayToken}
+                  onChange={(e) => setSePayToken(e.target.value)}
+                  placeholder="Dán SePay API Token (my.sepay.vn → Cấu hình Công ty → API Access)"
+                  className="h-8 min-w-0 flex-1 rounded-lg bg-inset px-2.5 text-[12px] text-ink placeholder:text-ink-secondary focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+                <button
+                  type="submit"
+                  disabled={vnBusySlug === app.slug || !sePayToken.trim()}
+                  className="inline-flex h-8 shrink-0 items-center rounded-lg bg-accent px-3 text-[12px] font-medium text-accent-ink disabled:opacity-40"
+                >
+                  {vnBusySlug === app.slug ? "Đang kiểm tra…" : "Xác thực Token"}
+                </button>
+              </div>
+            )}
+            {vnFormError && (
+              <div className="text-[12px] text-danger">{vnFormError}</div>
+            )}
+          </form>
+        )}
+        {chromeSignedIn && (
           <div className="ps-[52px]">
             <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[12px] leading-5">
               <Check size={12} className="shrink-0 text-success" />
