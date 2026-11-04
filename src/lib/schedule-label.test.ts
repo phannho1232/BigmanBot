@@ -1,8 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { setLocale } from "./i18n";
 import { intervalLabel, scheduleLabel, scheduleSentence, whenLabel } from "./schedule-label";
 
 describe("schedule labels", () => {
+  beforeEach(() => setLocale("en"));
+  afterEach(() => setLocale("vi"));
   it.each([
     ["0 9 1 * *", "Monthly on day 1 at 9:00"],
     ["30 8 L * *", "Monthly on the last day at 8:30"],
@@ -32,6 +35,12 @@ describe("schedule labels", () => {
     expect(intervalLabel(60)).toBe("Every hour");
     expect(intervalLabel(120)).toBe("Every 2 hr");
     expect(intervalLabel(90)).toBe("Every 1 hr 30 min");
+    setLocale("vi");
+    expect(intervalLabel(5)).toBe("Mỗi 5 phút");
+    expect(intervalLabel(15)).toBe("Mỗi 15 phút");
+    expect(intervalLabel(60)).toBe("Mỗi giờ");
+    expect(intervalLabel(120)).toBe("Mỗi 2 giờ");
+    expect(intervalLabel(90)).toBe("Mỗi 1 giờ 30 phút");
   });
 
   it("writes schedules as prose", () => {

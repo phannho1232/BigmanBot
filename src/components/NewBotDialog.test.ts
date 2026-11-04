@@ -77,14 +77,14 @@ describe("bot draft dialog", () => {
   it("preserves upstream audience selection for browser admins before creation", () => {
     fixture.admin = true;
     vi.stubGlobal("window", {});
-    expect(render().html).toContain("Who can see it");
-    expect(render().html).toContain("Admins only");
-    expect(render(true).html).not.toContain("Who can see it");
+    expect(render().html).toContain("Ai có thể xem");
+    expect(render().html).toContain("Chỉ quản trị viên");
+    expect(render(true).html).not.toContain("Ai có thể xem");
     fixture.admin = false;
-    expect(render().html).not.toContain("Who can see it");
+    expect(render().html).not.toContain("Ai có thể xem");
     fixture.admin = true;
     vi.stubGlobal("window", { ogb: {} });
-    expect(render().html).not.toContain("Who can see it");
+    expect(render().html).not.toContain("Ai có thể xem");
   });
   it.each([false, true])("closes after a successful creation when its caller fails (async=%s)", async asyncFailure => {
     fixture.ready = true;
@@ -121,13 +121,13 @@ describe("bot draft dialog", () => {
   it("opens immediately with all sections and no creation request", () => {
     const result = render();
     expect(result.html).toContain('role="dialog"');
-    for (const section of ["Identity", "Soul", "Skills", "Memory", "Routines", "Access", "Model", "Permissions", "Voice &amp; alerts"]) {
+    for (const section of ["Danh tính", "Chỉ dẫn cốt lõi", "Kỹ năng", "Bộ nhớ", "Tác vụ định kỳ", "Quyền truy cập", "Mô hình AI", "Phân quyền &amp; Phê duyệt", "Giọng nói &amp; Thông báo"]) {
       expect(result.html).toContain(section);
     }
     fixture.advanced = false;
     const simple = render().html;
-    expect(simple, "Simple mode picks no model: new bots use the default").not.toContain(">Model<");
-    expect(simple).toContain(">Permissions<");
+    expect(simple, "Simple mode picks no model: new bots use the default").not.toContain(">Mô hình AI<");
+    expect(simple).toContain(">Phân quyền &amp; Phê duyệt<");
     fixture.effects[0]();
     expect(fixture.api).toHaveBeenCalledExactlyOnceWith("/api/bot-defaults");
     expect(fixture.dispatch).not.toHaveBeenCalled();
@@ -158,7 +158,7 @@ describe("bot draft dialog", () => {
 
   it("can cancel a loading draft without creating or deleting a bot", () => {
     const result = render();
-    result.nodes.find(node => node.type === "button" && node.props["aria-label"] === "Close")!.props.onClick!();
+    result.nodes.find(node => node.type === "button" && node.props["aria-label"] === "Đóng")!.props.onClick!();
     expect(fixture.close).toHaveBeenCalledOnce();
     expect(fixture.dispatch).not.toHaveBeenCalled();
     expect(fixture.api).not.toHaveBeenCalled();
@@ -227,8 +227,8 @@ describe("bot draft dialog", () => {
 
   it("uses the same section editor for default templates", () => {
     const result = render(true);
-    expect(result.html).toContain("Defaults for new bots");
-    expect(result.html).toContain("Save defaults");
-    expect(result.html).not.toContain(">Create bot<");
+    expect(result.html).toContain("Mặc định cho bot mới");
+    expect(result.html).toContain("Lưu mặc định");
+    expect(result.html).not.toContain(">Tạo bot<");
   });
 });

@@ -1,4 +1,5 @@
 import type { CalendarCall } from "./calendar-calls";
+import { t } from "./i18n";
 import type { Routine, RoutineRun, RoutineSchedule } from "./routines";
 import { nextCronRuns } from "../../shared/routine-schedule";
 
@@ -157,7 +158,7 @@ export function slotAt(day: number, clientY: number, top: number, hourHeight: nu
 export function scheduleAt(schedule: Exclude<RoutineSchedule, { type: "interval" | "cron" }>, occurrenceAt: number, nextAt: number): Exclude<RoutineSchedule, { type: "interval" | "cron" }>;
 export function scheduleAt(schedule: RoutineSchedule, occurrenceAt: number, nextAt: number): RoutineSchedule;
 export function scheduleAt(schedule: RoutineSchedule, occurrenceAt: number, nextAt: number): RoutineSchedule {
-  if (schedule.type === "cron") throw new Error("Edit this routine's schedule to change its cron timing.");
+  if (schedule.type === "cron") throw new Error(t("i18nExt.g1.routineCalendar.editCronScheduleError"));
   if (schedule.type === "once" || schedule.type === "limit_reset") return { type: "once", at: nextAt };
   if (schedule.type === "interval") {
     return {

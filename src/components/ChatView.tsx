@@ -216,7 +216,7 @@ export function ErrorRow({
         ) : isProviderSafetyBlock(message) ? (
           <p className="mt-2 text-[13px] leading-relaxed text-ink-secondary">
             {PROVIDER_SAFETY_GUIDANCE}{" "}
-            <a href={PROVIDER_SAFETY_HELP_URL} target="_blank" rel="noreferrer" className="underline">About provider safety checks</a>
+            <a href={PROVIDER_SAFETY_HELP_URL} target="_blank" rel="noreferrer" className="underline">{t("i18nExt.g2.chat.providerSafetyChecks")}</a>
           </p>
         ) : setupInstance &&
         !(setupInstance.snapshot.state === "available" && setupInstance.snapshot.authenticated !== false) ? (
@@ -1083,7 +1083,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
             </button>
           )}
           {!phone && !simpleHead && <ChatHeadRole bot={bot} />}<span role="status" className="sr-only" data-chathead-status>{bot.busy ? t("sidebar.preview.working") : ""}</span>{!simpleHead && privateChat && <TeamPrivateHeader />}{!simpleHead && ownHelper && <TeamOwnHelperHeader />}{!simpleHead && sharedChat && team && <TeamSharedHeader team={team} />}
-          {!simpleHead && !bot.busy && bot.waitingForTeammates && <span className="truncate text-[12px] text-ink-secondary" role="status">Teammates working</span>}
+          {!simpleHead && !bot.busy && bot.waitingForTeammates && <span className="truncate text-[12px] text-ink-secondary" role="status">{t("i18nExt.g2.chat.teammatesWorking")}</span>}
           {(advanced || remoteClient) && awayFromMainThread(profile, showThreads) && (
             <button
               type="button"

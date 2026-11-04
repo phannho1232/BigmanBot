@@ -21,7 +21,6 @@ import { OrgLibraryTab } from "./TeamLibraryPanelOrg";
 import { MAX_TEAM_BACKUP_BYTES } from "../../shared/team-backup";
 import { takeImportName } from "../../shared/import-name";
 import { isGrokLink } from "../../shared/grok-import";
-const COMMUNITY_TEAMS_REPOSITORY = "https://github.com/milind-soni/openmausbot-teams";
 
 export { TeamImportDetails };
 
@@ -495,17 +494,6 @@ export function TeamLibraryPanel({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            {!pending && (
-              <button
-                onClick={() => void openExternal(catalog?.repositoryUrl ?? COMMUNITY_TEAMS_REPOSITORY)}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[13px] text-ink-secondary hover:bg-raised hover:text-ink"
-                title={t("templates.openRepository")}
-              >
-                <Github size={16} />
-                <span className="max-sm:hidden">{t("templates.communityRepo")}</span>
-                <ExternalLink size={12} />
-              </button>
-            )}
             <button
               onClick={onClose}
               disabled={importing}

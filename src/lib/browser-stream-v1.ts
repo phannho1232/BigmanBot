@@ -223,7 +223,7 @@ export function createLiveStreamClient(botId: string, events: PreviewStreamEvent
     const message = (reply as { notice?: unknown } | null)?.notice;
     if (typeof message === "string" && message) notice(message);
   };
-  const queue = createLiveInputQueue((body) => (viewerId ? postTo(body, viewerId).then(noticed) : Promise.reject(new Error("Open the browser connection first."))), (cause) => {
+  const queue = createLiveInputQueue((body) => (viewerId ? postTo(body, viewerId).then(noticed) : Promise.reject(new Error(t("i18nExt.g1.browser.v1.openConnectionFirst")))), (cause) => {
     notice(cause instanceof Error ? cause.message : String(cause));
   }, () => inputBatch);
 
@@ -377,7 +377,7 @@ export function createLiveStreamClient(botId: string, events: PreviewStreamEvent
       size: () => queue.size(),
       stopped: () => queue.stopped(),
       take: async () => {
-        if (!viewerId) throw new Error("The browser view is not connected. Reconnect it, then try again.");
+        if (!viewerId) throw new Error(t("i18nExt.g1.browser.control.notConnectedError"));
         const reply = await postTo({ type: "take" }, viewerId) as { waited?: unknown } | null;
         return { waited: reply?.waited === true };
       },

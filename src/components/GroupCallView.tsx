@@ -6,6 +6,7 @@ import { Loader2, PhoneOff, X } from "lucide-react";
 import { currentCall, deferCallCleanup, endCall, useOnCall } from "@/lib/call";
 import { routeSpokenGroupMessage } from "@/lib/group-call";
 import { track } from "@/lib/analytics";
+import { t } from "@/lib/i18n";
 import { normalizeState } from "@/lib/mascot";
 import { speaker } from "@/lib/tts";
 import { useSpeech } from "@/lib/tts/useSpeech";
@@ -76,7 +77,7 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
   const [note, setNote] = useState<string | null>(null);
   const [speakingMemberId, setSpeakingMemberId] = useState<string | null>(null);
   const pushToTalk = usePushToTalk(group.id, phase === "listening", () => {
-    setNote("Push to talk couldn't start. Check Microphone and Speech Recognition access.");
+    setNote(t("i18nExt.g2.call.pttStartFailed"));
   });
 
   const messages = group.messages;
@@ -132,7 +133,7 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
     setNote(null);
     void window.ogb?.speechStart({ endpointMs: CALL_ENDPOINT_MS }).catch(() => {
       if (alive.current && currentCall() === group.id) {
-        setNote("The microphone couldn't start. Check Microphone and Speech Recognition access.");
+        setNote(t("i18nExt.g2.call.micStartFailed"));
       }
     });
   }, [group.id, move]);
@@ -218,7 +219,7 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
     const offTranscript = bridge.onSpeechTranscript((line) => {
       if (!alive.current || currentCall() !== group.id || phaseRef.current !== "listening") return;
       if (line.error) {
-        setNote("Dictation stopped unexpectedly. Check Microphone and Speech Recognition access.");
+        setNote(t("i18nExt.g2.call.dictationStopped"));
         return;
       }
       if (typeof line.text !== "string") return;
@@ -301,7 +302,7 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
       if (defaultResponderRef.current.kind === "mentions" && !routed.addressed) {
         listen();
         const names = membersRef.current.map((member) => member.name).join(", ");
-        setNote("Say a member's name" + (names ? " — " + names : "") + " — or say everyone.");
+        setNote(names ? t("i18nExt.g2.groupCall.sayMemberOrEveryoneWithNames", { names }) : t("i18nExt.g2.groupCall.sayMemberOrEveryone"));
         return;
       }
 
@@ -313,18 +314,18 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
     const offEnd = bridge.onSpeechEnd(({ code, reason }) => {
       if (!alive.current || currentCall() !== group.id) return;
       if (code === 2) {
-        setNote("Calls need macOS dictation, which isn't available here yet.");
+        setNote(t("i18nExt.g2.call.needsMacDictation"));
         return;
       }
       if (code === 1) {
         setNote(
           reason === "helper-build-failed"
-            ? "The dictation helper couldn't be built. Install Apple's Command Line Tools and try again."
+            ? t("i18nExt.g2.call.helperBuildFailed")
             : reason === "dictation-disabled"
-              ? "Turn on Dictation in System Settings → Keyboard, then try again."
+              ? t("i18nExt.g2.call.dictationDisabled")
               : reason === "speech-not-authorized"
-                ? "Allow Speech Recognition in System Settings → Privacy & Security, then try again."
-                : "Dictation couldn't start. Try again.",
+                ? t("i18nExt.g2.call.speechNotAuthorized")
+                : t("i18nExt.g2.call.dictationStartFailed"),
         );
         return;
       }
@@ -455,21 +456,21 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
   const status =
     phase === "listening"
       ? pushToTalk
-        ? "Push to talk"
-        : "Listening"
+        ? t("i18nExt.g2.call.pushToTalk")
+        : t("i18nExt.g2.call.listening")
       : phase === "sending"
-        ? "Bringing the group in"
+        ? t("i18nExt.g2.groupCall.bringingGroupIn")
         : phase === "speaking"
-          ? (speakingMember?.name ?? "Group member") + " is speaking"
+          ? t("i18nExt.g2.groupCall.memberSpeaking", { name: speakingMember?.name ?? t("i18nExt.g2.groupCall.groupMember") })
           : workingMember
-            ? workingMember.name + " is working"
-            : "Working";
+            ? t("i18nExt.g2.groupCall.memberWorking", { name: workingMember.name })
+            : t("i18nExt.g2.call.working");
 
   return (
     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-6 bg-app/95 px-8 backdrop-blur-sm">
       <button
         onClick={() => endCall(group.id)}
-        aria-label="Hang up"
+        aria-label={t("i18nExt.g2.call.hangUp")}
         className="absolute right-5 top-5 rounded-md p-2 text-ink-secondary hover:bg-raised hover:text-ink"
       >
         <X size={18} />
@@ -525,14 +526,14 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
           heard || (
             <span className="text-ink-secondary">
               {pushToTalk
-                ? "Release Control + Option to send…"
-                : "Say a name, say “everyone,” or just talk to the group…"}
+                ? t("i18nExt.g2.call.releaseToSend")
+                : t("i18nExt.g2.groupCall.sayNamePrompt")}
             </span>
           )
         ) : phase === "speaking" ? (
           speech.caption
         ) : (
-          <span className="text-ink-secondary">{workingMember ? "You’ll hear each response in turn." : ""}</span>
+          <span className="text-ink-secondary">{workingMember ? t("i18nExt.g2.groupCall.hearEachResponse") : ""}</span>
         )}
       </div>
 
@@ -543,7 +544,7 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
             onClick={listen}
             className="rounded-full border border-warning/40 px-3 py-1.5 text-[12px] hover:bg-warning/10"
           >
-            Try microphone again
+            {t("i18nExt.g2.call.tryMicAgain")}
           </button>
         </div>
       )}
@@ -555,19 +556,19 @@ function GroupCall({ group, members }: { group: Group; members: Bot[] }) {
             onClick={interruptSpeech}
             className="rounded-full border border-hairline/50 px-4 py-2 text-[14px] text-ink hover:bg-raised"
           >
-            Interrupt
+            {t("i18nExt.g2.call.interrupt")}
           </button>
         )}
         <button
           onClick={() => endCall(group.id)}
           className="flex items-center gap-2 rounded-full bg-danger px-5 py-2.5 text-[14px] font-medium text-white hover:brightness-110"
         >
-          <PhoneOff size={16} /> Hang up
+          <PhoneOff size={16} /> {t("i18nExt.g2.call.hangUp")}
         </button>
       </div>
 
       <div className="text-[12px] text-ink-tertiary">
-        Hold Control + Option to talk · Say a member’s name to direct the turn · Space interrupts · Esc hangs up
+        {t("i18nExt.g2.groupCall.shortcutsHint")}
       </div>
     </div>
   );

@@ -769,7 +769,7 @@ export function LocalVmWorkspace({
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-[14px] font-semibold text-ink">{t("vm.workspace.viewTitle")}</h1>
           <p className="truncate text-[12px] text-ink-secondary">
-            Two live desktops · one active controller · watch-only by default
+            {t("i18nExt.g0.vmWorkspaceSubtitle")}
           </p>
         </div>
         <button
@@ -777,7 +777,7 @@ export function LocalVmWorkspace({
           onClick={() => void closeWorkspace()}
           disabled={controlPending}
           className="rounded-md p-1.5 text-ink-secondary hover:bg-raised hover:text-ink disabled:opacity-50"
-          aria-label="Close private desktop view"
+          aria-label={t("i18nExt.g0.closeVmView")}
         >
           <X size={18} />
         </button>
