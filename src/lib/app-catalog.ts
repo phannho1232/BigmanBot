@@ -298,6 +298,16 @@ const RAW_VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = [
     categories: ["Sales and CRM"],
   },
   {
+    slug: "vn-thuvienphapluat",
+    label: "Thư viện Pháp luật",
+    blurb: "Tra cứu Luật, Nghị định, Thông tư thuế mới nhất, kiểm tra hiệu lực và tải biểu mẫu hợp đồng",
+    url: "https://thuvienphapluat.vn",
+    domain: "thuvienphapluat.vn",
+    siteSuffix: "thuvienphapluat.vn",
+    logo: null,
+    categories: ["Productivity"],
+  },
+  {
     slug: "vn-thue-dien-tu",
     label: "Hóa đơn Điện tử Thuế",
     blurb: "Tra cứu, đối soát hóa đơn đầu vào và đầu ra trên Cổng Tổng cục Thuế",
