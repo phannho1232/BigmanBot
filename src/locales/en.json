@@ -6265,6 +6265,7 @@
   "apps.catalog.outlook.blurb": "Read and send Microsoft 365 email and calendar",
   "apps.catalog.onedrive.blurb": "Store and sync Microsoft 365 files and folders",
   "apps.catalog.microsoftTeams.blurb": "Team chat, channels, and online meetings",
+  "apps.catalog.microsoftExcel.blurb": "Read and update Excel spreadsheets (.xlsx), formulas, and reports",
   "apps.catalog.linkedin.blurb": "Professional networking, posts, and B2B recruiting",
   "sidebar.nav.routines": "Routines",
   "sidebar.nav.triggers": "Triggers",

@@ -930,6 +930,7 @@ const CURATED: Array<ToolkitCard & { slug: CuratedConnectorSlug }> = [
   { slug: "outlook", label: "Microsoft Outlook", blurb: "Quản lý email và lịch làm việc Microsoft 365", domain: "outlook.office.com", logo: null, categories: ["Communication"] },
   { slug: "one_drive", label: "Microsoft OneDrive", blurb: "Lưu trữ và đồng bộ tài liệu Microsoft 365", domain: "onedrive.live.com", logo: null, categories: ["Files"] },
   { slug: "microsoft_teams", label: "Microsoft Teams", blurb: "Nhắn tin nội bộ, nhóm làm việc và họp trực tuyến", domain: "teams.microsoft.com", logo: null, categories: ["Communication"] },
+  { slug: "excel", label: "Microsoft Excel", blurb: "Đọc, cập nhật bảng tính Excel (.xlsx), công thức và báo cáo tài chính", domain: "office.com", logo: "https://logos.composio.dev/api/excel", categories: ["Productivity"] },
   { slug: "airtable", label: "Airtable", blurb: "Quản lý bảng cơ sở dữ liệu và bản ghi trực quan", domain: "airtable.com", logo: null, categories: ["Productivity"] },
   { slug: "jira", label: "Jira", blurb: "Quản lý dự án, đầu việc và tiến độ sprint", domain: "atlassian.com", logo: null, categories: ["Developer tools"] },
   { slug: "slack", label: "Slack", blurb: "Nhắn tin kênh nội bộ và nhận thông báo nhóm", domain: "slack.com", logo: null, categories: ["Communication"] },
