@@ -6261,6 +6261,7 @@
   "apps.catalog.facebook.blurb": "Publish Fanpage posts and manage engagement",
   "apps.catalog.instagram.blurb": "Publish photos, Reels, and manage Instagram comments and DMs",
   "apps.catalog.googleAnalytics.blurb": "Track website traffic and conversion metrics",
+  "apps.catalog.googleSearchConsole.blurb": "Monitor SEO keyword rankings, search clicks, and indexing status",
   "apps.catalog.googleMeet.blurb": "Schedule and manage online meetings",
   "apps.catalog.zoom.blurb": "Schedule and manage Zoom meetings and webinars",
   "apps.catalog.outlook.blurb": "Read and send Microsoft 365 email and calendar",
