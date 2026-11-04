@@ -68,9 +68,10 @@ function Open-BigmanBrowser([string]$NodeExe, [string]$CliJs) {
       $code = $Matches[1]
       $url = "http://127.0.0.1:$Port/#code=$code"
       Write-Output "Pairing code: $code"
+      Write-Output "Open link:    $url"
     }
   } catch {}
-  Start-Process $url | Out-Null
+  Start-Process "explorer.exe" -ArgumentList $url | Out-Null
 }
 
 function Start-BigmanServer {
@@ -95,12 +96,21 @@ function Start-BigmanServer {
   }
 
   New-Item -ItemType Directory -Force -Path $LogsDir | Out-Null
-  Start-Process -FilePath $nodeExe `
-    -ArgumentList @($cliJs, "serve", "--port", "$Port", "--no-pair", "--local") `
-    -WorkingDirectory $RepoRoot `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $OutLog `
-    -RedirectStandardError $ErrLog | Out-Null
+  $cmdLine = "cmd.exe /d /s /c ""set PATH=$nodeDir;%PATH% && ""$nodeExe"" ""$cliJs"" serve --port $Port --no-pair --local >> ""$OutLog"" 2>> ""$ErrLog"""""
+  $startup = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
+  $created = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+    CommandLine = $cmdLine
+    CurrentDirectory = $RepoRoot
+    ProcessStartupInformation = $startup
+  } -ErrorAction SilentlyContinue
+  if (-not $created -or $created.ReturnValue -ne 0) {
+    Start-Process -FilePath $nodeExe `
+      -ArgumentList @($cliJs, "serve", "--port", "$Port", "--no-pair", "--local") `
+      -WorkingDirectory $RepoRoot `
+      -WindowStyle Hidden `
+      -RedirectStandardOutput $OutLog `
+      -RedirectStandardError $ErrLog | Out-Null
+  }
 
   $deadline = (Get-Date).AddSeconds(20)
   $ready = $false
