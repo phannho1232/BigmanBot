@@ -278,6 +278,16 @@ const RAW_VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = [
     categories: ["Analytics"],
   },
   {
+    slug: "vn-pancake",
+    label: "Pancake Đa Kênh",
+    blurb: "Gộp tin nhắn Fanpage, Zalo, Shopee, TikTok và chốt đơn trực tiếp trên khung chat",
+    url: "https://pancake.vn",
+    domain: "pancake.vn",
+    siteSuffix: "pancake.vn",
+    logo: null,
+    categories: ["Sales and CRM"],
+  },
+  {
     slug: "vn-kiotviet",
     label: "KiotViet Quản lý",
     blurb: "Quản lý bán hàng POS, đồng bộ tồn kho, giá vốn và doanh thu cửa hàng",

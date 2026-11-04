@@ -49,7 +49,7 @@ describe("catalogSections", () => {
 
   it("keeps the catalog section even when empty, and skips empty ones", () => {
     expect(catalogSections([], connected, ["Design"])).toEqual([{ kind: "all", cards: [] }]);
-    expect(VIETNAM_BROWSER_APPS).toHaveLength(12);
+    expect(VIETNAM_BROWSER_APPS).toHaveLength(13);
     expect(curateVietnamCatalog([{ slug: "hackernews", label: "Hacker News" }])).toHaveLength(29);
   });
 });
