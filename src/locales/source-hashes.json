@@ -43351,7 +43351,10 @@
       "botAccess.overview.setForEveryone": "9977ff8af92976c59eb12909a06cae271b86b427455d8ba82c493d7924c76ea4",
       "botAccess.overview.cell": "50a24934d9aa69b9dc2cedc67b7c0836f8725fafebb75dd644611e5b7e0a9c88",
       "botAccess.overview.toastEveryone": "72b06613c29e9b22c085b558319bca77a11c7c284d9a7b43f404332ebb16228c",
-      "botAccess.overview.toastPerson": "dff637324c0c60c5c24ef975849268f154d80ec82b56592a2125b272087c9763"
+      "botAccess.overview.toastPerson": "dff637324c0c60c5c24ef975849268f154d80ec82b56592a2125b272087c9763",
+      "mcp.claudeSkills.title": "e99f0ab7d217d6a2ba3df841bf2301e5746194def1e8150a84b16d127a4021a8",
+      "mcp.claudeSkills.desc": "4358601c7efb4595bf606d5dd4cc703cc77c2494805ec9aecca7624f0122f0d8",
+      "mcp.claudeSkills.aria": "bd6633c9fe16353f8007acda6f957543268fb5b07af38f973c0cce76efdeb106"
     },
     "tr": {
       "whop.description": "1a07cf04ef17029448d3781415cbac16d54e66b821907a40d94e0e6349710e70",

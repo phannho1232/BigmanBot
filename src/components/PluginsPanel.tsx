@@ -852,7 +852,7 @@ export function PluginsPanel() {
 
           {filter !== "connected" && category === null && (
             <div className={cn(filter === "all" && "mt-8 border-t border-hairline/30 pt-6", filter === "mcp" && "pt-1")}>
-              <McpServersPanel embedded hideWhop={filter === "all"} />
+              <McpServersPanel embedded hideWhop />
             </div>
           )}
         </div>
