@@ -238,6 +238,16 @@ const RAW_VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = [
     categories: ["Sales and CRM"],
   },
   {
+    slug: "vn-lazada-seller",
+    label: "Lazada Seller Center",
+    blurb: "Quản lý gian hàng, sản phẩm, đơn hàng và chiến dịch khuyến mãi trên Lazada",
+    url: "https://sellercenter.lazada.vn",
+    domain: "lazada.vn",
+    siteSuffix: "lazada.vn",
+    logo: null,
+    categories: ["Sales and CRM"],
+  },
+  {
     slug: "vn-meta-business",
     label: "Meta Business Suite",
     blurb: "Quản lý Fanpage Facebook, hộp thư khách hàng và quảng cáo Meta",
