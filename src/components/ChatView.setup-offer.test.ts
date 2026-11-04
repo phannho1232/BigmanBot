@@ -15,6 +15,7 @@ vi.mock("@/lib/cloud-guest", () => ({ useCanWriteIn: () => true, useReactor: () 
 vi.mock("./ModelPicker", () => ({ ModelPicker: () => null }));
 
 const { ChatView } = await import("./ChatView");
+const { setLocale } = await import("@/lib/i18n");
 const { BotEditorStore, initialState } = await import("@/state/store");
 
 const greeting: Message = { id: "g1", role: "bot", kind: "text", at: new Date(2026, 9, 3, 9, 0).getTime(), text: "Hi, I'm Pepper. What would you like me to do?", setupOffer: true };
@@ -41,6 +42,7 @@ const card = () => document.querySelector<HTMLElement>('[data-mid="g1"] [data-se
 const firstAnswer = () => card()?.querySelector<HTMLButtonElement>("[data-ask-choice]");
 
 beforeAll(() => {
+  setLocale("en");
   vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
     sent.push({ url: String(url), init });
     return Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } }));
@@ -50,6 +52,7 @@ beforeAll(() => {
   root = createRoot(container);
 });
 afterAll(() => {
+  setLocale("vi");
   root.unmount();
   vi.unstubAllGlobals();
 });

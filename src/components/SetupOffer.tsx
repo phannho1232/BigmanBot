@@ -8,7 +8,7 @@ import { Sparkles, X } from "lucide-react";
 
 import { currentReactor, useReactor } from "@/lib/cloud-guest";
 import { cn } from "@/lib/cn";
-import { t } from "@/lib/i18n";
+import { activeLocale, t } from "@/lib/i18n";
 import type { LocaleKey } from "@/locales";
 import { api, useStore, type Bot, type Message } from "@/state/store";
 import { moveChoiceFocus, returnFocusToComposer } from "./AskCard";
@@ -18,6 +18,22 @@ const LETTERS = "ABCDEFGH";
 const FALLBACK_CHOICES: LocaleKey[] = [
   "chat.setupCard.research", "chat.setupCard.watch", "chat.setupCard.inbox", "chat.setupCard.errands", "chat.setupCard.data",
 ];
+const EN_DEFAULT_CHOICE_TO_KEY = new Map<string, LocaleKey>([
+  ["Research and digging into topics", "chat.setupCard.research"],
+  ["Keeping an eye on things for me", "chat.setupCard.watch"],
+  ["Email, calendar and messages", "chat.setupCard.inbox"],
+  ["Bookings, shopping and errands", "chat.setupCard.errands"],
+  ["Data, spreadsheets and reports", "chat.setupCard.data"],
+]);
+const EN_GREETING = /^Hi(?: ([^,]+))?, I'm (.+)\. What would you like me to do\?$/;
+
+export function localizeSeededGreeting(text: string): string {
+  if (activeLocale() !== "vi") return text;
+  const match = EN_GREETING.exec(text);
+  if (!match) return text;
+  const [, person, name] = match;
+  return `Xin chào${person ? ` ${person}` : ""}, mình là ${name}. Bạn muốn mình giúp việc gì nào?`;
+}
 /** How long the card waits for answers being written after it first sees the wait, and how old a wait can be before it
  * is one a restart left behind: the server ends a wait within 7 s. */
 const PENDING_GRACE_MS = 8_000;
@@ -65,8 +81,15 @@ export function SetupOffer({ botId, threadId, message, transcript }: { botId: st
   const pending = waiting && !settled;
   const updating = rewriting && !settled;
   if (pending || updating) waitedOnce.current = true;
-  if (shown.current?.id !== message.id || (showedWait.current && !pending && !updating)) {
-    shown.current = { id: message.id, choices: message.setupChoices?.length ? message.setupChoices : FALLBACK_CHOICES.map((key) => t(key)) };
+  const locale = activeLocale();
+  if (shown.current?.id !== `${message.id}:${locale}` || (showedWait.current && !pending && !updating)) {
+    const mapped = message.setupChoices?.length
+      ? message.setupChoices.map((choice) => {
+          const key = EN_DEFAULT_CHOICE_TO_KEY.get(choice);
+          return key ? t(key) : choice;
+        })
+      : FALLBACK_CHOICES.map((key) => t(key));
+    shown.current = { id: `${message.id}:${locale}`, choices: mapped };
   }
   showedWait.current = pending || updating;
   const quiet = settled || updating;
