@@ -921,6 +921,7 @@ const CURATED: Array<ToolkitCard & { slug: CuratedConnectorSlug }> = [
   { slug: "canva", label: "Canva", blurb: "Thiết kế hình ảnh, banner và ấn phẩm truyền thông", domain: "canva.com", logo: null, categories: ["Design"] },
   { slug: "youtube", label: "YouTube", blurb: "Quản lý kênh video, mô tả chuẩn SEO và thống kê", domain: "youtube.com", logo: null, categories: ["Social"] },
   { slug: "facebook", label: "Facebook", blurb: "Đăng bài Fanpage, quản lý nội dung và tương tác", domain: "facebook.com", logo: null, categories: ["Social"] },
+  { slug: "instagram", label: "Instagram", blurb: "Đăng ảnh, Reels, quản lý bình luận và tin nhắn Instagram", domain: "instagram.com", logo: "https://logos.composio.dev/api/instagram", categories: ["Social"] },
   { slug: "notion", label: "Notion", blurb: "Quản lý trang ghi chú, tài liệu và cơ sở dữ liệu", domain: "notion.so", logo: null, categories: ["Productivity"] },
   { slug: "trello", label: "Trello", blurb: "Quản lý bảng công việc, thẻ nhiệm vụ và tiến độ", domain: "trello.com", logo: null, categories: ["Productivity"] },
   { slug: "figma", label: "Figma", blurb: "Xem thiết kế giao diện, tệp và ghi chú phản hồi", domain: "figma.com", logo: null, categories: ["Design"] },

@@ -1,6 +1,6 @@
 /** The Composio apps Connected apps lists when the catalog cannot be read. Product analytics names these apps, and only these. */
 export const CURATED_CONNECTOR_SLUGS = [
-  "googlesheets", "googledocs", "googledrive", "gmail", "googlecalendar", "canva", "youtube", "facebook",
+  "googlesheets", "googledocs", "googledrive", "gmail", "googlecalendar", "canva", "youtube", "facebook", "instagram",
   "notion", "trello", "figma", "google_analytics", "googlemeet", "zoom", "outlook", "one_drive", "microsoft_teams", "excel",
   "airtable", "jira", "slack", "discord", "github", "zapier", "dropbox", "hubspot", "linkedin",
 ] as const;
