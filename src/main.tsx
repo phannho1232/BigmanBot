@@ -41,11 +41,12 @@ async function chooseRoot(): Promise<React.ReactNode> {
   }
   const session = await readSessionState();
   if (session.kind === "unauthenticated") {
-    const pair = <PairPage initialCode={null} reason={endedBeforeReload() ? SESSION_ENDED_REASON : session.error} />;
+    const pair = <PairPage initialCode={takePairingCodeFromLocation()} reason={endedBeforeReload() ? SESSION_ENDED_REASON : session.error} />;
     return home ? <SignedOutAtHome bridge={home} fallback={pair} /> : pair;
   }
   forgetEndedSession();
-  if (session.kind === "loopback" && session.trust === "service") return <PairPage initialCode={null} reason={SERVICE_TRUST_REASON} />;
+  const initialCode = takePairingCodeFromLocation();
+  if (session.kind === "loopback" && session.trust === "service") return <PairPage initialCode={initialCode} reason={SERVICE_TRUST_REASON} />;
   if (location.pathname === "/desktop-viewer") {
     const { DesktopViewer } = await import("./components/DesktopViewer");
     return <DesktopViewer />;

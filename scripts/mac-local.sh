@@ -38,12 +38,12 @@ ensure_built() {
 
 open_pair_link() {
   cd "$ROOT_DIR"
-  local output link
-  output="$(node dist-server/openmausbot.js pair 2>&1 || true)"
+  local output code
+  output="$(node dist-server/openmausbot.js pair --port "$PORT" --label "Mac" 2>&1 || true)"
   echo "$output"
-  link="$(printf '%s\n' "$output" | grep -Eo 'http://127\.0\.0\.1:[0-9]+/pair#code=[A-Z0-9-]+' | head -n 1 || true)"
-  if [ -n "$link" ]; then
-    open "$link"
+  code="$(printf '%s\n' "$output" | sed -n 's/.*#code=\([A-Za-z0-9_-]*\).*/\1/p' | head -n 1 || true)"
+  if [ -n "$code" ]; then
+    open "http://127.0.0.1:$PORT/#code=$code"
   else
     open "http://127.0.0.1:$PORT/"
   fi
@@ -54,11 +54,7 @@ start_server() {
   if health_ok; then
     echo "Bigman Bot is already running at http://127.0.0.1:$PORT/ (PID $(server_pid))"
     if [ "${1:-}" = "--open" ]; then
-      if [ ! -f "$DATA_DIR/sessions.json" ]; then
-        open_pair_link
-      else
-        open "http://127.0.0.1:$PORT/"
-      fi
+      open_pair_link
     fi
     return 0
   fi
@@ -75,11 +71,7 @@ start_server() {
     if health_ok; then
       echo "Bigman Bot started at http://127.0.0.1:$PORT/ (PID $(server_pid))"
       if [ "${1:-}" = "--open" ]; then
-        if [ ! -f "$DATA_DIR/sessions.json" ]; then
-          open_pair_link
-        else
-          open "http://127.0.0.1:$PORT/"
-        fi
+        open_pair_link
       fi
       return 0
     fi

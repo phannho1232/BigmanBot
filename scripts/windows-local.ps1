@@ -1,5 +1,5 @@
 param(
-  [ValidateSet("start", "stop", "restart", "status", "autostart-on", "autostart-off", "desktop-shortcut")]
+  [ValidateSet("start", "stop", "restart", "pair", "status", "autostart-on", "autostart-off", "desktop-shortcut")]
   [string]$Action = "start",
   [int]$Port = 8799,
   [switch]$NoBrowser
@@ -63,13 +63,11 @@ function Stop-BigmanServer {
 function Open-BigmanBrowser([string]$NodeExe, [string]$CliJs) {
   $url = "http://127.0.0.1:$Port/"
   try {
-    $rawSessions = & $NodeExe $CliJs sessions --port $Port --json 2>$null
-    $sessions = @($rawSessions | ConvertFrom-Json)
-    if (-not $sessions -or $sessions.Count -eq 0) {
-      $pairOut = (& $NodeExe $CliJs pair --port $Port --label "Windows PC" 2>$null) -join "`n"
-      if ($pairOut -match "(http://127\.0\.0\.1:$Port/pair#code=[A-Za-z0-9_-]+)") {
-        $url = $Matches[1]
-      }
+    $pairOut = (& $NodeExe $CliJs pair --port $Port --label "Windows PC" 2>$null) -join "`n"
+    if ($pairOut -match "code=([A-Za-z0-9_-]+)") {
+      $code = $Matches[1]
+      $url = "http://127.0.0.1:$Port/#code=$code"
+      Write-Output "Pairing code: $code"
     }
   } catch {}
   Start-Process $url | Out-Null
@@ -135,6 +133,11 @@ switch ($Action) {
   "restart" {
     Stop-BigmanServer
     Start-BigmanServer
+  }
+  "pair" {
+    $nodeExe = Resolve-Node24
+    $cliJs = Join-Path $RepoRoot "dist-server\openmausbot.js"
+    Open-BigmanBrowser -NodeExe $nodeExe -CliJs $cliJs
   }
   "status" {
     $h = Get-ServerHealth
