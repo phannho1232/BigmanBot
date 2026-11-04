@@ -194,6 +194,16 @@ const RAW_VIETNAM_BROWSER_APPS: readonly VietnamBrowserApp[] = [
     categories: ["Communication"],
   },
   {
+    slug: "vn-tiktok-studio",
+    label: "TikTok (Kênh & TikTok Studio)",
+    blurb: "Đăng video, gắn giỏ hàng Affiliate, xem phân tích kênh và quản lý bình luận",
+    url: "https://www.tiktok.com/tiktokstudio",
+    domain: "tiktok.com",
+    siteSuffix: "tiktok.com",
+    logo: "https://logos.composio.dev/api/tiktok",
+    categories: ["Social"],
+  },
+  {
     slug: "vn-tiktok-seller",
     label: "TikTok Shop Seller VN",
     blurb: "Quản lý đơn hàng, sản phẩm, Flash Sale và sức khỏe gian hàng",
@@ -325,8 +335,7 @@ export function isVietnamAppConnected(app: VietnamBrowserApp, connectedEntries: 
     const clean = entry.toLowerCase().replace(/^www\./, "");
     return clean === app.slug
       || clean === appHost
-      || clean.endsWith(`.${appHost}`)
-      || (appHost === app.siteSuffix && (clean === app.siteSuffix || clean.endsWith(`.${app.siteSuffix}`)));
+      || (appHost !== "tiktok.com" && (clean.endsWith(`.${appHost}`) || (app.siteSuffix !== "tiktok.com" && (clean === app.siteSuffix || clean.endsWith(`.${app.siteSuffix}`)))));
   });
 }
 
@@ -351,7 +360,7 @@ export function noteVietnamBrowserSite(slugOrUrl: string): string[] {
   if (!host || host === "id.zalo.me") return readConnectedVietnamSites();
   const matched = VIETNAM_BROWSER_APPS.filter((app) => {
     const appHost = appUrlHost(app);
-    return host === appHost || host.endsWith(`.${appHost}`) || host === app.siteSuffix;
+    return host === appHost || (appHost !== "tiktok.com" && (host.endsWith(`.${appHost}`) || (app.siteSuffix !== "tiktok.com" && host === app.siteSuffix)));
   });
   if (matched.length === 0) return readConnectedVietnamSites();
   const current = readConnectedVietnamSites();
@@ -371,7 +380,7 @@ export function removeVietnamBrowserSite(app: VietnamBrowserApp): string[] {
   const current = readConnectedVietnamSites();
   const next = current.filter((entry) => {
     const clean = entry.toLowerCase().replace(/^www\./, "");
-    return clean !== app.slug && clean !== appHost && clean !== app.siteSuffix && !clean.endsWith(`.${app.siteSuffix}`);
+    return clean !== app.slug && clean !== appHost;
   });
   return next.length !== current.length ? writeConnectedVietnamSites(next) : current;
 }
