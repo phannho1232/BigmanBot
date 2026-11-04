@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { setLocale } from "@/lib/i18n";
 
 import {
   ApprovalModeSelector,
@@ -8,6 +9,10 @@ import {
   approvalModeOptionsFor,
   approvalModeSelectionRequiresLocalDesktop,
 } from "./ApprovalModeSelector";
+
+beforeEach(() => {
+  setLocale("en");
+});
 
 describe("approval mode selector", () => {
   it("lists the approval levels with their plain-language copy", () => {

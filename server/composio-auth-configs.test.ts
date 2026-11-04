@@ -382,7 +382,7 @@ describe("custom auth configs made in the Composio dashboard", () => {
     const failed = await callTool(cfg, "BUFFER_LIST_POSTS");
     expect(failed.result.content[0]!.text).toContain(NO_MANAGED_AUTH("buffer"));
     expect(failed.result.content[1]!.text).toBe(
-      "OpenMausBot note: buffer has no Composio-managed sign-in. buffer connects with the person's own Composio auth config "
+      "Bigman Bot note: buffer has no Composio-managed sign-in. buffer connects with the person's own Composio auth config "
       + 'ac_buffer_new. Call COMPOSIO_MANAGE_CONNECTIONS with toolkits ["buffer"] to show the person a card that connects '
       + "it, then end the turn. Do not retry this call before that.",
     );
@@ -416,7 +416,7 @@ describe("custom auth configs made in the Composio dashboard", () => {
         + "it uses it. Check that your Composio project key may edit auth configs. Composio said: This API key may not edit auth configs",
     });
     const reply = await callTool(cfg, "XERO_LIST_INVOICES");
-    expect(reply.result.content[1]!.text).toMatch(/^OpenMausBot note: OpenMausBot could not turn on Tool Router for your xero auth config/);
+    expect(reply.result.content[1]!.text).toMatch(/^Bigman Bot note: OpenMausBot could not turn on Tool Router for your xero auth config/);
   });
 });
 
@@ -436,8 +436,8 @@ describe("OpenMausBot's managed connected apps", () => {
     expect(calls.slice(before)).toEqual([]);
 
     const reply = await callTool(managed, "XERO_LIST_INVOICES");
-    expect(reply.result.content[1]!.text).toContain("OpenMausBot's built-in connected apps cannot use. Tell the person: add their own Composio project key in Settings → API keys");
-    expect(reply.result.content[1]!.text).toContain("OpenMausBot then picks that auth config up on its own");
+    expect(reply.result.content[1]!.text).toContain("Bigman Bot's built-in connected apps cannot use. Tell the person: add their own Composio project key in Settings → API keys");
+    expect(reply.result.content[1]!.text).toContain("Bigman Bot then picks that auth config up on its own");
     expect(calls.slice(before).some((call) => call.path.startsWith("/api/"))).toBe(false);
   });
 });

@@ -6,11 +6,9 @@ import {
   Check,
   CircleUserRound,
   Cloud,
-  Download,
   FolderOpen,
   Gauge,
   Info,
-  HelpCircle,
   Keyboard,
   Laptop,
   LifeBuoy,
@@ -25,7 +23,6 @@ import {
 
 import { AccountMoveStatus, useAccountMove, type AccountMoveKind } from "./AccountMove";
 import { InitialsAvatar } from "./Avatar";
-import { DiscordIcon } from "./DiscordIcon";
 import { AboutDialog } from "./AboutDialog";
 import { PhoneAppDialog } from "./PhoneAppDialog";
 import { CloudTile } from "./cloud-buy/parts";
@@ -301,33 +298,24 @@ export function phoneMenuItems({
   destinations,
   connected,
   onConnect,
-  onGetApp,
 }: {
   destinations: PhoneDestination[];
   connected: boolean;
   onConnect: (destination: PhoneDestination) => void;
-  onGetApp: () => void;
+  onGetApp?: () => void;
 }): SidebarMenuItem[] {
-  return [
-    ...destinations.map((destination) => ({
-      key: destination.id === "cloud" ? "connect-phone-cloud" : "connect-phone",
-      label: t("sidebar.menu.connectPhone"),
-      subtitle: destination.team ? t("sidebar.menu.connectPhone.team", { team: destination.team }) : t(destination.subtitleKey),
-      ...(destination.noteKey ? { note: t(destination.noteKey) } : {}),
-      icon: <Smartphone size={18} />,
-      trailing:
-        destination.id === "here" && destination.target === "computer" && connected ? (
-          <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-success" />
-        ) : undefined,
-      onSelect: () => onConnect(destination),
-    } satisfies SidebarMenuItem)),
-    {
-      key: "phone-app",
-      label: t("sidebar.menu.getPhoneApp"),
-      icon: <Download size={18} />,
-      onSelect: onGetApp,
-    },
-  ];
+  return destinations.map((destination) => ({
+    key: destination.id === "cloud" ? "connect-phone-cloud" : "connect-phone",
+    label: t("sidebar.menu.connectPhone"),
+    subtitle: destination.team ? t("sidebar.menu.connectPhone.team", { team: destination.team }) : t(destination.subtitleKey),
+    ...(destination.noteKey ? { note: t(destination.noteKey) } : {}),
+    icon: <Smartphone size={18} />,
+    trailing:
+      destination.id === "here" && destination.target === "computer" && connected ? (
+        <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-success" />
+      ) : undefined,
+    onSelect: () => onConnect(destination),
+  } satisfies SidebarMenuItem));
 }
 
 export function toolMenuItems({ activeView, automationsNeedYou, onAutomations, onTeamMap, onFiles, archived }: {
@@ -389,14 +377,8 @@ export function placeMenuItems(place: Pick<WorkspacePlace, "bridge" | "current" 
   ];
 }
 
-export function simplePhoneItems({ connected, onGetApp }: { connected: boolean; onGetApp: () => void }): SidebarMenuItem[] {
-  return [{
-    key: "phone-app",
-    label: t("sidebar.menu.getPhoneApp"),
-    icon: <Smartphone size={18} />,
-    trailing: connected ? <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-success" /> : undefined,
-    onSelect: onGetApp,
-  }];
+export function simplePhoneItems(_options?: { connected?: boolean; onGetApp?: () => void }): SidebarMenuItem[] {
+  return [];
 }
 
 type PlanWindowUse = { available: boolean; usedPercent: number | null; resetsAt: string | null };
@@ -460,8 +442,6 @@ export function profileMenuItems({
   onSettings,
   onShortcuts,
   onAbout,
-  onHelp,
-  onFeedback,
   onAccount,
 }: {
   phone: SidebarMenuItem[];
@@ -477,13 +457,11 @@ export function profileMenuItems({
   onSettings: () => void;
   onShortcuts: () => void;
   onAbout: () => void;
-  onHelp: () => void;
-  onFeedback: () => void;
+  onHelp?: () => void;
+  onFeedback?: () => void;
   onAccount: () => void;
 }): SidebarMenuItem[] {
   const help: SidebarMenuItem[] = [
-    { key: "help", label: t("sidebar.menu.help"), icon: <HelpCircle size={18} />, onSelect: onHelp },
-    { key: "feedback", label: t("sidebar.menu.feedback"), icon: <DiscordIcon size={17} />, onSelect: onFeedback },
     {
       key: "shortcuts",
       label: t("sidebar.menu.shortcuts"),

@@ -2,12 +2,7 @@ import { useEffect, useRef } from "react";
 
 import {
   APP_NAME,
-  APP_REPOSITORY,
-  DOCS_URL,
-  LICENSE_URL,
-  RELEASES_URL,
   appVersion,
-  openExternalLink,
   platformLabel,
 } from "@/lib/app-links";
 import { productName } from "@/lib/brand";
@@ -68,12 +63,6 @@ export function AboutDialog({ open, onClose }: { open: boolean; onClose: () => v
         <p className="mt-3 text-[13px] leading-relaxed text-ink-secondary">
           {t("i18nExt.g3.about.tagline", { appName: APP_NAME })}
         </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[13px]">
-          <AboutLink href={APP_REPOSITORY} label="GitHub" />
-          <AboutLink href={DOCS_URL} label={t("i18nExt.g3.about.docs")} />
-          <AboutLink href={RELEASES_URL} label={t("i18nExt.g3.about.releases")} />
-          <AboutLink href={LICENSE_URL} label={t("i18nExt.g3.about.license")} />
-        </div>
         <button
           ref={closeRef}
           type="button"
@@ -84,17 +73,5 @@ export function AboutDialog({ open, onClose }: { open: boolean; onClose: () => v
         </button>
       </div>
     </div>
-  );
-}
-
-function AboutLink({ href, label }: { href: string; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={() => void openExternalLink(href)}
-      className="text-accent hover:underline"
-    >
-      {label}
-    </button>
   );
 }
