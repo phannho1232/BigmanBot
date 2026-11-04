@@ -10,10 +10,19 @@ import { useStore, type InstanceInfo } from "@/state/store";
 import type { TraceDetail, TraceNode, TraceRootSummary, TraceTotals } from "../../../shared/usage-trace";
 import { appName, StepIcon, ToolIcon, TurnAvatar, useAppCards } from "./TraceIcon";
 
+const LEGACY_THINKING_SUFFIX = /^(.+)-(low|medium|high)$/i;
+
 export function modelName(model: string, instances: readonly InstanceInfo[]): string {
   for (const instance of instances) {
     const label = instance.models?.options?.find((option) => option.id === model)?.label;
     if (label) return label;
+  }
+  const base = LEGACY_THINKING_SUFFIX.exec(model)?.[1];
+  if (base) {
+    for (const instance of instances) {
+      const label = instance.models?.options?.find((option) => option.id === base)?.label;
+      if (label) return label;
+    }
   }
   return model;
 }

@@ -3,6 +3,8 @@
 // access, a viewer that may operate sizes the page while it only watches, a larger frame cap is sent in place and a
 // reconnect opens with the newest size and cap, and OpenMausBot's own messages are passed on.
 
+import { t } from "./i18n";
+
 /** The browser's host cannot run Chrome until it is set up; the close reason names the fix. */
 export const PREVIEW_STREAM_HOST_SETUP_CLOSE_CODE = 4503;
 export const PREVIEW_STREAM_TAB_GONE_CODE = 4404;
@@ -69,16 +71,16 @@ export interface PreviewStreamControl {
 /** Status line shown above a viewer; `null` control means the socket is not connected. */
 export const previewStreamControlLabel = (control: PreviewStreamControl | null): string =>
   !control
-    ? "Connecting..."
+    ? t("i18nExt.g1.browser.stream.connecting")
     : !control.canOperate
-      ? "Read-only"
+      ? t("i18nExt.g1.browser.stream.readOnly")
       : control.controller === "you"
-        ? "You have control"
+        ? t("i18nExt.g1.browser.pill.youHaveControl")
         : control.controller === "agent"
-          ? "Bot has control"
+          ? t("i18nExt.g1.browser.stream.botHasControl")
           : control.controller === "another-viewer"
-            ? "Another viewer has control"
-            : "Watching";
+            ? t("i18nExt.g1.browser.stream.anotherViewerHasControl")
+            : t("i18nExt.g1.browser.pill.watching");
 
 const isPreviewStreamDialog = (value: unknown): value is PreviewStreamControl["dialog"] =>
   value === null ||
@@ -184,7 +186,7 @@ export async function uploadPreviewStreamFiles(
     try {
       message = (JSON.parse(text) as { error?: string }).error ?? text;
     } catch {}
-    throw new Error(message || "The upload was refused.");
+    throw new Error(message || t("i18nExt.g1.browser.stream.uploadRefused"));
   }
 }
 
@@ -549,5 +551,5 @@ const decodeHostSetup = (reason: string): PreviewStreamHostSetup => {
 /** What a viewer tells the person; `command` is shown beside it, ready to copy. */
 export const previewStreamHostSetupMessage = (setup: PreviewStreamHostSetup) =>
   setup.need === "sandbox"
-    ? "This server's host blocks the sandbox its browser runs in. Run this once on the host, then try again:"
-    : "This server's host is missing libraries its browser needs. Run this once on the host, then try again:";
+    ? t("i18nExt.g1.browser.stream.hostSetupSandbox")
+    : t("i18nExt.g1.browser.stream.hostSetupLibraries");

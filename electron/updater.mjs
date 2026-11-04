@@ -146,7 +146,7 @@ export function attachUpdaterWindow(mainWindow) {
 
 /** `signals` (quietSignals): what tells a quiet moment; without them a downloaded update installs only on Restart or quit. */
 export function startUpdater(signals = null) {
-  if (!app.isPackaged) {
+  if (!app.isPackaged || !existsSync(join(process.resourcesPath, "app-update.yml"))) {
     updaterCoordinator = null;
     setState({ status: "idle" });
     return;

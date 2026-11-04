@@ -76,7 +76,7 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
       type="button"
       disabled={busy}
       aria-pressed={!showsImage && body === id}
-      aria-label={`Use the ${name} body`}
+      aria-label={t("i18nExt.g3.avatarEditorCard.useBody", { name })}
       title={name}
       onClick={() => pickMascot({ mascotBody: id })}
       className={cn(
@@ -144,7 +144,7 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
                   type="button"
                   disabled={busy}
                   aria-pressed={bot.color === color}
-                  aria-label={`Use ${color} mascot color`}
+                  aria-label={t("i18nExt.g3.avatarEditorCard.useColor", { color: t(MAUS_COLOR_LABEL[color]) })}
                   title={t(MAUS_COLOR_LABEL[color])}
                   onClick={() => pickMascot({ color })}
                   className={cn(
@@ -252,7 +252,7 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
                   type="button"
                   onClick={removeImage}
                   disabled={busy}
-                  aria-label="Remove custom avatar image"
+                  aria-label={t("i18nExt.g3.avatarEditorCard.removeCustomAria")}
                   title={t("botPanel.avatar.remove")}
                   className="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-secondary hover:bg-control hover:text-danger disabled:opacity-50"
                 >

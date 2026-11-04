@@ -42,7 +42,7 @@ describe("BotProfileAvatarCard body picker", () => {
   it("renders one option per body catalog entry, labeled by name", () => {
     const markup = renderCard(makeBot());
 
-    expect(markup).toContain(">Body<");
+    expect(markup).toContain(">Kiểu dáng linh vật<");
     for (const id of MASCOT_BODY_IDS) {
       expect(markup).toContain(`aria-label="Use the ${MASCOT_BODIES[id].name} body"`);
     }
@@ -92,7 +92,7 @@ describe("BotProfileAvatarCard body picker", () => {
   it("hides the body picker for flat crops that have no mascot to wear one", () => {
     const markup = renderCard(makeBot({ avatarCrop: "circle" }));
 
-    expect(markup).not.toContain(">Body<");
+    expect(markup).not.toContain(">Kiểu dáng linh vật<");
     expect(markup).not.toContain(`aria-label="Use the ${MASCOT_BODIES.cursor.name} body"`);
   });
 
@@ -100,7 +100,7 @@ describe("BotProfileAvatarCard body picker", () => {
     for (const crop of ["rounded", "square"] as const) {
       const markup = renderCard(makeBot({ avatarCrop: crop }));
 
-      expect(markup).not.toContain(">Body<");
+      expect(markup).not.toContain(">Kiểu dáng linh vật<");
     }
   });
 });

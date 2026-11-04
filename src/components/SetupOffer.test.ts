@@ -1,8 +1,9 @@
 import { Children, createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setLocale } from "@/lib/i18n";
 import type { Bot, Message } from "@/state/store";
-import { SetupOffer, SetupRequestChip, setupRequestPlaceholder } from "./SetupOffer";
+import { localizeSeededGreeting, SetupOffer, SetupRequestChip, setupRequestPlaceholder } from "./SetupOffer";
 
 const fixture = vi.hoisted(() => ({ values: [] as unknown[], index: 0, api: vi.fn(), focus: vi.fn(), dispatch: vi.fn(), bots: [] as unknown[], instances: [] as unknown[], reactor: "user" }));
 vi.mock("react", async (original) => ({
@@ -55,6 +56,7 @@ function renderChip(of: Bot) {
 }
 
 beforeEach(() => {
+  setLocale("en");
   fixture.values = [];
   fixture.api.mockReset().mockResolvedValue({ ok: true, message: CANNED });
   fixture.focus.mockReset();
@@ -62,6 +64,9 @@ beforeEach(() => {
   fixture.bots = [bot()];
   fixture.instances = [{ instanceId: "claude", capabilities: { agentsMcp: true } }];
   fixture.reactor = "user";
+});
+afterEach(() => {
+  setLocale("vi");
 });
 
 describe("the setup card under a new bot's greeting", () => {
@@ -76,6 +81,20 @@ describe("the setup card under a new bot's greeting", () => {
 
   it("offers its own answers on an older greeting that carries none", () => {
     expect(renderOffer(greeting).choices.map((node) => label(node).split("|")[1])).toEqual(["Research and digging into topics", "Keeping an eye on things for me", "Email, calendar and messages", "Bookings, shopping and errands", "Data, spreadsheets and reports", "Something else"]);
+  });
+
+  it("localizes seeded English greeting and default setup choices when locale is vi", () => {
+    setLocale("vi");
+    expect(localizeSeededGreeting("Hi, I'm Cocoa. What would you like me to do?")).toBe("Xin chào, mình là Cocoa. Bạn muốn mình giúp việc gì nào?");
+    const seededEn = { ...greeting, setupChoices: ["Research and digging into topics", "Keeping an eye on things for me", "Email, calendar and messages", "Bookings, shopping and errands", "Data, spreadsheets and reports"] } as Message;
+    expect(renderOffer(seededEn).choices.map((node) => label(node).split("|")[1])).toEqual([
+      "Nghiên cứu và tìm hiểu chuyên sâu các chủ đề",
+      "Theo dõi và giám sát công việc cho tôi",
+      "Email, lịch làm việc và tin nhắn",
+      "Đặt lịch, mua sắm và việc vặt",
+      "Dữ liệu, bảng tính và báo cáo",
+      "Việc khác",
+    ]);
   });
 
   it("is not shown for a bot given a role or instructions, when the AI cannot set the bot up, or once closed", () => {

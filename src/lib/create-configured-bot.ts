@@ -4,14 +4,15 @@ import type { BotCreationDraft } from "./bot-creation-draft";
 import { imageAttachmentFromFile } from "./composer-attachments";
 import type { BotVisibility } from "../../shared/wire";
 import { botAvatarUrlFromStoredPath } from "../../shared/bot-avatar";
+import { t } from "@/lib/i18n";
 
 export async function preparedBotTemplate(draft: BotCreationDraft) {
   const template = draft.export();
   if (template.profile.avatarUrl?.startsWith("blob:")) {
-    if (!draft.avatarFile) throw new Error("Choose the avatar image again");
+    if (!draft.avatarFile) throw new Error(t("i18nExt.g3.createBot.chooseAvatarAgain"));
     const uploaded = await imageAttachmentFromFile(draft.avatarFile);
     const avatarUrl = uploaded && botAvatarUrlFromStoredPath(uploaded.path);
-    if (!avatarUrl) throw new Error("Could not store the avatar image");
+    if (!avatarUrl) throw new Error(t("i18nExt.g3.createBot.storeAvatarError"));
     template.profile.avatarUrl = avatarUrl;
   }
   return template;
@@ -28,7 +29,7 @@ export async function createConfiguredBot(
 ): Promise<{ bot: Bot; warnings: string[] }> {
   const template = await preparedBotTemplate(draft);
   const { chiefOfStaff, managedSections, toolScope, modelSelection, ...profile } = template.profile;
-  if (!profile.name?.trim()) throw new Error("Give the bot a name");
+  if (!profile.name?.trim()) throw new Error(t("i18nExt.g3.createBot.giveNameError"));
   const preset = draft.preset;
   const chosenAi = modelSelection?.instanceId && modelSelection.model ? { modelSelection, requireAvailableModel: true } : {};
   const response = await request<{ bot: Bot }>("/api/bots", {
@@ -47,14 +48,14 @@ export async function createConfiguredBot(
     bot = { ...bot, ...patched };
     if (profile.approvalMode === "full" || profile.approvalMode === "custom") {
       if (patched.approvalMode !== profile.approvalMode) {
-        throw new Error("The bot's requested approval level was not granted");
+        throw new Error(t("i18nExt.g3.createBot.botApprovalNotGranted"));
       }
       const granted = await persistTaskApproval(bot.id, bot.threadId, {
         approvalMode: profile.approvalMode,
         acknowledgeLocalAuto: draft.consent.acknowledgeLocalAuto === true,
       }, approvals, request);
       if (granted.approvalMode !== profile.approvalMode) {
-        throw new Error("The initial thread's requested approval level was not granted");
+        throw new Error(t("i18nExt.g3.createBot.threadApprovalNotGranted"));
       }
     }
     for (const [path, text] of Object.entries(template.memory)) {
@@ -82,7 +83,7 @@ export async function createConfiguredBot(
     try { await request(`/api/bots/${bot.id}`, { method: "DELETE" }); }
     catch { cleanup.push(`bot ${bot.name} (${bot.id})`); }
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(cleanup.length ? `${message}. Cleanup failed for ${cleanup.join(", ")}; remove them before retrying.` : message);
+    throw new Error(cleanup.length ? t("i18nExt.g3.createBot.cleanupFailed", { message, items: cleanup.join(", ") }) : message);
   }
   // Creation is complete: never delete a bot whose routine may have run, undo a Chief handover, or invite a duplicate retry.
   if (chiefOfStaff) {
@@ -92,12 +93,12 @@ export async function createConfiguredBot(
       });
       bot = { ...bot, ...result.bot };
     } catch (error) {
-      warnings.push(`Review this bot's Chief of Staff setting: ${error instanceof Error ? error.message : String(error)}`);
+      warnings.push(t("i18nExt.g3.createBot.reviewChiefSetting", { error: error instanceof Error ? error.message : String(error) }));
     }
   }
   for (const routine of routines.filter(routine => routine.enabled)) {
     try { await request(`/api/routines/${routine.id}`, { method: "PATCH", body: JSON.stringify({ enabled: true }) }); }
-    catch (error) { warnings.push(`Could not activate a routine: ${error instanceof Error ? error.message : String(error)}`); }
+    catch (error) { warnings.push(t("i18nExt.g3.createBot.activateRoutineError", { error: error instanceof Error ? error.message : String(error) })); }
   }
   return { bot, warnings };
 }

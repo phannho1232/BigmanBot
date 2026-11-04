@@ -1,9 +1,15 @@
 import { atLocalTime } from "@/lib/routine-calendar";
+import { activeLocale } from "@/lib/i18n";
 import type { RoutineSchedule } from "@/lib/routines";
 import { cronScheduleLabel } from "../../shared/cron-label";
 import { limitResetWhen } from "@/lib/limit-resets";
 
 export const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const DAY_NAMES_VI = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"] as const;
+
+export function dayName(day: number): string {
+  return activeLocale() === "vi" ? (DAY_NAMES_VI[day] ?? DAY_NAMES[day]!) : DAY_NAMES[day]!;
+}
 
 export function niceTime(at: number): string {
   return new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -20,12 +26,23 @@ export function whenLabel(at: number): string {
 }
 
 export function durationLabel(minutes: number): string {
+  if (activeLocale() === "vi") {
+    if (minutes < 60) return `${minutes} phút`;
+    if (minutes % 60 === 0) return `${minutes / 60} giờ`;
+    return `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`;
+  }
   if (minutes < 60) return `${minutes} min`;
   if (minutes % 60 === 0) return `${minutes / 60} hr`;
   return `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
 }
 
 export function intervalLabel(minutes: number): string {
+  if (activeLocale() === "vi") {
+    if (minutes < 60) return `Mỗi ${minutes} phút`;
+    if (minutes === 60) return "Mỗi giờ";
+    if (minutes % 60 === 0) return `Mỗi ${minutes / 60} giờ`;
+    return `Mỗi ${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`;
+  }
   if (minutes < 60) return `Every ${minutes} min`;
   if (minutes === 60) return "Every hour";
   if (minutes % 60 === 0) return `Every ${minutes / 60} hr`;
@@ -33,11 +50,12 @@ export function intervalLabel(minutes: number): string {
 }
 
 function intervalRestrictions(schedule: Extract<RoutineSchedule, { type: "interval" }>): string[] {
+  const isVi = activeLocale() === "vi";
   const details: string[] = [];
   if (schedule.weekdays && schedule.weekdays.length < 7) {
     details.push(schedule.weekdays.join(",") === "1,2,3,4,5"
-      ? "weekdays"
-      : schedule.weekdays.map((day) => DAY_NAMES[day]).join(", "));
+      ? (isVi ? "ngày làm việc" : "weekdays")
+      : schedule.weekdays.map((day) => dayName(day)).join(", "));
   }
   if (schedule.window) {
     const wallTime = (time: string) => {
@@ -47,7 +65,7 @@ function intervalRestrictions(schedule: Extract<RoutineSchedule, { type: "interv
     details.push(`${wallTime(schedule.window.start)}–${wallTime(schedule.window.end)}`);
   }
   if (schedule.endsAt != null) {
-    details.push(`until ${new Date(schedule.endsAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}`);
+    details.push(`${isVi ? "đến" : "until"} ${new Date(schedule.endsAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}`);
   }
   return details;
 }
@@ -59,15 +77,16 @@ export function scheduleLabel(schedule: RoutineSchedule | { type: "once"; at: nu
   if (schedule.type === "interval") {
     return [intervalLabel(schedule.everyMinutes), ...intervalRestrictions(schedule)].join(" · ");
   }
+  const isVi = activeLocale() === "vi";
   const days = schedule.weekdays;
   const label = days.length === 7
-    ? "Every day"
+    ? (isVi ? "Mỗi ngày" : "Every day")
     : days.join(",") === "1,2,3,4,5"
-      ? "Every weekday"
+      ? (isVi ? "Mỗi ngày làm việc" : "Every weekday")
       : days.length === 1
-        ? `Weekly on ${DAY_NAMES[days[0]!]}`
-        : days.map((day) => DAY_NAMES[day]).join(", ");
-  return `${label} at ${niceTime(atLocalTime(Date.now(), schedule.time))}`;
+        ? (isVi ? `Hàng tuần vào ${dayName(days[0]!)}` : `Weekly on ${DAY_NAMES[days[0]!]}`)
+        : days.map((day) => dayName(day)).join(", ");
+  return `${label} ${isVi ? "lúc" : "at"} ${niceTime(atLocalTime(Date.now(), schedule.time))}`;
 }
 
 export function scheduleSentence(schedule: RoutineSchedule): string {

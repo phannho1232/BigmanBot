@@ -98,9 +98,9 @@ describe("calendar event details drawer", () => {
     })));
     expect(html).toContain(t("routines.drawer.lead"));
     expect(html).toContain("Runner");
-    expect(html).not.toContain(">Group<");
-    expect(html).not.toContain("Group unavailable");
-    expect(html).not.toContain("Open group");
+    expect(html).not.toContain(`>${t("routines.drawer.group")}<`);
+    expect(html).not.toContain(t("routines.drawer.groupUnavailable"));
+    expect(html).not.toContain(t("routines.drawer.openGroup"));
   });
 
   it("shows a goal run that had no group as the bot's own, even after the routine was given a room", () => {
@@ -111,7 +111,7 @@ describe("calendar event details drawer", () => {
       bots: [bot], onClose: vi.fn(), onEdit: vi.fn(), onCallChanged: vi.fn(), onOpenRoom: vi.fn(),
     })));
     expect(html).toContain("Runner");
-    expect(html).not.toContain("Group unavailable");
+    expect(html).not.toContain(t("routines.drawer.groupUnavailable"));
   });
 
   it("names its close button", () => {
@@ -130,7 +130,7 @@ describe("calendar event editor", () => {
       seed: { kind: "routine", at: 1, durationMinutes: 30, botIds: [bot.id], routine: orphaned },
       bots: [bot], onClose: vi.fn(), onSavedCall: vi.fn(),
     })));
-    expect(html).toContain("Room no longer exists");
-    expect(html).toMatch(/<button[^>]*\bdisabled=""[^>]*>(?:(?!<\/button>).)*Save<\/button>/s);
+    expect(html).toContain(t("routines.editor.roomGone"));
+    expect(html).toMatch(new RegExp(`<button[^>]*\\bdisabled=""[^>]*>(?:(?!<\\/button>).)*${t("automations.editor.app.save")}<\\/button>`, "s"));
   });
 });

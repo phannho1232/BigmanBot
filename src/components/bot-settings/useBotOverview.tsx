@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 
 import { api, useStore, type Bot } from "@/state/store";
 import type { BotOverview } from "@/lib/bot-overview-types";
+import { t } from "@/lib/i18n";
 import { ConfirmDialog } from "../ConfirmDialog";
 import type { HistoryRow } from "./HistorySection";
 import type { PromptPreviewData } from "./PromptPreview";
@@ -169,9 +170,9 @@ export function HistoryRollbackDialog({ history, returnFocusRef }: {
   return (
     <ConfirmDialog
       open={rollbackTarget !== null}
-      title="Restore previous instructions?"
-      body="Replaces current SOUL with the version before this change. Current version stays in History."
-      confirmLabel="Restore instructions"
+      title={t("i18nExt.g0.restoreInstructionsTitle")}
+      body={t("i18nExt.g0.restoreInstructionsBody")}
+      confirmLabel={t("i18nExt.g0.restoreInstructionsConfirm")}
       tone="neutral"
       returnFocusRef={returnFocusRef}
       onCancel={() => setRollbackTarget(null)}

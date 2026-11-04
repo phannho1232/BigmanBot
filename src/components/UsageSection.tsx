@@ -76,7 +76,27 @@ function useUsageGroups(range: { from: string; to: string }, groupBy: UsageGroup
 
 export function GroupBars({ groupBy, groups }: { groupBy: UsageGroupBy; groups: readonly UsageGroup[] }) {
   const { state } = useStore();
-  const top = [...groups].sort((a, b) => headlineTokens(b) - headlineTokens(a)).slice(0, 6);
+  const merged = useMemo(() => {
+    if (groupBy !== "model") return groups;
+    const byName = new Map<string, UsageGroup>();
+    for (const group of groups) {
+      const resolved = modelName(group.label, state.instances);
+      const existing = byName.get(resolved);
+      if (!existing) {
+        byName.set(resolved, { ...group, label: resolved });
+      } else {
+        existing.turns += group.turns;
+        existing.input += group.input;
+        existing.output += group.output;
+        existing.cachedInput += group.cachedInput;
+        if (hasFiniteCost(group.costUsd)) {
+          existing.costUsd = (hasFiniteCost(existing.costUsd) ? existing.costUsd : 0) + group.costUsd;
+        }
+      }
+    }
+    return [...byName.values()];
+  }, [groupBy, groups, state.instances]);
+  const top = [...merged].sort((a, b) => headlineTokens(b) - headlineTokens(a)).slice(0, 6);
   const max = Math.max(...top.map(headlineTokens), 0);
   if (!top.length || max <= 0) return <p className="text-[13px] text-ink-secondary">{t("usage.page.whereEmpty")}</p>;
   return (

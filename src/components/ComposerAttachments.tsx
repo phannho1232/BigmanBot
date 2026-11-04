@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ClipboardPaste, File as FileIcon, Image as ImageIcon, LoaderCircle, MessageSquareText, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { t } from "@/lib/i18n";
 import {
   attachmentImageUrl,
   intakeFiles,
@@ -109,7 +110,7 @@ export function ComposerAttachments({
       {dragging && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-10">
           <div className="rounded-2xl border-2 border-dashed border-accent/70 bg-panel/90 px-8 py-6 text-[14px] font-medium text-ink shadow-2xl">
-            Drop to attach
+            {t("i18nExt.g2.attachments.dropToAttach")}
           </div>
         </div>
       )}
@@ -119,7 +120,7 @@ export function ComposerAttachments({
           <span className="min-w-0 flex-1">{notice}</span>
           <button
             onClick={() => onNotice(null)}
-            aria-label="Dismiss"
+            aria-label={t("i18nExt.g2.attachments.dismiss")}
             className="shrink-0 rounded p-0.5"
           >
             <X size={12} />
@@ -155,11 +156,11 @@ export function ComposerAttachments({
                   type="button"
                   onClick={() => onDisplayInChatBox(a)}
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-accent/25 bg-accent/5 px-2 py-1.5 text-[11px] font-medium text-accent-text transition-colors hover:border-accent/50 hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/60"
-                  aria-label="Display pasted text in chat box"
-                  title="Display in chat box"
+                  aria-label={t("i18nExt.g2.attachments.displayInChatBoxAria")}
+                  title={t("i18nExt.g2.attachments.displayInChatBox")}
                 >
                   <MessageSquareText size={12} aria-hidden="true" />
-                  <span>Display in chat box</span>
+                  <span>{t("i18nExt.g2.attachments.displayInChatBox")}</span>
                 </button>
               </Chip>
             ) : a.kind === "image" ? (
@@ -174,7 +175,7 @@ export function ComposerAttachments({
                   disabled={!attachmentImageUrl(a.path) && !a.previewUrl}
                   aria-busy={a.uploading || undefined}
                   className="relative flex h-[76px] w-full items-center justify-center overflow-hidden rounded-lg bg-inset focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-default"
-                  aria-label={`Preview ${a.name}`}
+                  aria-label={t("i18nExt.g2.attachments.previewAria", { name: a.name })}
                 >
                   <img
                     src={attachmentImageUrl(a.path) ?? a.previewUrl}
@@ -190,7 +191,7 @@ export function ComposerAttachments({
                   )}
                 </button>
                 <div className="mt-1 truncate text-[11px] text-ink-tertiary">
-                  {a.uploading ? "Uploading…" : formatSize(a.size)}
+                  {a.uploading ? t("i18nExt.g2.attachments.uploading") : formatSize(a.size)}
                 </div>
               </Chip>
             ) : (
@@ -224,6 +225,11 @@ function Chip({
   onRemove: () => void;
 }) {
   const Icon = label === "PASTED" ? ClipboardPaste : label === "IMAGE" ? ImageIcon : FileIcon;
+  const badgeText = label === "PASTED"
+    ? t("i18nExt.g2.attachments.badgePasted")
+    : label === "IMAGE"
+      ? t("i18nExt.g2.attachments.badgeImage")
+      : t("i18nExt.g2.attachments.badgeFile");
   return (
     <div
       title={title}
@@ -236,13 +242,13 @@ function Chip({
       <div className="mt-1 flex items-center gap-1">
         <Icon size={11} className="text-ink-tertiary" />
         <span className="rounded border border-hairline/60 px-1 py-px text-[10px] font-medium tracking-wide text-ink-secondary">
-          {label}
+          {badgeText}
         </span>
       </div>
       {/* Not `hidden`: that would take the only way to remove a chip out of the keyboard's reach. */}
       <button
         onClick={onRemove}
-        aria-label={`Remove ${label === "PASTED" ? "pasted text" : "file"}`}
+        aria-label={label === "PASTED" ? t("i18nExt.g2.attachments.removePastedAria") : t("i18nExt.g2.attachments.removeFileAria")}
         className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border border-hairline/60 bg-panel text-ink-secondary opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 touch:opacity-100"
       >
         <X size={11} />

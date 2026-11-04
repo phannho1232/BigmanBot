@@ -66,7 +66,7 @@ function header(req: IncomingMessage, name: string): string | undefined {
 
 function bearerSecret(req: IncomingMessage): string {
   const authorization = header(req, "authorization") ?? "";
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  const match = authorization.match(/^(?:Bearer|Apikey)\s+(.+)$/i);
   return match?.[1]?.trim() || header(req, "x-openmaus-secret")?.trim() || "";
 }
 

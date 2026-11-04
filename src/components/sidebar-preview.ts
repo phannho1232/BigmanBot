@@ -1,4 +1,5 @@
 import { approvalCardOutcome } from "./ApprovalCard";
+import { localizeSeededGreeting } from "./SetupOffer";
 import type { Bot, Group, InstanceInfo, Message } from "@/state/store";
 import type { RoutineRunCardData } from "../../shared/routine-run";
 import { peerLine } from "@/lib/peer-message";
@@ -55,7 +56,7 @@ export function lastLine(bot: Bot, visible: Message[], instances: InstanceInfo[]
   const peer = peerLine(last);
   if (peer) return `${peer.name}: ${plainPreviewText(peer.body)}`;
   if (last.role !== "user" && isClientCancellation(last.text ?? "")) return t("chat.turnStopped");
-  return plainPreviewText(citationPreviewText(last.text ?? ""));
+  return plainPreviewText(citationPreviewText(localizeSeededGreeting(last.text ?? "")));
 }
 
 const RUN_PREVIEW = {

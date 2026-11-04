@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { appVersion } from "@/lib/app-links";
 import { setLocale } from "@/lib/i18n";
@@ -10,6 +10,10 @@ function about(page: object): string {
   vi.stubGlobal("window", page);
   return renderToStaticMarkup(createElement(AboutDialog, { open: true, onClose: () => {} }));
 }
+
+beforeEach(() => {
+  setLocale("en");
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();

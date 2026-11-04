@@ -1,4 +1,5 @@
 import type { SendKey } from "./send-key";
+import { t } from "@/lib/i18n";
 
 export interface ShortcutItem {
   id: string;
@@ -14,110 +15,110 @@ export interface ShortcutGroup {
 
 export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
   {
-    category: "Navigation",
+    get category() { return t("i18nExt.g3.shortcuts.catNavigation"); },
     items: [
       {
         id: "command-palette",
-        description: "Open command palette (switcher & transcript search)",
+        get description() { return t("i18nExt.g3.shortcuts.commandPalette"); },
         macKeys: ["⌘", "K"],
         winKeys: ["Ctrl", "K"],
       },
       {
         id: "new-bot",
-        description: "Create a new bot",
+        get description() { return t("i18nExt.g3.shortcuts.newBot"); },
         macKeys: ["⌘", "N"],
         winKeys: ["Ctrl", "N"],
       },
       {
         id: "jump-bot",
-        description: "Jump to bot 1–9 in the roster",
+        get description() { return t("i18nExt.g3.shortcuts.jumpBot"); },
         macKeys: ["⌘", "1–9"],
         winKeys: ["Ctrl", "1–9"],
       },
       {
         id: "toggle-sidebar",
-        description: "Collapse or expand the sidebar",
+        get description() { return t("i18nExt.g3.shortcuts.toggleSidebar"); },
         macKeys: ["⌘", "\\"],
         winKeys: ["Ctrl", "\\"],
       },
       {
         id: "switch-bot",
-        description: "Switch to previous / next bot",
+        get description() { return t("i18nExt.g3.shortcuts.switchBot"); },
         macKeys: ["⌘", "⇧", "[ / ]"],
         winKeys: ["Ctrl", "Shift", "[ / ]"],
       },
       {
         id: "find-conversation",
-        description: "Find in conversation",
+        get description() { return t("i18nExt.g3.shortcuts.findConversation"); },
         macKeys: ["⌘", "F"],
         winKeys: ["Ctrl", "F"],
       },
     ],
   },
   {
-    category: "Chat & Composer",
+    get category() { return t("i18nExt.g3.shortcuts.catChat"); },
     items: [
       {
         id: "send-message",
-        description: "Send message",
+        get description() { return t("i18nExt.g3.shortcuts.sendMessage"); },
         macKeys: ["Return"],
         winKeys: ["Enter"],
       },
       {
         id: "new-line",
-        description: "Insert new line without sending",
+        get description() { return t("i18nExt.g3.shortcuts.newLine"); },
         macKeys: ["⇧", "Return"],
         winKeys: ["Shift", "Enter"],
       },
       {
         id: "edit-last-message",
-        description: "Edit last message (when composer is empty)",
+        get description() { return t("i18nExt.g3.shortcuts.editLastMessage"); },
         macKeys: ["↑"],
         winKeys: ["↑"],
       },
       {
         id: "close-panel",
-        description: "Close active drawer, modal, or find bar",
+        get description() { return t("i18nExt.g3.shortcuts.closePanel"); },
         macKeys: ["Esc"],
         winKeys: ["Esc"],
       },
       {
         id: "shortcuts-cheat-sheet",
-        description: "Show keyboard shortcuts cheat sheet",
+        get description() { return t("i18nExt.g3.shortcuts.cheatSheet"); },
         macKeys: ["⌘", "/"],
         winKeys: ["Ctrl", "/"],
       },
     ],
   },
   {
-    category: "Calls",
+    get category() { return t("i18nExt.g3.shortcuts.catCalls"); },
     items: [
       {
         id: "live-call-mute",
-        description: "Mute or unmute a Live call",
+        get description() { return t("i18nExt.g3.shortcuts.liveCallMute"); },
         macKeys: ["⌘", "⇧", "M"],
         winKeys: ["Ctrl", "Shift", "M"],
       },
       {
         id: "live-call-hang-up",
-        description: "Hang up a Live call",
+        get description() { return t("i18nExt.g3.shortcuts.liveCallHangUp"); },
         macKeys: ["⌘", "⇧", "H"],
         winKeys: ["Ctrl", "Shift", "H"],
       },
     ],
   },
   {
-    category: "Management & Groups",
+    get category() { return t("i18nExt.g3.shortcuts.catManagement"); },
     items: [
       {
         id: "save-bulletin",
-        description: "Save group instruction changes",
+        get description() { return t("i18nExt.g3.shortcuts.saveBulletin"); },
         macKeys: ["⌘", "Return"],
         winKeys: ["Ctrl", "Enter"],
       },
       {
         id: "reorder-section",
-        description: "Reorder sidebar sections (focus a section heading)",
+        get description() { return t("i18nExt.g3.shortcuts.reorderSection"); },
         macKeys: ["⌥", "↑ / ↓"],
         winKeys: ["Alt", "↑ / ↓"],
       },

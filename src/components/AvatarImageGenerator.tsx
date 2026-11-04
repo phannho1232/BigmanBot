@@ -8,9 +8,9 @@ import { t } from "@/lib/i18n";
 import { productName } from "@/lib/brand";
 
 const PROVIDERS = {
-  openai: { label: "OpenAI", keyLabel: "OpenAI image API key", credential: "openaiImageApiKey" },
-  xai: { label: "Grok (xAI)", keyLabel: "Grok API key", credential: "xaiApiKey" },
-  custom: { label: "Custom", keyLabel: "Custom image API key", credential: "customImageApiKey" },
+  openai: { get label() { return "OpenAI"; }, get keyLabel() { return t("botIdentity.ai.openaiKey"); }, credential: "openaiImageApiKey" },
+  xai: { get label() { return "Grok (xAI)"; }, get keyLabel() { return t("botIdentity.ai.xaiKey"); }, credential: "xaiApiKey" },
+  custom: { get label() { return t("i18nExt.g3.avatarGen.providerCustom"); }, get keyLabel() { return t("botIdentity.ai.customKey"); }, credential: "customImageApiKey" },
 } as const;
 
 const INPUT_CLASS = "w-full min-w-0 rounded-lg border border-hairline/40 bg-inset px-3 py-2 text-[13px] text-ink placeholder:text-ink-secondary focus:outline-none disabled:opacity-50";
@@ -115,7 +115,7 @@ export function AvatarImageGenerator({
       const url = provider === "custom" ? normalizeImageGenerationUrl(customUrl.trim()) : "";
       const model = customModel.trim();
       if (provider === "custom" && (model.length > 200 || ["\r", "\n", "\0"].some((character) => model.includes(character)))) {
-        throw new Error("Use a model ID of at most 200 characters without control characters");
+        throw new Error(t("i18nExt.g3.avatarGen.invalidModelId"));
       }
       if (imageKey.trim()) await saveCredential(imageKey.trim());
       if (provider === "custom") {
@@ -170,13 +170,13 @@ export function AvatarImageGenerator({
               value={customModel}
               disabled={busy}
               onChange={(event) => setModelDraft(event.target.value)}
-              placeholder="Model ID from your image provider"
+              placeholder={t("i18nExt.g3.avatarGen.modelIdPlaceholder")}
               autoComplete="off"
               className={`${INPUT_CLASS} mt-1`}
             />
           </label>
           <p className="text-[11px] leading-relaxed text-ink-secondary">
-            OpenAI-compatible Images API. localhost refers to the {productName()} server, including when you open this page remotely.
+            {t("i18nExt.g3.avatarGen.customApiHelp", { app: productName() })}
           </p>
         </>
       )}
@@ -199,10 +199,10 @@ export function AvatarImageGenerator({
         />
       </label>
       {provider === "xai" && (
-        <p className="text-[11px] leading-relaxed text-ink-secondary">Shares the Grok API key in Settings. Changing or removing it also affects other Grok features.</p>
+        <p className="text-[11px] leading-relaxed text-ink-secondary">{t("i18nExt.g3.avatarGen.xaiSharedNotice")}</p>
       )}
       {provider === "custom" && keyConfigured && (
-        <p className="text-[11px] leading-relaxed text-ink-secondary">The saved custom key will be used. Remove it for a keyless connection.</p>
+        <p className="text-[11px] leading-relaxed text-ink-secondary">{t("i18nExt.g3.avatarGen.customKeySavedNotice")}</p>
       )}
       <div className="flex items-center justify-end gap-2">
         {keyConfigured && (
