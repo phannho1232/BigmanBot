@@ -3,6 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "description": "A local-first chat app for running a team of AI agents.",
+  "homepage": "https://github.com/phannho1232/BigmanBot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/phannho1232/BigmanBot.git"
+  },
   "license": "Apache-2.0",
   "desktopName": "com.openmausbot.app.desktop",
   "type": "module",
