@@ -4,7 +4,7 @@ import type { CloudAccountState } from "../../electron/cloud-account.mjs";
 import { useStore } from "@/state/store";
 import { buyOfferAllowed, cloudPlanLine, cloudPlanView, moneyBackLine, offerTrialDays, usd, type CloudPlanView } from "@/lib/cloud-plan";
 import { useCloudOffer } from "@/lib/use-cloud-offer";
-import { t } from "@/lib/i18n";
+import { activeLocale, t } from "@/lib/i18n";
 import { SettingRow } from "./SettingsPrimitives";
 import { UpgradeButton, type UpgradeUi } from "./CloudUsageMeter";
 import type { CloudUsage } from "../../electron/cloud-home.mjs";
@@ -31,10 +31,28 @@ export function ProSettingsCard() {
   const plan = useCloudPlan();
   const offering = plan !== null && buyOfferAllowed(plan.view);
   const offer = useCloudOffer(offering, plan?.account?.offer);
-  if (!plan) return null;
-  const { view } = plan;
-  if (offering) {
+  if (!plan && !(activeLocale() === "vi" && !window.ogb?.remoteClient?.active)) return null;
+  const view = plan?.view ?? { kind: "signed-out" as const };
+  if (offering || (!plan && activeLocale() === "vi" && !window.ogb?.remoteClient?.active)) {
     const trial = offerTrialDays(offer) !== null, moneyBack = moneyBackLine(offer);
+    if (activeLocale() === "vi") {
+      return <section aria-label={t("pro.name")} data-cloud-offer="vpsmmo" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline/50 p-3">
+        <div className="flex items-center gap-3">
+          <Crown className="text-ink-secondary" size={18} aria-hidden="true" />
+          <div><h3 className="text-[14px] font-semibold text-ink">{t("pro.name")}</h3>
+            <p className="mt-1 text-[12px] text-ink-secondary">{t("pro.settingsSummary")}</p>
+            <p className="mt-1 text-[12px] text-ink-secondary">Các gói máy chủ VPS Linux Việt Nam 24/7 từ 249.000đ/tháng (chu kỳ 1 năm · Uplink 10 Gbps · NVMe).</p>
+            <p className="mt-1 text-[12px] text-ink-secondary">{t("pro.disclaimer")}</p></div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" className="cursor-pointer text-[13px] text-ink-secondary underline underline-offset-2 hover:text-ink"
+              onClick={() => dispatch({ type: "openCloudAdd", source: "app_settings" })}>{t("pro.seePlans")}</button>
+            <button type="button" className="ui-button ui-button-primary" onClick={() => dispatch({ type: "openCloudAdd", source: "app_settings" })}>Thuê máy chủ Cloud</button>
+          </div>
+        </div>
+      </section>;
+    }
     const cheapest = offer ? Math.min(...offer.plans.map(entry => entry.amount)) : null;
     return <section aria-label={t("pro.name")} data-cloud-offer={trial ? "trial" : offer ? "plans" : "none"} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline/50 p-3">
       <div className="flex items-center gap-3">
@@ -73,14 +91,24 @@ export function CloudPlanRow({ place, usage = null, upgrade }: { place: "account
   const plan = useCloudPlan();
   const offering = plan !== null && buyOfferAllowed(plan.view);
   const offer = useCloudOffer(offering, plan?.account?.offer);
-  if (!plan) return null;
-  if (offering) {
+  if (!plan && !(activeLocale() === "vi" && !window.ogb?.remoteClient?.active)) return null;
+  if (offering || (!plan && activeLocale() === "vi" && !window.ogb?.remoteClient?.active)) {
     const trial = offerTrialDays(offer) !== null;
+    if (activeLocale() === "vi") {
+      return (
+        <SettingRow title={t("pro.name")} subtitle={place === "plan" ? "Từ 249.000đ/tháng (thanh toán theo năm · VPS Việt Nam 24/7)" : t("pro.settingsSummary")}>
+          <div className="flex items-center gap-3">
+            <button type="button" data-cloud-offer="vpsmmo" className="ui-button ui-button-primary"
+              onClick={() => dispatch({ type: "openCloudAdd", source: "app_settings" })}>Thuê máy chủ Cloud</button>
+          </div>
+        </SettingRow>
+      );
+    }
     const cheapest = offer && offer.plans.length ? Math.min(...offer.plans.map((entry) => entry.amount)) : null;
     return (
       <SettingRow title={t("pro.name")} subtitle={place === "plan" && cheapest !== null ? t("pro.fromPrice", { price: usd(cheapest / 100) }) : t("pro.settingsSummary")}>
         <div className="flex items-center gap-3">
-          {place === "plan" && plan.view.kind === "signed-out" && (
+          {place === "plan" && plan?.view.kind === "signed-out" && (
             <button type="button" className="cursor-pointer text-[13px] text-ink-secondary hover:text-ink"
               onClick={() => dispatch({ type: "openCloudAdd", source: "app_settings", signIn: true })}>{t("cloudAccount.signIn")}</button>
           )}
@@ -90,6 +118,7 @@ export function CloudPlanRow({ place, usage = null, upgrade }: { place: "account
       </SettingRow>
     );
   }
+  if (!plan) return null;
   const line = plan.view.kind === "reauth" ? t("pro.reauthShort") : cloudPlanLine(plan.view);
   if (!line) return null;
   return (

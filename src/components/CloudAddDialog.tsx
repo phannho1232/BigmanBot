@@ -9,7 +9,7 @@ import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { cloudColor, cloudNameShown, DEFAULT_CLOUD_COLOR } from "@/lib/cloud-look";
 import { cloudAddView, offerPlan, sameTerms, startedSleeps, type CloudAddView, type CloudSignInPhase } from "@/lib/cloud-plan";
-import { t } from "@/lib/i18n";
+import { activeLocale, t } from "@/lib/i18n";
 import { welcomeOnScreen } from "@/lib/onboarding";
 import { useStore } from "@/state/store";
 import { AddCloudFlow } from "./cloud-buy/AddCloudFlow";
@@ -19,6 +19,7 @@ import { PayScreen } from "./cloud-buy/PayScreen";
 import { CLOSE, ON_NIGHT, SHEET, StagingMark } from "./cloud-buy/parts";
 import { SetupScreen, TeamReadyScreen, TeamSetupScreen } from "./cloud-buy/SetupScreen";
 import { BrowserSignInScreen, codeDigits, SignInScreen } from "./cloud-buy/SignInScreen";
+import { VpsMmoCloudFlow } from "./vpsmmo-cloud/VpsMmoCloudFlow";
 
 export interface CloudAddActions {
   /** A plan card's button: the in-app sign-in when signed out, then (or else) that plan's checkout. */
@@ -91,10 +92,10 @@ const HELD: ReadonlySet<CloudAddView["kind"]> = new Set(["sign-in", "signing-in"
 
 /** The sheet over the app: one width per screen, the close button, and the staging mark when the app is on staging.
  * Above the z-50 layers (Settings, the welcome flow), which it may be opened over. */
-export function CloudAddSheet({ kind, staging, onClose, children }: { kind: CloudAddView["kind"]; staging: boolean; onClose: () => void; children: ReactNode }) {
+export function CloudAddSheet({ kind, wide = false, staging, onClose, children }: { kind: CloudAddView["kind"]; wide?: boolean; staging: boolean; onClose: () => void; children: ReactNode }) {
   return <div className="ui-scrim fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6" onMouseDown={event => event.target === event.currentTarget && !HELD.has(kind) && onClose()}>
     <div role="dialog" aria-modal="true" aria-labelledby="cloud-add-title" data-cloud-add-dialog tabIndex={-1}
-      className={cn(SHEET, "group/sheet animate-pop-in relative max-h-full w-full overflow-y-auto overscroll-contain outline-none", WIDTH[kind] ?? "max-w-[540px]")}>
+      className={cn(SHEET, "group/sheet animate-pop-in relative max-h-full w-full overflow-y-auto overscroll-contain outline-none", wide ? "max-w-[1060px]" : WIDTH[kind] ?? "max-w-[540px]")}>
       <button type="button" onClick={onClose} aria-label={t("cloudAdd.close")} className={cn(CLOSE, ON_NIGHT, "absolute end-4 top-4 z-10")}><X size={16} /></button>
       {staging && <StagingMark className="absolute end-14 top-[22px] z-10 group-has-[[data-night-card]]/sheet:bg-app" />}
       {children}
@@ -132,7 +133,7 @@ export function CloudAddDialog({ now = Date.now }: { now?: () => number }) {
   const [arrived, setArrived] = useState(false);
   const [terms, setTerms] = useState(false);
   const [extraWide, setExtraWide] = useState(false);
-  const open = Boolean(request && bridge);
+  const open = Boolean(request && (bridge || activeLocale() === "vi"));
   const profileEmail = state.config?.profile?.email?.trim() || null;
   // Over the welcome flow the sheet is as good as closed for "ready": main notifies, and nothing switches the window away.
   const overWelcome = welcomeOnScreen();
@@ -264,6 +265,11 @@ export function CloudAddDialog({ now = Date.now }: { now?: () => number }) {
     window.addEventListener("blur", stop);
     return () => window.removeEventListener("blur", stop);
   }, [counting]);
+  if (request && activeLocale() === "vi") {
+    return <CloudAddSheet kind="offer" wide staging={false} onClose={close}>
+      <VpsMmoCloudFlow profileEmail={profileEmail} onClose={close} />
+    </CloudAddSheet>;
+  }
   if (!open || !view || !request || !bridge || view.kind === "settings") return null;
   if (view.kind === "has-cloud" && account?.status === "connected" && account.clouds && window.ogb?.cloudAdd
     && (account.addCloud?.canAdd !== false || (account.adding && !account.adding.done))) {

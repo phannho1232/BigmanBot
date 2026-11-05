@@ -95,7 +95,7 @@ import { DATA_INTERNAL_MCP_PATH, dataRpc } from "./data/rpc.ts";
 import { createHighLevelHost } from "./highlevel/host.ts";
 import { HIGHLEVEL_INTERNAL_MCP_PATH } from "./highlevel/rpc.ts";
 import { createHighLevelService } from "./highlevel/service.ts";
-import { createHighLevelRoutes } from "./routes/highlevel.ts"; import { createPostizRoutes } from "./routes/postiz.ts"; import { createPostiz } from "./postiz/service.ts"; import { createVietnamPaymentsRoutes } from "./routes/vietnam-payments.ts";
+import { createHighLevelRoutes } from "./routes/highlevel.ts"; import { createPostizRoutes } from "./routes/postiz.ts"; import { createPostiz } from "./postiz/service.ts"; import { createVietnamPaymentsRoutes } from "./routes/vietnam-payments.ts"; import { createVpsMmoCloudRoutes } from "./routes/vpsmmo-cloud.ts";
 import { createPhones } from "./host/phones.ts";
 import { NOT_THE_OWNER } from "./phones/owner.ts";
 import { PHONE_INTERNAL_MCP_PATH } from "./phones/rpc.ts";
@@ -12523,7 +12523,7 @@ ROUTES.push(createAntigravityAccountRoutes({
     return work().finally(() => { providerConfigBusy = false; });
   },
 }));
-const postiz = createPostiz({ cfg: () => cfg, mcpOAuth, persistMcpServers, mcpConfigBusy: { get: () => mcpConfigBusy, set: (busy) => { mcpConfigBusy = busy; } }, mcpPolicyRefusal, appCatalog: chatAppsMcp, team: teamConnections, loopback: !CLOUD_HOME && !HOSTED_WORKSPACE }); ROUTES.push(createVietnamPaymentsRoutes(), createPostizRoutes({ postiz }), createConfigRoutes({
+const postiz = createPostiz({ cfg: () => cfg, mcpOAuth, persistMcpServers, mcpConfigBusy: { get: () => mcpConfigBusy, set: (busy) => { mcpConfigBusy = busy; } }, mcpPolicyRefusal, appCatalog: chatAppsMcp, team: teamConnections, loopback: !CLOUD_HOME && !HOSTED_WORKSPACE }); ROUTES.push(createVietnamPaymentsRoutes(), createVpsMmoCloudRoutes(), createPostizRoutes({ postiz }), createConfigRoutes({
   store, cfg, registry, sessions, browserCleanup, browserLive, browserRuntime, usedBrowserSessions, decider,
   sharedComputers, sharedComputerControl, closeBrowser, browserEngineSwitched,
   hostedModels: Boolean(hostedModels),
