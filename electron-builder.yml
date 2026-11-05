@@ -6,7 +6,10 @@ protocols:
   - name: Bigman Bot package install
     schemes: [openmausbot]
 
-publish: null
+publish:
+  - provider: github
+    owner: ImTheOne-9
+    repo: BigmanBot-Releases
 
 directories:
   buildResources: build
