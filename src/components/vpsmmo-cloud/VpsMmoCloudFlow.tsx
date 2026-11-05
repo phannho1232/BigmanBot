@@ -640,7 +640,7 @@ export function VpsMmoCloudFlow({
           </h2>
           <p className="mt-1 text-[13px] text-ink-secondary">
             {isReady
-              ? "Máy chủ Linux của bạn đã được cấp địa chỉ IP Public Việt Nam và chứng chỉ bảo mật HTTPS tự động (Cách A)."
+              ? "Máy chủ Linux của bạn đã được cấp địa chỉ IP Public Việt Nam và kích hoạt chứng chỉ bảo mật HTTPS tự động."
               : isFailed
                 ? "Đã xảy ra lỗi khi gọi API khởi tạo VPS. Vui lòng kiểm tra lại cấu hình Token/KeyPass hoặc số dư Reseller trên portal.vpsmmo.vn."
                 : "Quá trình cấp phát tài nguyên NVMe, IP Public VN và cấu hình HTTPS tự động chỉ mất vài giây."}
@@ -659,7 +659,7 @@ export function VpsMmoCloudFlow({
               },
               {
                 key: "configuring_domain",
-                title: "Cấp phát IP Public Việt Nam (Uplink 10 Gbps) & kích hoạt HTTPS tự động qua sslip.io / Caddy",
+                title: "Cấp phát IP Public Việt Nam (Uplink 10 Gbps) & kích hoạt chứng chỉ bảo mật HTTPS tự động",
                 state: stepIndex > 1 ? "done" : stepIndex === 1 ? "now" : "next",
               },
               {
@@ -698,7 +698,7 @@ export function VpsMmoCloudFlow({
                 <p data-vpsmmo-ip className="font-mono text-[14px] font-semibold text-ink">{order.vps.ip}</p>
               </div>
               <div>
-                <span className="text-[11px] uppercase tracking-wider text-ink-tertiary">Tên miền HTTPS Tự động (Cách A)</span>
+                <span className="text-[11px] uppercase tracking-wider text-ink-tertiary">Địa chỉ kết nối bảo mật (HTTPS)</span>
                 <p data-vpsmmo-domain className="font-mono text-[13px] font-semibold text-accent-text">{order.vps.origin}</p>
               </div>
               <div>
@@ -830,7 +830,7 @@ export function VpsMmoCloudFlow({
                         </span>
                       ) : (
                         <span className="rounded-md bg-ink/[0.05] px-2 py-0.5 text-[11px] text-ink-tertiary">
-                          {plan.portalPlanName.replace("VPS Linux · ", "")}
+                          24/7 Cloud VN
                         </span>
                       )}
                     </div>
@@ -895,18 +895,18 @@ export function VpsMmoCloudFlow({
           </li>
           <li className="flex flex-col gap-1 rounded-[12px] bg-ink/[0.03] px-3.5 py-3">
             <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink">
-              <ShieldCheck size={14} className="text-accent-text" /> Tự động cấp HTTPS (Cách A)
+              <ShieldCheck size={14} className="text-accent-text" /> Bảo mật riêng tư & Truy cập mọi nơi
             </span>
             <span className="text-[12px] leading-relaxed text-ink-secondary">
-              Tự động kích hoạt chứng chỉ bảo mật HTTPS qua <code>sslip.io</code> và Caddy mà không bắt buộc phải mua tên miền riêng.
+              Mã hoá kết nối SSL/HTTPS riêng biệt, giúp bạn và đội nhóm điều khiển Bot an toàn từ máy tính hoặc điện thoại ở bất kỳ đâu.
             </span>
           </li>
           <li className="flex flex-col gap-1 rounded-[12px] bg-ink/[0.03] px-3.5 py-3">
             <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink">
-              <Cpu size={14} className="text-accent-text" /> Cài sẵn Golden Image 24/7
+              <Cpu size={14} className="text-accent-text" /> Tự động cài đặt & vận hành 24/7
             </span>
             <span className="text-[12px] leading-relaxed text-ink-secondary">
-              Máy chủ Ubuntu Linux được đóng gói sẵn Bigman Bot Server, tự động khởi chạy ngay khi hoàn tất thanh toán VietQR.
+              Máy chủ được cài sẵn Bigman Bot Server và tự động khởi chạy liên tục 24/7 ngay khi hoàn tất thanh toán VietQR.
             </span>
           </li>
           <li className="flex flex-col gap-1 rounded-[12px] bg-ink/[0.03] px-3.5 py-3">
