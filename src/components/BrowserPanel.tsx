@@ -57,6 +57,7 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
   const [kept, setKept] = useState(false);
   const [showProfiles, setShowProfiles] = useState(false);
   const [showTyping, setShowTyping] = useState(false);
+  const [showCookies, setShowCookies] = useState(false);
   const [masked, setMasked] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [maximized, setMaximized] = useState(false);
@@ -68,6 +69,7 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
   const surface = useRef<StreamSurfaceHandle>(null);
   const profilesDialog = useRef<HTMLDialogElement>(null);
   const typingDialog = useRef<HTMLDialogElement>(null);
+  const cookiesDialog = useRef<HTMLDialogElement>(null);
   const clientRef = useRef<PreviewStreamClient | null>(null);
   const controlRef = useRef<PreviewStreamControl | null>(null);
   const controlListeners = useRef(new Set<(control: PreviewStreamControl | null) => void>());
@@ -90,6 +92,10 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
     browserControl.current?.hold(showTyping);
     if (showTyping) typingDialog.current?.showModal(); else typingDialog.current?.close();
   }, [showTyping]);
+  useEffect(() => {
+    browserControl.current?.hold(showTyping || showCookies);
+    if (showCookies) cookiesDialog.current?.showModal(); else cookiesDialog.current?.close();
+  }, [showTyping, showCookies]);
 
   const reconnect = useCallback(() => {
     setGone(false);
@@ -324,6 +330,7 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
         onPip={togglePip}
         onType={() => { setMasked(false); setShowTyping(true); }}
         onSecret={() => { setMasked(true); setShowTyping(true); }}
+        onCookies={() => setShowCookies(true)}
         onReconnect={reconnect}
         onRestart={restart}
       />}
@@ -373,6 +380,15 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
       }}><input key={masked ? "secret" : "text"} name="pageText" type={masked ? "password" : "text"} aria-label={masked ? t("browser.typeSecret.field") : t("browser.panel.typeTextField")} autoComplete={masked ? "new-password" : "off"} spellCheck={false} maxLength={4096} placeholder={masked ? "••••••••" : t("browser.panel.typeTextPlaceholder")} className="rounded-lg bg-inset px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-accent" />
         {masked && <p className="flex items-center gap-1 text-[12px] text-ink-tertiary"><LockKeyhole size={11} aria-hidden="true" />{t("browser.typeSecret.note")}</p>}
         <button disabled={!typingReady} className="self-end rounded-lg bg-accent px-4 py-2 text-[12px] text-accent-ink disabled:opacity-40">{t("browser.panel.typeButton")}</button></form>
+    </dialog>
+    <dialog ref={cookiesDialog} onClose={() => { const field = cookiesDialog.current?.querySelector("textarea"); if (field) field.value = ""; setShowCookies(false); }} className="m-auto w-[min(460px,calc(100%-32px))] rounded-2xl border border-hairline/50 bg-card p-5 text-ink shadow-2xl backdrop:bg-black/40">
+      <div className="mb-3 flex items-center justify-between"><h2 className="text-[14px] font-medium">{t("browser.importCookies.title")}</h2><button className={button} aria-label={t("browser.panel.closeTyping")} onClick={() => setShowCookies(false)}><X size={16} /></button></div>
+      <form className="flex flex-col gap-3" onSubmit={(e) => {
+        e.preventDefault(); const field = e.currentTarget.elements.namedItem("cookieRaw") as HTMLTextAreaElement;
+        if (typingReady && field.value.trim()) { clientRef.current?.send({ type: "importCookies", raw: field.value }); field.value = ""; setShowCookies(false); }
+      }}><textarea name="cookieRaw" rows={5} aria-label={t("browser.importCookies.field")} spellCheck={false} placeholder={t("browser.importCookies.placeholder")} className="rounded-lg bg-inset px-3 py-2 font-mono text-[12px] outline-none focus:ring-1 focus:ring-accent" />
+        <p className="flex items-center gap-1 text-[12px] text-ink-tertiary"><LockKeyhole size={11} aria-hidden="true" />{t("browser.importCookies.note")}</p>
+        <button disabled={!typingReady} className="self-end rounded-lg bg-accent px-4 py-2 text-[12px] text-accent-ink disabled:opacity-40">{t("browser.importCookies.submit")}</button></form>
     </dialog>
   </div>;
 }

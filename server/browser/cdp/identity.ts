@@ -35,6 +35,7 @@ export interface IdentityOverride {
   userAgent: string;
   userAgentMetadata: UserAgentMetadata;
   acceptLanguage?: string;
+  platform?: string;
 }
 
 /** Read in the isolated world: userAgentData exists only in a secure context, such as a loopback page. */
@@ -90,6 +91,7 @@ export function identityOverride(identity: Pick<Identity, "userAgent" | "userAge
     userAgent: identity.userAgent,
     userAgentMetadata: identity.userAgentMetadata,
     ...(acceptLanguage ? { acceptLanguage } : {}),
+    ...(identity.userAgentMetadata.platform === "Windows" ? { platform: "Win32" } : {}),
   };
 }
 
