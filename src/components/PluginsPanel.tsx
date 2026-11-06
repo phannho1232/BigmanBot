@@ -455,12 +455,12 @@ export function PluginsPanel() {
     && (!search || `${c.label} ${c.slug} ${connectorDescription(c)}`.toLowerCase().includes(search.toLowerCase())));
   const isConnected = (slug: string) => Boolean(status[slug]?.connected || status[slug]?.accounts?.length);
   const filter: AppsFilter = surface === "mcp" ? "mcp" : tab === "connected" ? "connected" : "all";
-  const shownHosted = new Set(HOSTED_MCP_APPS.filter((app) => hostedShown(app, search, filter, hostedConnected)).map((app) => app.id));
+  const shownHosted = new Set(HOSTED_MCP_APPS.filter((app) => hostedConnected?.[app.id] === true && hostedShown(app, search, filter, hostedConnected)).map((app) => app.id));
   const highLevelMatches = !search || `highlevel high level growably crm ${t("highlevel.description")}`.toLowerCase().includes(search.toLowerCase().trim());
-  const showHighLevel = highLevelMatches && (filter === "all" || (filter === "connected" && highLevelConnected !== false));
+  const showHighLevel = highLevelConnected === true && highLevelMatches && (filter === "all" || filter === "connected");
   const showEmail = (!search || `email mail imap smtp mailbox ${t("email.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || (filter === "connected" && emailConnected !== false));
-  const showX = (!search || `${X_CARD_SEARCH} ${t("apps.x.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || (filter === "connected" && xConnected !== false));
-  const showPostiz = (!search || `${POSTIZ_SEARCH} ${t("postiz.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || (filter === "connected" && postizConnected !== false));
+  const showX = xConnected === true && (!search || `${X_CARD_SEARCH} ${t("apps.x.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || filter === "connected");
+  const showPostiz = postizConnected === true && (!search || `${POSTIZ_SEARCH} ${t("postiz.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || filter === "connected");
   const visible = (filter === "connected" ? matching.filter((card) => isConnected(card.slug)) : matching)
     .map((card, index) => ({ card, index }))
     .sort((a, b) => Number(isConnected(b.card.slug)) - Number(isConnected(a.card.slug)) || a.index - b.index)
@@ -472,7 +472,7 @@ export function PluginsPanel() {
   const matchingVietnamApps = vnBrowserReady
     ? VIETNAM_BROWSER_APPS.filter((app) =>
       (filter === "connected" ? isVnAppConnected(app) : true)
-      && (category === null || app.categories.includes(category))
+      && (category === null || (app.categories ?? []).includes(category))
       && (!search || `${app.label} ${app.slug} ${app.blurb} ${app.domain}`.toLowerCase().includes(search.toLowerCase().trim())))
     : [];
   const connectedVnApps = vnBrowserReady

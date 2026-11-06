@@ -89,13 +89,31 @@ export function tFromServer(key: string | undefined, fallback: string | undefine
   return unfilled ? fallback : t(key as LocaleKey, params);
 }
 
+const BIGMAN_EXTRA_KEYS = new Set([
+  "apps.category.automation",
+  "apps.category.finance",
+  "apps.catalog.canva.blurb",
+  "apps.catalog.youtube.blurb",
+  "apps.catalog.facebook.blurb",
+  "apps.catalog.instagram.blurb",
+  "apps.catalog.googleAnalytics.blurb",
+  "apps.catalog.googleSearchConsole.blurb",
+  "apps.catalog.googleMeet.blurb",
+  "apps.catalog.zoom.blurb",
+  "apps.catalog.outlook.blurb",
+  "apps.catalog.onedrive.blurb",
+  "apps.catalog.microsoftTeams.blurb",
+  "apps.catalog.microsoftExcel.blurb",
+  "apps.catalog.linkedin.blurb",
+]);
+
 export function activePackComplete(): boolean {
-  return activePack !== en && Object.keys(en).every((key) => key.startsWith("i18nExt.") || key.startsWith("readyBots.bot.tiktok-") || Object.hasOwn(activePack, key));
+  return activePack !== en && Object.keys(en).every((key) => key.startsWith("i18nExt.") || key.startsWith("readyBots.bot.tiktok-") || BIGMAN_EXTRA_KEYS.has(key) || Object.hasOwn(activePack, key));
 }
 
 /** `{app}` is the product's name as a person reads it (productName) unless `params` names it. */
 export function t(key: LocaleKey, params?: Record<string, string | number>): string {
-  const template = activePack[key] ?? en[key];
+  const template = activePack[key] ?? en[key] ?? String(key);
   if (!params && !template.includes("{app}")) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) =>
     params && name in params ? String(params[name]) : name === "app" ? productName() : match,
