@@ -963,6 +963,15 @@ export class ViewerHub {
       case "history":
         await (num(message.delta) < 0 ? tab.page.back({ readiness: "none" }) : tab.page.forward({ readiness: "none" }));
         return;
+      case "importCookies": {
+        const raw = typeof message.raw === "string" ? message.raw.trim() : "";
+        const parsed = parseImportedCookies(raw, tab.page.url());
+        if (parsed.cookies.length === 0) return;
+        await session.send("Network.setCookies", { cookies: parsed.cookies });
+        const dest = parsed.navigateUrl ?? tab.page.url();
+        await tab.page.navigate(dest, { readiness: "none", timeoutMs: 15_000 });
+        return;
+      }
       case "reload":
         if (message.ignoreCache === true) await tab.page.session.send("Page.reload", { ignoreCache: true });
         else await tab.page.reload({ readiness: "none" });
@@ -994,4 +1003,103 @@ function parseSetting(value: unknown): ViewportSetting | null {
     return size ? { mode: "fixed", ...size } : null;
   }
   return null;
+}
+
+
+interface ImportedCookieParam {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  secure: boolean;
+  httpOnly?: boolean;
+  expires?: number;
+  sameSite?: "Strict" | "Lax" | "None";
+  url?: string;
+}
+
+function defaultCookieDomain(pageUrl: string): { domain: string; navigateUrl: string | null } {
+  try {
+    const parsed = new URL(pageUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      const host = parsed.hostname.replace(/^www\./iu, "");
+      return { domain: host.includes(".") ? `.${host}` : host, navigateUrl: null };
+    }
+  } catch {}
+  return { domain: "", navigateUrl: null };
+}
+
+function cdpSameSite(raw: unknown): "Strict" | "Lax" | "None" | null {
+  if (typeof raw !== "string") return null;
+  const lower = raw.toLowerCase().replace(/_/gu, "");
+  if (lower === "strict") return "Strict";
+  if (lower === "lax") return "Lax";
+  if (lower === "none" || lower === "norestriction" || lower === "unspecified") return "None";
+  return null;
+}
+
+export function parseImportedCookies(raw: string, pageUrl: string): { cookies: ImportedCookieParam[]; navigateUrl: string | null } {
+  const { domain: fallbackDomain, navigateUrl } = defaultCookieDomain(pageUrl);
+  const cookies: ImportedCookieParam[] = [];
+  if (!raw) return { cookies, navigateUrl: null };
+  if (raw.startsWith("[") || raw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      const list = Array.isArray(parsed)
+        ? parsed
+        : parsed && typeof parsed === "object" && Array.isArray((parsed as { cookies?: unknown }).cookies)
+          ? (parsed as { cookies: unknown[] }).cookies
+          : [];
+      for (const item of list) {
+        const entry = record(item);
+        if (!entry || typeof entry.name !== "string" || !entry.name.trim()) continue;
+        const exp = typeof entry.expirationDate === "number" ? entry.expirationDate : typeof entry.expires === "number" ? entry.expires : undefined;
+        const dom = typeof entry.domain === "string" && entry.domain.trim() ? entry.domain.trim() : fallbackDomain;
+        if (!dom) continue;
+        const sec = entry.secure !== false;
+        const ss = cdpSameSite(entry.sameSite);
+        cookies.push({
+          name: entry.name.trim(),
+          value: String(entry.value ?? ""),
+          domain: dom,
+          path: typeof entry.path === "string" && entry.path.trim() ? entry.path.trim() : "/",
+          secure: sec,
+          httpOnly: entry.httpOnly === true,
+          ...(exp && Number.isFinite(exp) && exp > 0 ? { expires: exp } : {}),
+          ...(ss ? { sameSite: ss } : {}),
+          url: `http${sec ? "s" : ""}://${dom.startsWith(".") ? dom.slice(1) : dom}/`,
+        });
+      }
+      return { cookies, navigateUrl };
+    } catch {}
+  }
+  for (const line of raw.split(/\r?\n/u)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const tabs = trimmed.split("\t");
+    if (tabs.length >= 7) {
+      const [dom, , path, sec, expRaw, name, value] = tabs;
+      if (name && value !== undefined) {
+        const exp = Number(expRaw);
+        cookies.push({
+          name: name.trim(),
+          value: value.trim(),
+          domain: dom?.trim() || fallbackDomain || ".",
+          path: path?.trim() || "/",
+          secure: sec?.toUpperCase() !== "FALSE",
+          ...(Number.isFinite(exp) && exp > 0 ? { expires: exp } : {}),
+        });
+      }
+      continue;
+    }
+    for (const part of trimmed.split(";")) {
+      const eq = part.indexOf("=");
+      if (eq <= 0) continue;
+      const name = part.slice(0, eq).trim();
+      const value = part.slice(eq + 1).trim();
+      if (!name || /^(?:domain|path|expires|max-age|secure|httponly|samesite)$/iu.test(name)) continue;
+      cookies.push({ name, value, domain: fallbackDomain, path: "/", secure: true });
+    }
+  }
+  return { cookies, navigateUrl };
 }

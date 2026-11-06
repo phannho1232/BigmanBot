@@ -272,14 +272,15 @@ export function BotAvatar({ bot, size = 44, label, readable = false, ...mascotPr
     );
   }
 
-  const radius = avatarCropRadius(profile.avatarCrop);
+  const isMascotAsset = Boolean(profile.avatarUrl?.startsWith("/mascots/"));
+  const radius = isMascotAsset ? "0" : avatarCropRadius(profile.avatarCrop);
   const zoom = clampAvatarZoom(bot.avatarZoom ?? 1);
   const focusX = clampAvatarFocus(bot.avatarFocusX ?? 0.5);
   const focusY = clampAvatarFocus(bot.avatarFocusY ?? 0.5);
   const origin = `${focusX * 100}% ${focusY * 100}%`;
   return (
     <span
-      className="relative block shrink-0 overflow-hidden bg-raised"
+      className={cn("relative block shrink-0 overflow-hidden", isMascotAsset ? "bg-transparent" : "bg-raised")}
       style={{ width: size, height: size, borderRadius: radius }}
     >
       <img
@@ -289,7 +290,7 @@ export function BotAvatar({ bot, size = 44, label, readable = false, ...mascotPr
         height={size}
         draggable={false}
         onError={() => setImageFailed(true)}
-        className="block size-full max-w-none object-cover"
+        className={cn("block size-full max-w-none", isMascotAsset ? "object-contain" : "object-cover")}
         style={{
           width: size,
           height: size,

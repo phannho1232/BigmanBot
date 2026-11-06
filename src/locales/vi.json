@@ -3549,6 +3549,12 @@
   "browser.typeSecret.title": "Nhập mật khẩu hoặc mã vào trường đã chọn",
   "browser.typeSecret.field": "Mật khẩu hoặc mã cho trang",
   "browser.typeSecret.note": "Thông tin này chỉ được gửi đến trang. {app} không lưu giữ, ghi nhật ký hoặc hiển thị thông tin này.",
+  "browser.importCookies": "Nạp Cookie…",
+  "browser.importCookies.title": "Nạp Cookie vào trang hiện tại",
+  "browser.importCookies.field": "Cookie cho trang",
+  "browser.importCookies.placeholder": "Dán JSON từ Cookie-Editor hoặc chuỗi c_user=...; xs=... vào đây",
+  "browser.importCookies.note": "Hỗ trợ định dạng JSON (Cookie-Editor, J2Team), Netscape cookies.txt hoặc chuỗi c_user=...; xs=... Trang sẽ tự tải lại ngay sau khi nạp.",
+  "browser.importCookies.submit": "Nạp Cookie",
   "signIn.title": "Cần đăng nhập",
   "signIn.cardLabel": "{name} cần bạn đăng nhập vào {site}",
   "signIn.banner": "cần bạn đăng nhập vào {site}",
@@ -10100,7 +10106,7 @@
   "i18nExt.g3.botDraft.noSuchRoutine": "Không tìm thấy lịch trình trong bản nháp",
   "i18nExt.g3.botDraft.requiresCreatedBot": "Thao tác này yêu cầu bot đã được tạo",
   "readyBots.bot.tiktok-shop-manager.title": "Vận hành & CSKH TikTok Shop",
-  "readyBots.bot.tiktok-shop-manager.description": "Theo dõi đơn hàng, SLA giao v?n, x? l? ho?n tr?, tr?c chat kh?ch h?ng 24h v? ki?m so?t ?i?m s?c kh?e gian h?ng.",
+  "readyBots.bot.tiktok-shop-manager.description": "Theo dõi đơn hàng, SLA giao vận, xử lý hoàn trả, trực chat khách hàng 24h và kiểm soát điểm sức khỏe gian hàng.",
   "readyBots.bot.tiktok-shop-manager.try": "Kiểm tra trên TikTok Shop Seller Center xem có đơn hàng nào sắp quá hạn SLA 24h và yêu cầu Trả hàng/Hoàn tiền mới không",
   "readyBots.bot.tiktok-affiliate-koc.title": "Chuyên gia Affiliate & KOC TikTok",
   "readyBots.bot.tiktok-affiliate-koc.description": "Tìm kiếm KOC/KOL đúng tệp, thiết lập Cộng tác mở & Mục tiêu, theo dõi mẫu thử và tối ưu hoa hồng Affiliate.",
@@ -10110,7 +10116,7 @@
   "readyBots.bot.tiktok-content-live.try": "Viết 3 kịch bản video 30 giây gắn giỏ hàng cho sản phẩm chủ lực với 3 góc Hook khác nhau",
   "readyBots.bot.tiktok-seo-pricing.title": "Tối ưu SEO & Chiến lược Giá TikTok Shop",
   "readyBots.bot.tiktok-seo-pricing.description": "Viết tiêu đề & mô tả chuẩn SEO không vi phạm chính sách, tính giá bán bảo vệ biên lợi nhuận sau phí sàn + Affiliate và lên chiến dịch Flash Sale.",
-  "readyBots.bot.tiktok-seo-pricing.try": "Viết tiêu đề chu?n SEO v? m? t? chi ti?t cho s?n ph?m m?i n?y, ??m b?o kh?ng d?nh t? kh?a c?m c?a TikTok Shop",
+  "readyBots.bot.tiktok-seo-pricing.try": "Viết tiêu đề chuẩn SEO và mô tả chi tiết cho sản phẩm mới này, đảm bảo không dính từ khóa cấm của TikTok Shop",
   "apps.category.automation": "Tự động hóa",
   "apps.category.finance": "Tài chính & Thanh toán",
   "apps.catalog.canva.blurb": "Thiết kế hình ảnh, banner và ấn phẩm truyền thông",
@@ -10125,5 +10131,6 @@
   "apps.catalog.onedrive.blurb": "Lưu trữ và đồng bộ tài liệu Microsoft 365",
   "apps.catalog.microsoftTeams.blurb": "Nhắn tin nội bộ, nhóm làm việc và họp trực tuyến",
   "apps.catalog.microsoftExcel.blurb": "Đọc, cập nhật bảng tính Excel (.xlsx), công thức và báo cáo tài chính",
-  "apps.catalog.linkedin.blurb": "Xây dựng thương hiệu chuyên nghiệp và tuyển dụng B2B"
+  "apps.catalog.linkedin.blurb": "Xây dựng thương hiệu chuyên nghiệp và tuyển dụng B2B",
+  "botPanel.avatar.tabAnimated": "Nắm đấm động"
 }

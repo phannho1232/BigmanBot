@@ -133,6 +133,12 @@ if [ -n "$DOMAIN" ]; then
 else
   node dist-server/openmausbot.js service install --port "$PORT" --data-dir "$DATA_DIR" --label "Bigman Cloud VPS"
 fi
+if [ -f /etc/systemd/system/openmausbot.service ]; then
+  sed -i '/CapabilityBoundingSet=/d' /etc/systemd/system/openmausbot.service
+  grep -q 'OMB_BROWSER_SANDBOX=0' /etc/systemd/system/openmausbot.service || sed -i '/Environment=OMB_DATA_DIR=/a Environment=OMB_BROWSER_SANDBOX=0' /etc/systemd/system/openmausbot.service
+  systemctl daemon-reload
+  systemctl restart openmausbot
+fi
 
 echo "Đang chờ máy chủ Bigman Bot khởi động..."
 for _ in $(seq 1 40); do

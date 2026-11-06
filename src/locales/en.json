@@ -3549,6 +3549,12 @@
   "browser.typeSecret.title": "Type a password or code into the selected field",
   "browser.typeSecret.field": "Password or code for the page",
   "browser.typeSecret.note": "It goes only to the page. {app} does not keep, log or show it.",
+  "browser.importCookies": "Import cookies…",
+  "browser.importCookies.title": "Import cookies into the current site",
+  "browser.importCookies.field": "Cookies for the page",
+  "browser.importCookies.placeholder": "Paste Cookie-Editor JSON or c_user=...; xs=...",
+  "browser.importCookies.note": "Supports Cookie-Editor JSON, Netscape cookies.txt, or header strings (c_user=...; xs=...). The page reloads automatically.",
+  "browser.importCookies.submit": "Import cookies",
   "signIn.title": "Sign in needed",
   "signIn.cardLabel": "{name} needs you to sign in to {site}",
   "signIn.banner": "needs you to sign in to {site}",
@@ -10125,5 +10131,6 @@
   "apps.catalog.onedrive.blurb": "Store and sync Microsoft 365 files and folders",
   "apps.catalog.microsoftTeams.blurb": "Team chat, channels, and online meetings",
   "apps.catalog.microsoftExcel.blurb": "Read and update Excel spreadsheets (.xlsx), formulas, and reports",
-  "apps.catalog.linkedin.blurb": "Professional networking, posts, and B2B recruiting"
+  "apps.catalog.linkedin.blurb": "Professional networking, posts, and B2B recruiting",
+  "botPanel.avatar.tabAnimated": "Animated fist"
 }

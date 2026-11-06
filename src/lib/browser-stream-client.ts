@@ -151,7 +151,8 @@ export type PreviewStreamInput =
   | { readonly type: "authAnswer"; readonly tabId: string; readonly id: string; readonly username?: string; readonly password?: string }
   | { readonly type: "restart" }
   /** Starts the browser again after it closed unused (the server sent `asleep`); `awake` follows once it runs. */
-  | { readonly type: "wake" };
+  | { readonly type: "wake" }
+  | { readonly type: "importCookies"; readonly raw: string };
 
 export interface PreviewStreamDownload {
   readonly fileName: string;

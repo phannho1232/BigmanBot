@@ -54,7 +54,7 @@ export function clampAvatarFocus(value: unknown): number {
 export const botAvatarUrlSchema = z
   .string()
   .regex(
-    /^\/api\/attachments\/[A-Za-z0-9-]+\.(?:png|jpg|gif|webp)$/,
+    /^(?:\/api\/attachments\/[A-Za-z0-9-]+\.(?:png|jpg|gif|webp)|\/mascots\/[A-Za-z0-9_-]+\.(?:png|jpg|gif|webp))$/,
     "must be a stored PNG, JPEG, GIF, or WebP attachment",
   );
 

@@ -90,6 +90,7 @@ const PAGE = new Set([
   "Network.disable",
   "Network.getCookies",
   "Network.deleteCookies",
+  "Network.setCookies",
   "Network.setUserAgentOverride",
   "Log.enable",
   "Log.disable",
