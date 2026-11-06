@@ -166,7 +166,7 @@ async function closeOnce(binaryPath: string, env: NodeJS.ProcessEnv, session: st
   // reporting it while `close` fails with ETIMEDOUT/ECONNREFUSED against the dead port.
   const deadPid = closing !== null && /^\d+$/.test(closing) ? Number(closing) : NaN;
   if (process.platform === "win32" && Number.isInteger(deadPid) && deadPid > 1 && !processAlive(deadPid) && daemonPid() === closing) {
-    await releaseBrowserProfile(env.AGENT_BROWSER_PROFILE);
+    await releaseBrowserProfile(env.AGENT_BROWSER_PROFILE, binaryPath, env.AGENT_BROWSER_EXECUTABLE_PATH);
     if (env.AGENT_BROWSER_PROFILE && windowsProfileLocked(env.AGENT_BROWSER_PROFILE)) return false;
     if (daemonPid() !== closing) return true;
     for (const ext of [".pid", ".port", ".stream", ".engine", ".version", ".sock"] as const) {
@@ -182,7 +182,7 @@ async function closeOnce(binaryPath: string, env: NodeJS.ProcessEnv, session: st
 export async function startBrowserSession(binaryPath: string, env: NodeJS.ProcessEnv, timeoutMs = 30_000): Promise<boolean> {
   const session = env.AGENT_BROWSER_SESSION;
   if (!session || !/^[A-Za-z0-9_.-]{1,96}$/.test(session)) return false;
-  await releaseBrowserProfile(env.AGENT_BROWSER_PROFILE);
+  await releaseBrowserProfile(env.AGENT_BROWSER_PROFILE, binaryPath, env.AGENT_BROWSER_EXECUTABLE_PATH);
   return (await runBrowserCommand(binaryPath, env, ["open", "--json", "--no-webmcp"], Date.now() + timeoutMs)).ok;
 }
 
@@ -253,7 +253,7 @@ export async function prepareBrowserSessionState(
   const env = browserRuntimeEnv({ ...options.env, AGENT_BROWSER_SESSION: session, AGENT_BROWSER_HEADLESS: "1" });
   ensureManagedBrowserConfig(env);
   if (options.persistent === false) return;
-  await releaseBrowserProfile(env.AGENT_BROWSER_PROFILE);
+  await releaseBrowserProfile(env.AGENT_BROWSER_PROFILE, binaryPath, env.AGENT_BROWSER_EXECUTABLE_PATH);
   check();
   const directory = browserSessionsDirectory(env);
   const key = join(directory, session);

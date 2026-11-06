@@ -99,7 +99,7 @@ export function ExportTranscriptMenu({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        aria-label={t("i18nExt.g2.export.buttonAria")}
+        aria-label={t("chat.export.label")}
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
@@ -107,7 +107,7 @@ export function ExportTranscriptMenu({
           open ? "text-accent" : "text-ink-secondary hover:text-ink",
           className,
         )}
-        title={t("i18nExt.g2.export.buttonTitle")}
+        title={t("chat.export.title")}
       >
         <Share size={18} />
       </button>
@@ -115,16 +115,16 @@ export function ExportTranscriptMenu({
       {motion.shown && (
         <div
           role="menu"
-          aria-label={t("i18nExt.g2.export.menuAria")}
+          aria-label={t("chat.export.options")}
           className={cn("absolute right-0 top-full z-40 mt-1 w-[220px] overflow-hidden", MENU_SHEET, motion.className)} {...motion.exitProps}
         >
           <div className={MENU_HEADING}>
-            {t("i18nExt.g2.export.heading")}
+            {t("chat.export.menuTitle")}
           </div>
 
           {!hasMessages ? (
             <div className="px-2 py-1.5 text-[12px] text-ink-secondary">
-              {t("i18nExt.g2.export.empty")}
+              {t("chat.export.empty")}
             </div>
           ) : (
             <>
@@ -140,13 +140,13 @@ export function ExportTranscriptMenu({
                   <Copy size={16} className="shrink-0 text-ink-secondary" />
                 )}
                 <span className="flex-1 truncate">
-                  {copied ? t("i18nExt.g2.export.copied") : t("i18nExt.g2.export.copyMarkdown")}
+                  {t(copied ? "chat.export.copiedToClipboard" : "chat.export.copy")}
                 </span>
               </button>
 
               {copyFailed && (
                 <div role="status" className="px-2 py-1.5 text-[12px] text-ink-secondary">
-                  {t("i18nExt.g2.export.clipboardUnavailable")}
+                  {t("chat.export.clipboardUnavailable")}
                 </div>
               )}
 
@@ -157,7 +157,7 @@ export function ExportTranscriptMenu({
                 className="ui-menu-row text-ink"
               >
                 <Download size={16} className="shrink-0 text-ink-secondary" />
-                <span className="flex-1 truncate">{t("i18nExt.g2.export.downloadMd")}</span>
+                <span className="flex-1 truncate">{t("chat.export.download")}</span>
               </button>
             </>
           )}

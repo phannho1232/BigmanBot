@@ -1,6 +1,7 @@
 import type { BotRoutineTemplate, NewBotDefaults } from "../../shared/new-bot-defaults";
 import type { MascotBodyId } from "../../shared/mascot-bodies";
 import type { MausColor } from "../../shared/wire";
+import { t, tFromServer } from "@/lib/i18n";
 
 export type ReadyBotCategory = "everyday" | "work" | "writing" | "design" | "sales" | "personal";
 
@@ -228,8 +229,10 @@ export const READY_BOTS: ReadyBot[] = [
     title: "Quản lý Mạng xã hội",
     description: "Lên lịch nội dung đăng bài đa kênh dưới dạng bản nháp hoặc hẹn giờ để bạn duyệt trước khi đăng.",
     soul: [
-      "Bạn quản lý các kênh mạng xã hội của người dùng và hỗ trợ lên kế hoạch đăng bài chuyên nghiệp.",
-      "Add every post to Postiz as a draft, unless the user gave it a time to go out: then schedule it for that time.",
+      "Bạn quản lý các kênh mạng xã hội của người dùng thông qua Postiz bằng bộ công cụ postiz.",
+      "Before writing for a channel, list the connected channels (integrationList) and read that platform's rules and settings (integrationSchema). Never guess a channel id.",
+      "When you write a post, show a preview of it with show_html, then add it to Postiz without waiting for a reply.",
+      "Add every post to Postiz as a draft, unless the user gave it a time to go out: then schedule it for that time. Postiz's own calendar publishes scheduled posts, and the user reviews, edits or moves them there.",
       "Never publish a post straight away (type now) unless the user asks for that post to go out now.",
       "Trước khi viết bài cho từng kênh, hãy kiểm tra danh sách kênh đã kết nối và tuân thủ đúng quy tắc độ dài, định dạng cũng như giọng điệu thương hiệu lưu trong memory/social.md.",
       "Với mỗi bài viết, luôn nêu rõ kênh đăng, khung giờ đăng theo múi giờ của người dùng và trạng thái là bản nháp hay hẹn giờ.",
@@ -450,12 +453,18 @@ export function readyBotTemplate(defaults: NewBotDefaults, bot: ReadyBot): NewBo
     const own = template.memory[path]?.trimEnd();
     template.memory[path] = own ? `${own}\n${text}` : text;
   }
-  template.routines = [...template.routines, ...(bot.routines ?? []).map((routine) => ({ ...routine, enabled: false }))];
+  template.routines = [...template.routines, ...(bot.routines ?? []).map((routine) => ({ ...routine, ...(bot.id === "social" ? { name: t("readyBots.routine.socialWeekly") } : {}), enabled: false }))];
   return template;
+}
+
+export function readyBotCopy(bot: ReadyBot): { title: string; description: string; tryAsking: string } {
+  const copy = (field: string, english: string) => tFromServer(`readyBots.bot.${bot.id}.${field}`, english);
+  return { title: copy("title", bot.title), description: copy("description", bot.description), tryAsking: copy("try", bot.tryAsking[0]!) };
 }
 
 export function matchesReadyBot(bot: ReadyBot, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
-  return [bot.name, bot.title, bot.description, bot.category].some((field) => field.toLowerCase().includes(needle));
+  const copy = readyBotCopy(bot);
+  return [bot.name, bot.title, bot.description, bot.category, copy.title, copy.description].some((field) => field.toLowerCase().includes(needle));
 }

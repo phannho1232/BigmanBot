@@ -228,14 +228,14 @@ export function streamTransport(client: PreviewStreamClient, control: {
     take: () => new Promise((resolve, reject) => {
       const before = control.current();
       if (before?.controller === "you") { resolve({ waited: false }); return; }
-      if (!client.send({ type: "takeControl" })) { reject(new Error(t("i18nExt.g1.browser.control.notConnectedError"))); return; }
+      if (!client.send({ type: "takeControl" })) { reject(new Error(t("browser.panel.notConnected"))); return; }
       const waited = before?.controller === "agent";
       const done = (outcome: () => void) => { clearTimeout(timer); unwatch(); outcome(); };
-      const timer = setTimeout(() => done(() => reject(new Error(t("i18nExt.g1.browser.control.takeTimeoutError")))), TAKE_TIMEOUT_MS);
+      const timer = setTimeout(() => done(() => reject(new Error(t("browser.panel.takeFailed")))), TAKE_TIMEOUT_MS);
       const unwatch = control.watch((next) => {
         if (next?.controller === "you") done(() => resolve({ waited }));
         else if (next?.controller === "another-viewer") done(() => reject(new Error(heldElsewhere)));
-        else if (next === null) done(() => reject(new Error(t("i18nExt.g1.browser.control.disconnectedError"))));
+        else if (next === null) done(() => reject(new Error(t("browser.panel.viewDisconnected"))));
       });
     }),
     release: async () => { client.send({ type: "releaseControl" }); },

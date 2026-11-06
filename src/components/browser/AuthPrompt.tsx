@@ -21,14 +21,14 @@ export function AuthPrompt({ origin, realm, onAnswer }: {
     password.value = "";
   };
   return (
-    <form role="dialog" aria-label={t("i18nExt.g1.browser.auth.dialogAria")} onSubmit={submit} className="absolute inset-x-3 top-3 z-20 mx-auto flex max-w-sm flex-col gap-2.5 rounded-xl border border-hairline/60 bg-card p-4 text-ink shadow-xl">
-      <div className="flex items-center gap-2 text-[13px] font-medium"><LockKeyhole size={14} aria-hidden="true" />{t("i18nExt.g1.browser.auth.signIn")}</div>
-      <p className="break-words text-[12px] text-ink-secondary">{realm ? t("i18nExt.g1.browser.auth.originAsksForRealm", { origin, realm }) : origin}</p>
-      <input name="username" aria-label={t("i18nExt.g1.browser.auth.username")} autoComplete="off" spellCheck={false} maxLength={1024} placeholder={t("i18nExt.g1.browser.auth.username")} className="rounded-lg bg-inset px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-accent" />
-      <input name="password" type="password" aria-label={t("i18nExt.g1.browser.auth.password")} autoComplete="new-password" maxLength={1024} placeholder={t("i18nExt.g1.browser.auth.password")} className="rounded-lg bg-inset px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-accent" />
+    <form role="dialog" aria-label={t("browser.auth.label")} onSubmit={submit} className="absolute inset-x-3 top-3 z-20 mx-auto flex max-w-sm flex-col gap-2.5 rounded-xl border border-hairline/60 bg-card p-4 text-ink shadow-xl">
+      <div className="flex items-center gap-2 text-[13px] font-medium"><LockKeyhole size={14} aria-hidden="true" />{t("browser.auth.signIn")}</div>
+      <p className="break-words text-[12px] text-ink-secondary">{realm ? t("browser.auth.asks", { origin, realm }) : origin}</p>
+      <input name="username" aria-label={t("browser.auth.username")} autoComplete="off" spellCheck={false} maxLength={1024} placeholder={t("browser.auth.username")} className="rounded-lg bg-inset px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-accent" />
+      <input name="password" type="password" aria-label={t("logins.password")} autoComplete="new-password" maxLength={1024} placeholder={t("logins.password")} className="rounded-lg bg-inset px-3 py-2 text-[13px] outline-none focus:ring-1 focus:ring-accent" />
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => onAnswer(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-ink-secondary hover:bg-inset">{t("i18nExt.g1.browser.auth.cancel")}</button>
-        <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-[12px] text-accent-ink">{t("i18nExt.g1.browser.auth.signIn")}</button>
+        <button type="button" onClick={() => onAnswer(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-ink-secondary hover:bg-inset">{t("common.cancel")}</button>
+        <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-[12px] text-accent-ink">{t("browser.auth.signIn")}</button>
       </div>
     </form>
   );

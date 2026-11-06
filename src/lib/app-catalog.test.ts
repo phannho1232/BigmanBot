@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORY_SECTION_SIZE, catalogSections, curateVietnamCatalog, inCategory, rankCategories, VIETNAM_BROWSER_APPS } from "./app-catalog";
+import { appCategoryLabel, CATEGORY_SECTION_SIZE, catalogSections, connectorDescription, curateVietnamCatalog, inCategory, rankCategories, VIETNAM_BROWSER_APPS, VIETNAM_CURATED_CARDS } from "./app-catalog";
+import { loadLocale, setLocale } from "./i18n";
 
 const card = (slug: string, ...categories: string[]) => ({ slug, categories });
 
@@ -51,5 +52,26 @@ describe("catalogSections", () => {
     expect(catalogSections([], connected, ["Design"])).toEqual([{ kind: "all", cards: [] }]);
     expect(VIETNAM_BROWSER_APPS).toHaveLength(16);
     expect(curateVietnamCatalog([{ slug: "hackernews", label: "Hacker News" }])).toHaveLength(29);
+  });
+
+  it("resolves localized descriptions and categories for every curated card in English and Vietnamese", async () => {
+    for (const locale of ["en", "vi"] as const) {
+      await loadLocale(locale);
+      for (const entry of VIETNAM_CURATED_CARDS) {
+        expect(connectorDescription(entry).trim().length).toBeGreaterThan(0);
+        expect(connectorDescription(entry).startsWith("apps.catalog.")).toBe(false);
+        for (const cat of entry.categories ?? []) {
+          expect(appCategoryLabel(cat).trim().length).toBeGreaterThan(0);
+          expect(appCategoryLabel(cat).startsWith("apps.category.")).toBe(false);
+        }
+      }
+      for (const entry of VIETNAM_BROWSER_APPS) {
+        for (const cat of entry.categories ?? []) {
+          expect(appCategoryLabel(cat).trim().length).toBeGreaterThan(0);
+          expect(appCategoryLabel(cat).startsWith("apps.category.")).toBe(false);
+        }
+      }
+    }
+    setLocale("en");
   });
 });

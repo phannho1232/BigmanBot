@@ -2,10 +2,10 @@ import { useState } from "react";
 import { api, useStore, type ConfigStatus } from "@/state/store";
 import { builtInBrowserEnabled, showToolCallsEnabled, skillAuthoringEnabled } from "@/lib/feature-flags";
 import { localeChoices } from "@/locales";
-import { activeLocale, t } from "@/lib/i18n";
+import { activeLocale, activePackComplete, t } from "@/lib/i18n";
 import { withTourReset } from "@/lib/guided-tour";
 import { completionPatch } from "@/lib/onboarding";
-import { useUpdaterState } from "@/lib/updater";
+import { updaterMessage, useUpdaterState } from "@/lib/updater";
 import { productName } from "../lib/brand";
 import { BrowserProfilesManager } from "./BrowserProfilesManager";
 import { NewBrowserSettings } from "./BrowserSettingsRows";
@@ -19,6 +19,7 @@ import { setAdvancedMode, useAdvancedMode } from "@/lib/interface-mode";
 import { setPinnedCircles, setUniversalPins, usePinnedCircles, useUniversalPins } from "@/lib/sidebar-preferences";
 import { setShowRunCard, useShowRunCard } from "@/lib/run-card-preferences";
 import { parseSendKey, SEND_KEYS, sendKeyLabel, setSendKey, useSendKey } from "@/lib/send-key";
+import { alternateSendLabel, parseFollowUpDefault, setFollowUpDefault, useFollowUpDefault } from "@/lib/follow-up";
 import { effectiveLanguage, setLanguageChoice, useLanguageChoice } from "@/lib/language-preference";
 import { Select } from "./Select";
 
@@ -40,14 +41,14 @@ export function UpdatesRow({ title = t("settings.updates.title") }: { title?: st
               ? t("settings.updates.readyInstall", { app: productName(), version: s.version ?? "" })
               : t("settings.updates.ready", { app: productName(), version: s.version ?? "" })
             : s.status === "installing"
-              ? s.message ||
+              ? updaterMessage(s) ||
                 (s.installMode === "handoff"
                   ? t("settings.updates.openingTerminal")
                   : t("settings.updates.restarting"))
               : s.status === "handed-off"
                 ? t("settings.updates.handedOff")
                 : s.status === "error"
-                  ? t("settings.updates.failed", { message: s.message ?? t("settings.updates.unknownError") })
+                  ? t("settings.updates.failed", { message: updaterMessage(s) ?? t("settings.updates.unknownError") })
                   : t("settings.updates.latest");
   return (
     <SettingRow title={title} subtitle={label}>
@@ -185,7 +186,7 @@ export function LanguageRow({ simple = false }: { simple?: boolean }) {
   return (
     <SettingRow
       title={t("settings.language.title")}
-      subtitle={simple ? activeLocale() === "en" ? undefined : t("settings.simple.language.partial") : t("settings.language.subtitle")}
+      subtitle={activePackComplete() ? t("settings.language.subtitleComplete") : simple ? activeLocale() === "en" ? undefined : t("settings.simple.language.partial") : t("settings.language.subtitle")}
     >
       <Select size="sm" variant={simple ? "ghost" : "field"} className={simple ? undefined : "w-full max-w-[240px]"}
         value={current}
@@ -215,6 +216,24 @@ export function SendKeyRow({ simple = false }: { simple?: boolean }) {
         {SEND_KEYS.map((mode) => (
           <option key={mode} value={mode}>{sendKeyLabel(mode)}</option>
         ))}
+      </Select>
+    </SettingRow>
+  );
+}
+
+/** What Enter does with a message sent while a bot works. A setting, not a smart default: both are right, for different people. */
+export function FollowUpRow({ simple = false }: { simple?: boolean }) {
+  const followUp = useFollowUpDefault();
+  const key = alternateSendLabel(useSendKey());
+  return (
+    <SettingRow title={t("settings.followUp.title")} subtitle={t(simple ? "settings.simple.followUp" : "settings.followUp.subtitle", { key })}>
+      <Select size="sm" variant={simple ? "ghost" : "field"} className={simple ? undefined : "w-full max-w-[240px]"}
+        value={followUp}
+        aria-label={t("settings.followUp.title")}
+        onChange={(event) => setFollowUpDefault(parseFollowUpDefault(event.target.value))}
+      >
+        <option value="steer">{t("settings.followUp.steer")}</option>
+        <option value="queue">{t("settings.followUp.queue")}</option>
       </Select>
     </SettingRow>
   );

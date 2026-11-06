@@ -6,7 +6,7 @@ import { TOOL_BRIDGE_ENV } from "./drivers/agents-bridge.ts";
 import { agentsMcp } from "./drivers/agents-mcp.ts";
 import { agentsServerEnv, COMPUTER_OFF_REFUSAL, computerPickRefusal, directTurnKind, roomSkillsRefusal, type AgentsConversation, type AgentsTurn } from "./agents-turn.ts";
 
-const HOST: AgentsConversation["host"] = { skillAuthoring: true, sharedComputers: true, cloudHome: false, team: false, escalations: true, voiceNotes: true, x: true, research: true };
+const HOST: AgentsConversation["host"] = { skillAuthoring: true, sharedComputers: true, cloudHome: false, team: false, escalations: true, voiceNotes: true, x: true, research: true, imageGeneration: false };
 const CHAT: AgentsConversation = { threadId: "thread-1", bot: { id: "bot-1", chiefOfStaff: true }, room: false, teamComputer: false, host: HOST };
 const ROOM: AgentsConversation = { ...CHAT, threadId: "room-1", room: true };
 
@@ -60,7 +60,7 @@ describe("one conversation's agents tools", () => {
     const chat = await names(CHAT), room = await names(ROOM);
     expect(chat).toEqual(expect.arrayContaining(["select_computer", "wait_until", "list_waits", "cancel_wait"]));
     for (const tool of ["select_computer", "wait_until", "list_waits", "cancel_wait"]) expect(room).not.toContain(tool);
-    for (const tools of [chat, room]) expect(tools).toEqual(expect.arrayContaining(["skills_list", "skill_manage"]));
+    for (const tools of [chat, room]) expect(tools).toEqual(expect.arrayContaining(["skills_list", "skill_manage", "usage_limits"]));
     expect(await names({ ...CHAT, host: { ...HOST, skillAuthoring: false } })).not.toContain("skill_manage");
   });
 

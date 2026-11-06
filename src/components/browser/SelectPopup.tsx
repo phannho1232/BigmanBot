@@ -59,7 +59,7 @@ export function SelectPopup({ options, selectedIndex, anchor, bounds, onChoose, 
       <div
         ref={list}
         role="listbox"
-        aria-label={t("i18nExt.g1.browser.selectPopup.chooseOptionAria")}
+        aria-label={t("browser.select.label")}
         aria-activedescendant={active >= 0 ? `select-option-${active}` : undefined}
         tabIndex={0}
         onKeyDown={onKeyDown}

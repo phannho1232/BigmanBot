@@ -9,10 +9,10 @@ import { t } from "@/lib/i18n";
 export async function preparedBotTemplate(draft: BotCreationDraft) {
   const template = draft.export();
   if (template.profile.avatarUrl?.startsWith("blob:")) {
-    if (!draft.avatarFile) throw new Error(t("i18nExt.g3.createBot.chooseAvatarAgain"));
+    if (!draft.avatarFile) throw new Error(t("newBot.avatar.chooseAgain"));
     const uploaded = await imageAttachmentFromFile(draft.avatarFile);
     const avatarUrl = uploaded && botAvatarUrlFromStoredPath(uploaded.path);
-    if (!avatarUrl) throw new Error(t("i18nExt.g3.createBot.storeAvatarError"));
+    if (!avatarUrl) throw new Error(t("newBot.avatar.storeFailed"));
     template.profile.avatarUrl = avatarUrl;
   }
   return template;
@@ -29,7 +29,7 @@ export async function createConfiguredBot(
 ): Promise<{ bot: Bot; warnings: string[] }> {
   const template = await preparedBotTemplate(draft);
   const { chiefOfStaff, managedSections, toolScope, modelSelection, ...profile } = template.profile;
-  if (!profile.name?.trim()) throw new Error(t("i18nExt.g3.createBot.giveNameError"));
+  if (!profile.name?.trim()) throw new Error(t("newBot.nameRequired"));
   const preset = draft.preset;
   const chosenAi = modelSelection?.instanceId && modelSelection.model ? { modelSelection, requireAvailableModel: true } : {};
   const response = await request<{ bot: Bot }>("/api/bots", {
@@ -48,14 +48,14 @@ export async function createConfiguredBot(
     bot = { ...bot, ...patched };
     if (profile.approvalMode === "full" || profile.approvalMode === "custom") {
       if (patched.approvalMode !== profile.approvalMode) {
-        throw new Error(t("i18nExt.g3.createBot.botApprovalNotGranted"));
+        throw new Error(t("newBot.approvalNotGranted"));
       }
       const granted = await persistTaskApproval(bot.id, bot.threadId, {
         approvalMode: profile.approvalMode,
         acknowledgeLocalAuto: draft.consent.acknowledgeLocalAuto === true,
       }, approvals, request);
       if (granted.approvalMode !== profile.approvalMode) {
-        throw new Error(t("i18nExt.g3.createBot.threadApprovalNotGranted"));
+        throw new Error(t("newBot.threadApprovalNotGranted"));
       }
     }
     for (const [path, text] of Object.entries(template.memory)) {
@@ -93,12 +93,12 @@ export async function createConfiguredBot(
       });
       bot = { ...bot, ...result.bot };
     } catch (error) {
-      warnings.push(t("i18nExt.g3.createBot.reviewChiefSetting", { error: error instanceof Error ? error.message : String(error) }));
+      warnings.push(t("newBot.warning.chiefOfStaff", { error: error instanceof Error ? error.message : String(error) }));
     }
   }
   for (const routine of routines.filter(routine => routine.enabled)) {
     try { await request(`/api/routines/${routine.id}`, { method: "PATCH", body: JSON.stringify({ enabled: true }) }); }
-    catch (error) { warnings.push(t("i18nExt.g3.createBot.activateRoutineError", { error: error instanceof Error ? error.message : String(error) })); }
+    catch (error) { warnings.push(t("newBot.warning.routine", { error: error instanceof Error ? error.message : String(error) })); }
   }
   return { bot, warnings };
 }

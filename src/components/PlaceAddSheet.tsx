@@ -2,14 +2,15 @@
 // one), buy a Cloud (the buying sheet: another Cloud right here, or the first one on this computer's own sheet), or add a
 // server of the person's own by pasting its pairing link.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Building2, Cloud, Loader2, Server, X } from "lucide-react";
+import { Building2, Cloud, Loader2, Server, UserRound, X } from "lucide-react";
 import type { RailAddChoices } from "../../electron/cloud-rail.mjs";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
-import { t } from "@/lib/i18n";
+import { activeLocale, t } from "@/lib/i18n";
 import { AddCloudFlow } from "./cloud-buy/AddCloudFlow";
 import { NewOrganization } from "./cloud-buy/NewOrganization";
 import { BackLink, Heading } from "./cloud-buy/parts";
+import { VpsMmoCloudFlow } from "./vpsmmo-cloud/VpsMmoCloudFlow";
 
 /** A server's pairing link, pasted here: main checks it and asks "Connect to <host>?" itself, then opens it. The sheet
  * stays open when the person cancels, and says so when the link isn't one. `connect`: a server of theirs that signed in
@@ -82,16 +83,16 @@ export function RailSheet({ wide = false, focusKey, onClose, children }: { wide?
   }, [focusKey]);
   return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 sm:p-6" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <div ref={sheet} role="dialog" aria-modal="true" aria-labelledby="cloud-add-title" data-place-add-sheet tabIndex={-1}
-      className={cn("animate-pop-in relative max-h-full w-full overflow-y-auto overscroll-contain rounded-2xl border border-hairline/70 bg-panel shadow-2xl outline-none", wide ? "max-w-[900px]" : "max-w-[560px]")}>
+      className={cn("animate-pop-in relative max-h-full w-full overflow-y-auto overscroll-contain rounded-2xl border border-hairline/70 bg-panel shadow-2xl outline-none", wide ? "max-w-[1060px]" : "max-w-[560px]")}>
       <button type="button" onClick={onClose} aria-label={t("cloudAdd.close")} className="ui-icon-button absolute end-3.5 top-3.5 z-10"><X size={18} /></button>
       {children}
     </div>
   </div>;
 }
 
-export function PlaceAddSheet({ choices, connect = null, onClose }: { choices: RailAddChoices; connect?: { name: string } | null; onClose: () => void }) {
-  const server = choices.link, organization = choices.organization === true;
-  const several = [organization, choices.cloud, server].filter(Boolean).length > 1;
+export function PlaceAddSheet({ choices, connect = null, onClose, onAccount }: { choices: RailAddChoices; connect?: { name: string } | null; onClose: () => void; onAccount?: () => void }) {
+  const server = choices.link, organization = choices.organization === true, account = choices.account === true && Boolean(onAccount);
+  const several = [organization, choices.cloud, server, account].filter(Boolean).length > 1;
   const [view, setView] = useState<"choose" | "cloud" | "server" | "organization">(connect ? "server" : several ? "choose" : organization ? "organization" : choices.cloud ? "cloud" : "server");
   const [wide, setWide] = useState(false);
   const workspaces = window.ogb?.workspaces;
@@ -100,17 +101,21 @@ export function PlaceAddSheet({ choices, connect = null, onClose }: { choices: R
     onClose();
     void workspaces?.add?.("cloud").catch(() => {});
   };
-  return <RailSheet wide={view === "cloud" && wide} focusKey={view} onClose={onClose}>
+  const isVi = activeLocale() === "vi", inChromeRail = typeof window !== "undefined" && window.location?.protocol === "file:";
+  return <RailSheet wide={view === "cloud" && (wide || (isVi && !inChromeRail))} focusKey={view} onClose={onClose}>
     {view === "choose" && <div data-place-add="choose" className="flex flex-col gap-5 px-[30px] pb-[26px] pt-7">
       <Heading title={t("rail.add")} />
       <div className="flex flex-col gap-3 sm:flex-row">
         {organization && <Choice kind="organization" icon={<Building2 size={19} />} title={t("rail.org")} sub={t("rail.orgSub")} onClick={() => setView("organization")} />}
-        {choices.cloud && <Choice kind="cloud" icon={<Cloud size={19} />} title={t("rail.buy")} sub={t("rail.buySub")} onClick={() => setView("cloud")} />}
+        {choices.cloud && <Choice kind="cloud" icon={<Cloud size={19} />} title={t("rail.buy")} sub={t("rail.buySub")} onClick={() => (isVi && inChromeRail ? firstCloud() : setView("cloud"))} />}
         {server && <Choice kind="server" icon={<Server size={19} />} title={t("rail.own")} sub={t("rail.ownSub")} onClick={() => setView("server")} />}
+        {account && <Choice kind="account" icon={<UserRound size={19} />} title={t("accounts.add")} sub={t("rail.accountSub")} onClick={() => onAccount!()} />}
       </div>
     </div>}
     {view === "server" && <OwnServerLink onBack={several && !connect ? () => setView("choose") : null} onConnected={onClose} connect={connect} />}
-    {view === "cloud" && <AddCloudFlow onClose={onClose} onFirstCloud={firstCloud} onWide={setWide} onBack={several ? () => setView("choose") : null} />}
+    {view === "cloud" && (isVi && !inChromeRail
+      ? <VpsMmoCloudFlow onClose={onClose} onBack={several ? () => setView("choose") : null} />
+      : <AddCloudFlow onClose={onClose} onFirstCloud={firstCloud} onWide={setWide} onBack={several ? () => setView("choose") : null} />)}
     {view === "organization" && <NewOrganization onClose={onClose} onBack={several ? () => setView("choose") : null} />}
   </RailSheet>;
 }
