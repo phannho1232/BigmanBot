@@ -968,8 +968,8 @@ export class ViewerHub {
         const parsed = parseImportedCookies(raw, tab.page.url());
         if (parsed.cookies.length === 0) return;
         await session.send("Network.setCookies", { cookies: parsed.cookies });
-        if (parsed.navigateUrl) await tab.page.navigate(parsed.navigateUrl, { readiness: "none", timeoutMs: 15_000 });
-        else await tab.page.reload({ readiness: "none" });
+        const dest = parsed.navigateUrl ?? tab.page.url();
+        await tab.page.navigate(dest, { readiness: "none", timeoutMs: 15_000 });
         return;
       }
       case "reload":
@@ -1014,6 +1014,8 @@ interface ImportedCookieParam {
   secure: boolean;
   httpOnly?: boolean;
   expires?: number;
+  sameSite?: "Strict" | "Lax" | "None";
+  url?: string;
 }
 
 function defaultCookieDomain(pageUrl: string): { domain: string; navigateUrl: string | null } {
@@ -1024,7 +1026,16 @@ function defaultCookieDomain(pageUrl: string): { domain: string; navigateUrl: st
       return { domain: host.includes(".") ? `.${host}` : host, navigateUrl: null };
     }
   } catch {}
-  return { domain: ".facebook.com", navigateUrl: "https://www.facebook.com/" };
+  return { domain: "", navigateUrl: null };
+}
+
+function cdpSameSite(raw: unknown): "Strict" | "Lax" | "None" | null {
+  if (typeof raw !== "string") return null;
+  const lower = raw.toLowerCase().replace(/_/gu, "");
+  if (lower === "strict") return "Strict";
+  if (lower === "lax") return "Lax";
+  if (lower === "none" || lower === "norestriction" || lower === "unspecified") return "None";
+  return null;
 }
 
 export function parseImportedCookies(raw: string, pageUrl: string): { cookies: ImportedCookieParam[]; navigateUrl: string | null } {
@@ -1043,14 +1054,20 @@ export function parseImportedCookies(raw: string, pageUrl: string): { cookies: I
         const entry = record(item);
         if (!entry || typeof entry.name !== "string" || !entry.name.trim()) continue;
         const exp = typeof entry.expirationDate === "number" ? entry.expirationDate : typeof entry.expires === "number" ? entry.expires : undefined;
+        const dom = typeof entry.domain === "string" && entry.domain.trim() ? entry.domain.trim() : fallbackDomain;
+        if (!dom) continue;
+        const sec = entry.secure !== false;
+        const ss = cdpSameSite(entry.sameSite);
         cookies.push({
           name: entry.name.trim(),
           value: String(entry.value ?? ""),
-          domain: typeof entry.domain === "string" && entry.domain.trim() ? entry.domain.trim() : fallbackDomain,
+          domain: dom,
           path: typeof entry.path === "string" && entry.path.trim() ? entry.path.trim() : "/",
-          secure: entry.secure !== false,
+          secure: sec,
           httpOnly: entry.httpOnly === true,
           ...(exp && Number.isFinite(exp) && exp > 0 ? { expires: exp } : {}),
+          ...(ss ? { sameSite: ss } : {}),
+          url: `http${sec ? "s" : ""}://${dom.startsWith(".") ? dom.slice(1) : dom}/`,
         });
       }
       return { cookies, navigateUrl };
@@ -1067,7 +1084,7 @@ export function parseImportedCookies(raw: string, pageUrl: string): { cookies: I
         cookies.push({
           name: name.trim(),
           value: value.trim(),
-          domain: dom?.trim() || fallbackDomain,
+          domain: dom?.trim() || fallbackDomain || ".",
           path: path?.trim() || "/",
           secure: sec?.toUpperCase() !== "FALSE",
           ...(Number.isFinite(exp) && exp > 0 ? { expires: exp } : {}),

@@ -7,6 +7,7 @@ import type { LocaleKey } from "@/locales";
 import { colorSwatch, MAUS_COLOR_LABEL, MAUS_COLOR_NAMES, PICKABLE_STATES, type MausState } from "@/lib/mascot";
 import type { Bot } from "@/state/store";
 import { MASCOT_BODIES, MASCOT_BODY_IDS } from "../../../shared/mascot-bodies";
+import { ANIMATED_FIST_MASCOTS } from "../../../shared/animated-mascots";
 import { HALLOWEEN_BODIES, HALLOWEEN_BODY_IDS } from "../../../shared/halloween-bodies";
 import { isHalloweenBody, type BotBodyId } from "../../../shared/bot-body";
 import { useHalloweenDressed, wornBody } from "@/lib/halloween-dress";
@@ -16,10 +17,11 @@ import { AvatarFraming, OrganizationAvatarIcons, RESET_MASCOT_PATCH, useAvatarIm
 import { Segmented } from "./rows";
 import { MascotFaceColorPicker } from "../MascotFaceColorPicker";
 
-export type AvatarEditorTab = "bot" | "generate" | "upload";
+export type AvatarEditorTab = "bot" | "animated" | "generate" | "upload";
 
 const TABS: ReadonlyArray<readonly [AvatarEditorTab, LocaleKey]> = [
   ["bot", "botPanel.avatar.tabBot"],
+  ["animated", "botPanel.avatar.tabAnimated" as LocaleKey],
   ["generate", "botPanel.avatar.tabGenerate"],
   ["upload", "botPanel.avatar.tabUpload"],
 ];
@@ -57,8 +59,9 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
 }) {
   const image = useAvatarImage(bot, onPatch);
   const { fileRef, crop, uploading, generating, setSavingConnection, busy, error, upload, removeImage, generate } = image;
-  const showsImage = crop !== "mascot" && Boolean(bot.avatarUrl);
-  const [tab, setTab] = useState<AvatarEditorTab>(showsImage ? "upload" : "bot");
+  const isAnimated = Boolean(bot.avatarUrl?.startsWith("/mascots/"));
+  const showsImage = crop !== "mascot" && Boolean(bot.avatarUrl) && !isAnimated;
+  const [tab, setTab] = useState<AvatarEditorTab>(isAnimated ? "animated" : showsImage ? "upload" : "bot");
   const tabsRef = useRef<HTMLDivElement>(null);
   // The card is a dialog: focus moves into it, onto the tab it opened on, so Escape and Tab work from the start.
   useEffect(() => {
@@ -197,6 +200,45 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
               </div>
             )}
           </>
+        )}
+
+        {tab === "animated" && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-4 gap-2 max-h-[300px] overflow-y-auto pr-1">
+              {ANIMATED_FIST_MASCOTS.map((m) => {
+                const selected = bot.avatarUrl === m.url;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    disabled={busy}
+                    aria-pressed={selected}
+                    title={m.name}
+                    onClick={() => {
+                      onPatch({
+                        avatarUrl: m.url,
+                        avatarCrop: "circle",
+                        avatarZoom: 1,
+                        avatarFocusX: 0.5,
+                        avatarFocusY: 0.5,
+                      });
+                    }}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-2 rounded-xl transition-all disabled:opacity-50",
+                      selected
+                        ? "bg-ink/[0.08] ring-2 ring-accent-border font-medium text-ink"
+                        : "hover:bg-ink/[0.05] text-ink-secondary hover:text-ink"
+                    )}
+                  >
+                    <div className="size-11 flex items-center justify-center">
+                      <img src={m.url} alt={m.name} className="size-10 object-contain" />
+                    </div>
+                    <span className="mt-1 text-[11px] truncate max-w-full text-center">{m.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {tab === "generate" && (

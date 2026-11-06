@@ -7875,5 +7875,6 @@
   "i18nExt.g3.botDraft.routineMustTargetBot": "Lịch trình của bot mới phải nhắm tới chính bot đó",
   "i18nExt.g3.botDraft.routineOtherBot": "Lịch trình thuộc về một bot khác",
   "i18nExt.g3.botDraft.noSuchRoutine": "Không tìm thấy lịch trình trong bản nháp",
-  "i18nExt.g3.botDraft.requiresCreatedBot": "Thao tác này yêu cầu bot đã được tạo"
+  "i18nExt.g3.botDraft.requiresCreatedBot": "Thao tác này yêu cầu bot đã được tạo",
+  "botPanel.avatar.tabAnimated": "Nắm đấm động"
 }
