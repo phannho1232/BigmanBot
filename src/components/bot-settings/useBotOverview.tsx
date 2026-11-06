@@ -148,7 +148,7 @@ export function useBotHistory(bot: Bot, active: boolean) {
         body: JSON.stringify(target),
       });
     } catch (e: unknown) {
-      dispatch({ type: "error", message: e instanceof Error ? e.message : "Couldn't undo that change." });
+      dispatch({ type: "error", message: e instanceof Error ? e.message : t("botOverview.undoFailed") });
     } finally {
       await load();
       setRollingBack(false);
@@ -170,9 +170,9 @@ export function HistoryRollbackDialog({ history, returnFocusRef }: {
   return (
     <ConfirmDialog
       open={rollbackTarget !== null}
-      title={t("i18nExt.g0.restoreInstructionsTitle")}
-      body={t("i18nExt.g0.restoreInstructionsBody")}
-      confirmLabel={t("i18nExt.g0.restoreInstructionsConfirm")}
+      title={t("botOverview.restoreSoul.title")}
+      body={t("botOverview.restoreSoul.body")}
+      confirmLabel={t("botOverview.restoreSoul.confirm")}
       tone="neutral"
       returnFocusRef={returnFocusRef}
       onCancel={() => setRollbackTarget(null)}

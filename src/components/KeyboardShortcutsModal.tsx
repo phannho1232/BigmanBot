@@ -4,6 +4,8 @@ import { Keyboard, Search, X } from "lucide-react";
 import {
   filterShortcutGroups,
   isMacPlatform,
+  shortcutCategory,
+  shortcutDescription,
   shortcutGroupsFor,
   shortcutKeysForPlatform,
   type ShortcutItem,
@@ -21,7 +23,7 @@ function ShortcutRow({ item, isMac }: { item: ShortcutItem; isMac: boolean }) {
 
   return (
     <div className="flex items-center justify-between gap-4 py-1.5">
-      <span className="text-[13px] text-ink">{item.description}</span>
+      <span className="text-[13px] text-ink">{shortcutDescription(item)}</span>
       <div className="flex shrink-0 items-center gap-1">
         {keys.map((key, index) => (
           <kbd
@@ -76,17 +78,17 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
             </span>
             <div>
               <h2 id="shortcuts-dialog-title" className="text-[16px] font-semibold text-ink">
-                {t("i18nExt.g3.shortcutsModal.title")}
+                {t("shortcuts.title")}
               </h2>
               <p className="text-[12px] text-ink-secondary">
-                {t("i18nExt.g3.shortcutsModal.subtitle")}
+                {t("shortcuts.subtitle")}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label={t("i18nExt.g3.shortcutsModal.closeAria")}
+            aria-label={t("shortcuts.close")}
             className="rounded-lg p-1.5 text-ink-secondary hover:bg-raised hover:text-ink"
           >
             <X size={18} />
@@ -100,8 +102,8 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("i18nExt.g3.shortcutsModal.searchPlaceholder")}
-              aria-label={t("i18nExt.g3.shortcutsModal.searchAria")}
+              placeholder={t("shortcuts.searchPlaceholder")}
+              aria-label={t("shortcuts.search")}
               className="w-full bg-transparent text-[13px] text-ink placeholder:text-ink-secondary focus:outline-none"
             />
           </div>
@@ -110,13 +112,13 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4">
           {groups.length === 0 ? (
             <div className="py-8 text-center text-[13px] text-ink-secondary">
-              {t("i18nExt.g3.shortcutsModal.noResults", { query })}
+              {t("shortcuts.noMatch", { query })}
             </div>
           ) : (
             groups.map((group) => (
               <div key={group.category} className="space-y-1">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-tertiary">
-                  {group.category}
+                  {shortcutCategory(group)}
                 </div>
                 <div className="divide-y divide-hairline/20 rounded-xl bg-card/40 px-3 py-1 border border-hairline/30">
                   {group.items.map((item) => (
@@ -130,14 +132,14 @@ export function KeyboardShortcutsModal({ open, onClose }: KeyboardShortcutsModal
 
         <div className="flex items-center justify-between border-t border-hairline/40 bg-card/30 px-5 py-2.5 text-[12px] text-ink-secondary">
           <span>
-            {t("i18nExt.g3.shortcutsModal.pressBefore")} <kbd className="rounded bg-control px-1 py-0.5 font-mono text-[11px]">?</kbd> {t("i18nExt.g3.shortcutsModal.pressAfter")}
+            {t("shortcuts.openHintBefore")} <kbd className="rounded bg-control px-1 py-0.5 font-mono text-[11px]">?</kbd> {t("shortcuts.openHintAfter")}
           </span>
           <button
             type="button"
             onClick={onClose}
             className="ui-button ui-button-md"
           >
-            {t("i18nExt.g3.shortcutsModal.done")}
+            {t("common.done")}
           </button>
         </div>
       </div>

@@ -81,7 +81,7 @@ export function ManageMembersPanel({
     const rosterChanged =
       opened.length !== group.memberIds.length || opened.some((id, index) => id !== group.memberIds[index]);
     if (rosterChanged) {
-      setSaveError(t("i18nExt.g3.manageMembers.rosterChangedError"));
+      setSaveError(t("room.members.changed"));
       return;
     }
     if (changed) {
@@ -104,13 +104,13 @@ export function ManageMembersPanel({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={t("i18nExt.g3.manageMembers.dialogAria", { name: group.name })}
+        aria-label={t("room.members.dialogLabel", { name: group.name })}
         className="w-[340px] rounded-2xl border border-hairline/50 bg-card p-4 shadow-2xl"
       >
-        <div className="mb-1 text-[15px] font-semibold text-ink">{t("i18nExt.g3.manageMembers.title")}</div>
+        <div className="mb-1 text-[15px] font-semibold text-ink">{t("room.members.title")}</div>
         <div className="mb-3 truncate text-[13px] text-ink-secondary">{group.name}</div>
-        <BotPickerList bots={bots} picked={picked} onToggle={toggle} emptyHint={t("i18nExt.g3.manageMembers.emptyHint")} />
-        {!memberIds.length && <div className="mt-2 text-[12px] text-ink-secondary">{t("i18nExt.g3.manageMembers.minOneBot")}</div>}
+        <BotPickerList bots={bots} picked={picked} onToggle={toggle} emptyHint={t("room.members.emptyHint")} />
+        {!memberIds.length && <div className="mt-2 text-[12px] text-ink-secondary">{t("room.members.needOne")}</div>}
         {saveError && (
           <div role="alert" className="mt-2 text-[12px] text-danger">
             {saveError}
@@ -121,14 +121,14 @@ export function ManageMembersPanel({
             onClick={onClose}
             className="flex-1 rounded-lg bg-raised py-2 text-[14px] font-medium text-ink hover:brightness-110"
           >
-            {t("i18nExt.g3.manageMembers.cancel")}
+            {t("common.cancel")}
           </button>
           <button
             onClick={save}
             disabled={!memberIds.length}
             className="flex-1 rounded-lg bg-accent py-2 text-[14px] font-medium text-white hover:brightness-110 disabled:opacity-40"
           >
-            {!memberIds.length ? t("i18nExt.g3.manageMembers.save") : memberIds.length === 1 ? t("i18nExt.g3.manageMembers.saveOne") : t("i18nExt.g3.manageMembers.saveMany", { count: memberIds.length })}
+            {!memberIds.length ? t("common.save") : memberIds.length === 1 ? t("room.members.saveOne") : t("room.members.saveMany", { count: memberIds.length })}
           </button>
         </div>
       </div>

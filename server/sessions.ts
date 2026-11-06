@@ -5,6 +5,7 @@ import { dirname } from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "./atomic.ts";
 import { teamSessionExpiresAt, type TeamMember, type TeamRole } from "./cloud-team.ts";
+import { userError, type UserError } from "./user-errors.ts";
 
 export type Scope = "admin" | "client";
 export const SCOPES: readonly Scope[] = ["admin", "client"];
@@ -106,7 +107,7 @@ export interface PublicPairing {
 
 export type ExchangeResult =
   | { ok: true; token: string; session: PublicSession }
-  | { ok: false; status: 401 | 403 | 429; error: string };
+  | ({ ok: false; status: 401 | 403 | 429 } & UserError);
 
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
@@ -180,6 +181,9 @@ export interface SessionStoreOptions {
   emailScopes?: EmailScopesResolver;
   emailScopesSnapshot?: () => EmailScopesResolver;
   portalMembership?: boolean;
+  /** Between membershipChanged() calls, the hot paths (each request, stream frame and liveness check) recheck email
+   * membership at most this often. Default 0: every call. */
+  recheckMs?: number;
 }
 
 export class SessionRegistry {
@@ -195,7 +199,8 @@ export class SessionRegistry {
   private readonly options: SessionStoreOptions;
   private readonly openMarker: string;
   private closed = false;
-  private adminOnly: string | null = null;
+  private adminOnly: UserError | null = null;
+  private membershipCheckedAt = -Infinity;
 
   // No parameter properties: Node's strip-only TypeScript mode only erases types.
   constructor(options: SessionStoreOptions) {
@@ -257,7 +262,7 @@ export class SessionRegistry {
   }
 
   private prune(): void {
-    this.revalidateEmailSessions();
+    this.recheckMembership();
     const now = this.now();
     this.pairings = this.pairings.filter((p) => p.expiresAt > now);
     this.replays = this.replays.filter((r) => r.expiresAt > now);
@@ -269,7 +274,12 @@ export class SessionRegistry {
     if (expired.length) {
       this.sessions = this.sessions.filter((s) => s.expiresAt > now);
       for (const s of expired) this.forget(s.id);
-      this.persist();
+      try {
+        this.persist();
+      } catch {
+        // The heartbeat reaches prune() through isLive(), where an escaping write failure would exit the process.
+        console.error("Could not persist session pruning.");
+      }
     }
   }
 
@@ -291,7 +301,7 @@ export class SessionRegistry {
   }
 
   /** From now on nothing without admin scope is opened, redeemed, issued or accepted; the caller revokes stored sessions. */
-  requireAdmin(refusal: string): void {
+  requireAdmin(refusal: UserError): void {
     this.adminOnly = refusal;
   }
 
@@ -300,7 +310,10 @@ export class SessionRegistry {
   }
 
   private refusePersonal(scopes: readonly Scope[]): void {
-    if (this.personal(scopes)) throw Object.assign(new Error(this.adminOnly!), { status: 403, code: "cloud_personal" });
+    if (this.personal(scopes)) {
+      const { error, ...fields } = this.adminOnly!;
+      throw Object.assign(new Error(error), { status: 403, code: "cloud_personal", ...fields });
+    }
   }
 
   openPairing(input: { scopes?: Scope[]; label?: string; ttlMs?: number; browser?: boolean; owner?: string; member?: TeamMember; memberCheckedAt?: number } = {}): { id: string; code: string; credential: string; expiresAt: number } {
@@ -388,17 +401,17 @@ export class SessionRegistry {
     const lock = this.lockState(input.source);
     if (lock.locked) {
       const seconds = Math.ceil(lock.retryAfterMs / 1000);
-      return { ok: false, status: 429, error: `too many failed pairing attempts from your address; try again in ${seconds}s` };
+      return { ok: false, status: 429, ...userError("serverError.pair.tooMany", { seconds }) };
     }
     const index = this.pairings.findIndex((p) => (p.browser === true) === browser &&
       (sameDigest(p.credentialHash, presented) || (!p.browser && sameDigest(p.codeHash, presented))));
     if (index < 0) {
       this.recordFailure(input.source);
-      return { ok: false, status: 401, error: "pairing code is wrong or has expired; create a new one on the server" };
+      return { ok: false, status: 401, ...userError("serverError.pair.codeWrong") };
     }
     const [pairing] = this.pairings.splice(index, 1);
     this.failures.delete(input.source);
-    if (this.personal(pairing.scopes)) return { ok: false, status: 403, error: this.adminOnly! };
+    if (this.personal(pairing.scopes)) return { ok: false, status: 403, ...this.adminOnly! };
     const token = `omb_sess_${randomBytes(32).toString("base64url")}`;
     const checkedAt = pairing.memberCheckedAt ?? now;
     const record: SessionRecord = {
@@ -510,9 +523,21 @@ export class SessionRegistry {
     this.failures.delete(source);
   }
 
+  /** The sign-in lists may have changed: the next recheckMembership() reads them. */
+  membershipChanged(): void {
+    this.membershipCheckedAt = -Infinity;
+  }
+
+  /** revalidateEmailSessions(), unless one ran within `recheckMs` and membershipChanged() has not been called since. */
+  recheckMembership(): void {
+    if (this.now() - this.membershipCheckedAt < (this.options.recheckMs ?? 0)) return;
+    this.revalidateEmailSessions();
+  }
+
   /** Email membership is live: losing any scope revokes the token and its streams; promotions never widen existing credentials. */
   revalidateEmailSessions(): void {
     if (this.closed) throw new Error("Session registry is closed.");
+    this.membershipCheckedAt = this.now();
     // A team session's membership is the Admin's signed claim, checked at each pairing (cloud-team.ts), never the sign-in list.
     const eligible = this.sessions.filter(session => session.email !== undefined && session.membershipAuthority !== "team" && !(this.options.portalMembership && session.membershipAuthority === "portal"));
     if (!eligible.length) return;
@@ -544,7 +569,7 @@ export class SessionRegistry {
 
   authenticate(token: string | undefined): SessionRecord | null {
     if (!token) return null;
-    this.revalidateEmailSessions();
+    this.recheckMembership();
     const hash = sha256(token);
     const now = this.now();
     const record = this.sessions.find((s) => sameDigest(s.tokenHash, hash));
@@ -560,7 +585,7 @@ export class SessionRegistry {
 
   /** Call only after origin and scope checks pass; never revives an expired session. */
   renew(sessionId: string): boolean {
-    this.revalidateEmailSessions();
+    this.recheckMembership();
     const record = this.sessions.find((s) => s.id === sessionId);
     const now = this.now();
     if (!record || record.expiresAt <= now) return false;
@@ -589,6 +614,12 @@ export class SessionRegistry {
   memberPhones(): PublicSession[] {
     this.prune();
     return this.sessions.filter((s) => s.membershipAuthority === "team" && s.memberCheckedAt !== undefined).map(publicSession);
+  }
+
+  /** Every code a member made for a phone stops working, and every phone such a code opened signs out. Never an Admin-signed pairing (an app). */
+  closeMemberPhones(): number {
+    this.pairings = this.pairings.filter((pairing) => !(pairing.member && pairing.memberCheckedAt !== undefined));
+    return this.memberPhones().filter((phone) => this.revoke(phone.id)).length;
   }
 
   /** A person who left a Team Cloud: every session of theirs (app windows, phones) ends now, and no open code of theirs

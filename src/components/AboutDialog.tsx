@@ -61,7 +61,7 @@ export function AboutDialog({ open, onClose }: { open: boolean; onClose: () => v
         <p className="mt-1 text-[13px] text-ink-secondary">{version}</p>
         {connected && <p className="mt-0.5 text-[13px] text-ink-secondary">{connected}</p>}
         <p className="mt-3 text-[13px] leading-relaxed text-ink-secondary">
-          {t("i18nExt.g3.about.tagline", { appName: APP_NAME })}
+          {t("about.tagline", { app: APP_NAME })}
         </p>
         <button
           ref={closeRef}
@@ -69,7 +69,7 @@ export function AboutDialog({ open, onClose }: { open: boolean; onClose: () => v
           onClick={onClose}
           className="mt-5 w-full rounded-xl bg-raised px-4 py-2 text-[13px] font-medium text-ink hover:brightness-110"
         >
-          {t("i18nExt.g3.about.close")}
+          {t("common.close")}
         </button>
       </div>
     </div>

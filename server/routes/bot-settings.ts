@@ -19,6 +19,7 @@ import type { ModelSelectionCheck } from "./bots-create.ts";
 import { PASS, type RouteHandler } from "./table.ts";
 import { pinnedClientThreadGuard } from "./pinned-client-thread.ts";
 import { sawThread } from "../thread-presence.ts";
+import { refusalBody } from "../user-errors.ts";
 import { readThreadNotifications } from "./notifications.ts";
 
 export interface BotSettingsRouteDeps {
@@ -138,10 +139,10 @@ export function createBotSettingsRoutes(deps: BotSettingsRouteDeps): RouteHandle
         { selection: selected.modelSelection, busy: threadBusy(selected.id, selected.threadId) },
         true,
       );
-      if (!checked.ok) return json(res, checked.status, { error: checked.error });
+      if (!checked.ok) return json(res, checked.status, refusalBody(checked));
       if (activeGroupTurnForBot(existing.id)) {
         const groupChecked = checkedModelSelection(checked.selection, { selection: existing.modelSelection, busy: true });
-        if (!groupChecked.ok) return json(res, groupChecked.status, { error: groupChecked.error });
+        if (!groupChecked.ok) return json(res, groupChecked.status, refusalBody(groupChecked));
       }
       if ([existing, selected].some((owner) => {
         const mode = approvalModeFor(owner);
@@ -165,11 +166,12 @@ export function createBotSettingsRoutes(deps: BotSettingsRouteDeps): RouteHandle
       const current = requestedTaskBot(m[1], body?.threadId);
       sawThread(current.threadId);
       deps.threadRead?.(auth, current.threadId);
-      store.patchTask(current.id, current.threadId, { unread: false, ...readCursor(current.threadId) });
+      const task = store.taskByThread(current.id, current.threadId), cursor = readCursor(current.threadId);
+      const changed = Boolean(task?.unread) || (cursor.lastReadMessageId !== undefined && task?.lastReadMessageId !== cursor.lastReadMessageId);
+      if (changed) store.patchTask(current.id, current.threadId, { unread: false, ...cursor });
       readThreadNotifications(current.threadId, broadcast, auth);
-      const bot = store.bot(current.id)!;
-      const visible = wireBot(bot);
-      broadcast({ kind: "bot", bot: visible });
+      const visible = wireBot(store.bot(current.id)!);
+      if (changed) broadcast({ kind: "bot", bot: visible });
       return json(res, 200, { bot: visible });
     }
     m = path.match(/^\/api\/bots\/([\w-]+)\/command-allowlist(?:\/([\w-]+))?$/);

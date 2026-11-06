@@ -16,16 +16,18 @@ import { t } from "@/lib/i18n";
 import { speaker } from "@/lib/tts";
 import { localSystemVoiceActive } from "@/lib/local-voice";
 import { useSpeech } from "@/lib/tts/useSpeech";
-import { usePushToTalk } from "@/lib/push-to-talk";
+import { pushToTalkKeys, usePushToTalk } from "@/lib/push-to-talk";
 import { BotAvatar } from "./Avatar";
 import { navigateThreadMenu } from "./BotProjects";
 import { LiveKeyNeeded } from "./LiveKeyNeeded";
 import { liveLineHeldElsewhere } from "./LiveCallBar";
 import { isRoutineApproval, isSkillApproval, pendingApprovals, spokenApprovalPrompt } from "./PendingApproval";
+import { titledCard } from "./ApprovalCard";
 import { callStarted } from "@/lib/product-events";
 import { useDesktopCapabilities } from "./DesktopCapabilities";
 import { callCapabilityHelp, type CallCapabilityHelp } from "@/lib/call-capability";
 import { onCallStartRequest } from "@/lib/call-start-request";
+import { fishListeningReady, listensHere, speechBridge } from "@/lib/speech";
 import { VoiceSetupDialog } from "./VoiceSetupDialog";
 import { openBotSettings } from "./bot-panel/panel-link";
 import { MENU_SHEET } from "./menu-recipe";
@@ -101,7 +103,7 @@ export function CallTargetButton({
   const active = onCall || onLiveCall;
   const remoteClient = globalThis.window?.ogb?.remoteClient?.active === true;
   const capabilityHelp = capabilitiesReady
-    ? callCapabilityHelp(capabilities, Boolean(window.ogb?.speechStart))
+    ? callCapabilityHelp(capabilities, Boolean(speechBridge()?.speechStart), fishListeningReady(state.config))
     : null;
   const supported = capabilitiesReady && !capabilityHelp;
   const localVoice = localSystemVoiceActive();
@@ -110,7 +112,7 @@ export function CallTargetButton({
   const voiceReady =
     localVoice ||
     (configured && (requireExplicitVoices ? everyTargetHasVoice : Boolean(state.config?.tts?.ready || everyTargetHasVoice)));
-  const turnsHere = !capabilitiesReady || capabilities.dictation.available;
+  const turnsHere = !capabilitiesReady || listensHere(capabilities, state.config);
   const mode = effectiveCallMode(useCallMode(), { turnsHere, canLive });
   const liveMode = canLive && mode === "live";
   const turnsReady = capabilitiesReady && supported && voiceReady;
@@ -144,25 +146,25 @@ export function CallTargetButton({
       : liveMode
       ? t("call.live.callWith", { name: targetName })
       : !capabilitiesReady
-      ? t("i18nExt.g2.call.checkingAvailability")
+      ? t("call.turns.checking")
       : !supported
-        ? capabilityHelp?.label ?? t("i18nExt.g2.call.unavailable")
+        ? capabilityHelp?.label ?? t("call.turns.unavailable")
         : !configured
-          ? t("i18nExt.g2.call.setupVoiceToCall")
+          ? t("call.turns.setUpVoice")
           : !voiceReady
-            ? t("i18nExt.g2.call.pickVoiceToCall")
-            : t("i18nExt.g2.call.callTarget", { name: targetName });
+            ? t("call.turns.pickVoice")
+            : t("call.turns.callName", { name: targetName });
 
   const reason = !capabilitiesReady
-    ? t("i18nExt.g2.call.checkingDevice")
+    ? t("call.turns.checkingReason")
     : capabilityHelp
       ? capabilityHelp.reason
         : !configured
-          ? t("i18nExt.g2.call.setupVoiceProviderHint")
+          ? t("call.turns.setUpVoiceReason")
           : !voiceReady
             ? voices.length > 1
-              ? t("i18nExt.g2.call.groupVoiceHint")
-              : t("i18nExt.g2.call.chooseVoiceHint")
+              ? t("call.turns.groupVoicesReason")
+              : t("call.turns.pickVoiceReason")
             : "";
 
   const closePopovers = useCallback(() => {
@@ -329,7 +331,7 @@ export function CallTargetButton({
         <div
           ref={keyRef}
           id={keyId}
-          className={cn("animate-pop-in absolute right-0 z-30 w-[340px] max-w-[90vw] rounded-xl shadow-2xl", composer ? "bottom-full mb-1.5" : "top-full mt-1.5")}
+          className={cn("animate-pop-in absolute right-0 z-30 max-h-[calc(100dvh-80px)] w-[340px] max-w-[90vw] overflow-y-auto overscroll-contain rounded-xl shadow-2xl", composer ? "bottom-full mb-1.5" : "top-full mt-1.5")}
         >
           <LiveKeyNeeded />
         </div>
@@ -339,10 +341,10 @@ export function CallTargetButton({
         <div
           id={helpId}
           role="group"
-          aria-label={t("i18nExt.g2.call.unavailable")}
+          aria-label={t("call.turns.unavailable")}
           className={cn("absolute right-0 z-30 w-[280px]", composer ? "bottom-full mb-1.5" : "mt-1.5", "rounded-xl border border-hairline bg-panel p-3 text-left shadow-2xl", helpMotion.className)} {...helpMotion.exitProps}
         >
-          <div className="text-[13px] font-medium text-ink">{t("i18nExt.g2.call.unavailable")}</div>
+          <div className="text-[13px] font-medium text-ink">{t("call.turns.unavailable")}</div>
           <div className="mt-1 text-[12px] leading-[1.45] text-ink-secondary">{reason}</div>
           {canLive && (
             <button
@@ -473,7 +475,7 @@ function Call({ bot }: { bot: Bot }) {
   const [heard, setHeard] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const pushToTalk = usePushToTalk(bot.id, phase === "listening", () => {
-    setNote(t("i18nExt.g2.call.pttStartFailed"));
+    setNote(t("call.turns.pushToTalkFailed"));
   });
 
   const messages = visibleMessages(bot);
@@ -512,7 +514,7 @@ function Call({ bot }: { bot: Bot }) {
   }, []);
 
   const hush = useCallback(() => {
-    void window.ogb?.speechStop();
+    void speechBridge()?.speechStop();
   }, []);
 
   const listen = useCallback(() => {
@@ -520,9 +522,9 @@ function Call({ bot }: { bot: Bot }) {
     move("listening");
     setHeard("");
     setNote(null);
-    void window.ogb?.speechStart({ endpointMs: CALL_ENDPOINT_MS }).catch(() => {
+    void speechBridge()?.speechStart({ endpointMs: CALL_ENDPOINT_MS }).catch(() => {
       if (alive.current && currentCall() === bot.id) {
-        setNote(t("i18nExt.g2.call.micStartFailed"));
+        setNote(t("call.turns.micFailed"));
       }
     });
   }, [bot.id, move]);
@@ -560,12 +562,12 @@ function Call({ bot }: { bot: Bot }) {
   }, [bot.id]);
 
   useEffect(() => {
-    const bridge = window.ogb;
+    const bridge = speechBridge();
     if (!bridge) return;
     const offTranscript = bridge.onSpeechTranscript((line) => {
       if (!alive.current || currentCall() !== bot.id || phaseRef.current !== "listening") return;
       if (line.error) {
-        setNote(t("i18nExt.g2.call.dictationStopped"));
+        setNote(t("call.turns.dictationStopped"));
         return;
       }
       if (typeof line.text !== "string") return;
@@ -585,7 +587,7 @@ function Call({ bot }: { bot: Bot }) {
           const allow = YES.test(said);
           if (allow && open.skill) {
             setHeard("");
-            void sayThenListen("Open this chat to review the complete skill before enabling it. You can say no now to deny it.");
+            void sayThenListen("Open this chat to review the complete skill before approving it. You can say no now to deny it.");
             return;
           }
           // Stay claimed until the server's card patch arrives, or a render in that gap submits the same approval
@@ -633,21 +635,21 @@ function Call({ bot }: { bot: Bot }) {
       move("sending");
       dispatch({ type: "send", botId: bot.id, text: said, threadId: bot.threadId });
     });
-    const offEnd = bridge.onSpeechEnd(({ code, reason }) => {
+    const offEnd = bridge.onSpeechEnd(({ code, reason, message }) => {
       if (!alive.current || currentCall() !== bot.id) return;
       if (code === 2) {
-        setNote(t("i18nExt.g2.call.needsMacDictation"));
+        setNote(t("call.turns.needsDictation"));
         return;
       }
       if (code === 1) {
         setNote(
-          reason === "helper-build-failed"
-            ? t("i18nExt.g2.call.helperBuildFailed")
+          message ?? t(reason === "helper-build-failed"
+            ? "call.turns.helperBuildFailed"
             : reason === "dictation-disabled"
-              ? t("i18nExt.g2.call.dictationDisabled")
+              ? "composer.dictation.disabled"
               : reason === "speech-not-authorized"
-                ? t("i18nExt.g2.call.speechNotAuthorized")
-                : t("i18nExt.g2.call.dictationStartFailed"),
+                ? "call.turns.speechNotAuthorized"
+                : "composer.dictation.failed"),
         );
         return;
       }
@@ -658,7 +660,7 @@ function Call({ bot }: { bot: Bot }) {
     return () => {
       offTranscript();
       offEnd();
-      void window.ogb?.speechStop();
+      void speechBridge()?.speechStop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bot.id, bot.threadId, dispatch, hush, listen, move, sayThenListen]);
@@ -695,7 +697,7 @@ function Call({ bot }: { bot: Bot }) {
       const skillPrompt = approval.message.card?.skillRequest?.action === "update"
         ? `${bot.name} wants to update a learned skill. Open this chat to review the complete skill before replacing the current version. You can say no to deny it.`
         : `${bot.name} wants to enable a new learned skill. Open this chat to review the complete skill before enabling it. You can say no to deny it.`;
-      void sayThenListen(isSkillApproval(approval) ? skillPrompt : spokenApprovalPrompt(approval, bot.name));
+      void sayThenListen(isSkillApproval(approval) && !titledCard(approval.message.card) ? skillPrompt : spokenApprovalPrompt(approval, bot.name));
       return;
     }
     if (
@@ -765,19 +767,19 @@ function Call({ bot }: { bot: Bot }) {
   const status =
     phase === "listening"
       ? pushToTalk
-        ? t("i18nExt.g2.call.pushToTalk")
-        : t("i18nExt.g2.call.listening")
+        ? t("call.turns.pushToTalk")
+        : t("call.turns.listening")
       : phase === "sending"
-        ? t("i18nExt.g2.call.oneMoment")
+        ? t("call.turns.oneMoment")
         : phase === "speaking"
           ? bot.name
-          : t("i18nExt.g2.call.working");
+          : t("chat.activity.working");
 
   return (
     <>
       <button
         onClick={() => endCall(bot.id)}
-        aria-label={t("i18nExt.g2.call.hangUp")}
+        aria-label={t("call.live.hangUp")}
         className="absolute right-5 top-5 rounded-md p-2 text-ink-secondary hover:bg-raised hover:text-ink"
       >
         <X size={18} />
@@ -797,7 +799,7 @@ function Call({ bot }: { bot: Bot }) {
         {phase === "listening" ? (
           heard || (
             <span className="text-ink-secondary">
-              {pushToTalk ? t("i18nExt.g2.call.releaseToSend") : t("i18nExt.g2.call.saySomething")}
+              {pushToTalk ? t("call.turns.releaseToSend", { keys: pushToTalkKeys() }) : t("call.turns.saySomething")}
             </span>
           )
         ) : (
@@ -812,7 +814,7 @@ function Call({ bot }: { bot: Bot }) {
             onClick={listen}
             className="rounded-full border border-warning/40 px-3 py-1.5 text-[12px] hover:bg-warning/10"
           >
-            {t("i18nExt.g2.call.tryMicAgain")}
+            {t("call.turns.tryMicrophone")}
           </button>
         </div>
       )}
@@ -828,19 +830,19 @@ function Call({ bot }: { bot: Bot }) {
             }}
             className="rounded-full border border-hairline/50 px-4 py-2 text-[14px] text-ink hover:bg-raised"
           >
-            {t("i18nExt.g2.call.interrupt")}
+            {t("call.turns.interrupt")}
           </button>
         )}
         <button
           onClick={() => endCall(bot.id)}
           className="flex items-center gap-2 rounded-full bg-danger px-5 py-2.5 text-[14px] font-medium text-white hover:brightness-110"
         >
-          <PhoneOff size={16} /> {t("i18nExt.g2.call.hangUp")}
+          <PhoneOff size={16} /> {t("call.live.hangUp")}
         </button>
       </div>
 
       <div className="text-[12px] text-ink-tertiary">
-        {t("i18nExt.g2.call.shortcutsHint")}
+        {t("call.turns.keysHint", { keys: pushToTalkKeys() })}
       </div>
     </>
   );

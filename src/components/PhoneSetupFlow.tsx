@@ -1,3 +1,4 @@
+import { companionBridge } from "@/lib/companion-bridge";
 import {
   useCallback,
   useEffect,
@@ -125,9 +126,7 @@ interface PhonePairingRequest {
   generation: number;
 }
 
-export const companionBridge = (): CompanionBridge | null =>
-  // SAFETY: the preload owns this narrow bridge; browser builds are guarded by the optional lookup.
-  (globalThis as { ogb?: { companion?: CompanionBridge } }).ogb?.companion ?? null;
+export { companionBridge };
 
 export const companionAccountBridge = (): AccountBridge | null =>
   // SAFETY: Electron exposes only these account operations and never sends credentials to the renderer.
@@ -969,7 +968,7 @@ export function PhoneSetupFlowView({ controller }: { controller: PhoneSetupContr
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !c.codeSent && canSubmitEmail) c.requestCode();
                 }}
-                placeholder="you@example.com"
+                placeholder={t("common.emailPlaceholder")}
                 className="rounded-lg border border-hairline/50 bg-inset px-3 py-2.5 text-[14px] text-ink outline-none placeholder:text-ink-tertiary focus:border-accent disabled:opacity-50"
               />
             </label>
