@@ -3532,7 +3532,7 @@ function handleDesktopTrustedApprovalMessage(raw: unknown): boolean {
 }
 
 const storedAvatarExists = (avatarUrl: string): boolean =>
-  attachmentExists(avatarUrl.slice("/api/attachments/".length));
+  avatarUrl.startsWith("/mascots/") || attachmentExists(avatarUrl.slice("/api/attachments/".length));
 
 const publicBot = (bot: NonNullable<ReturnType<typeof store.bot>>) => {
   const wired = wireBot(bot), tasks = store.tasks(bot.id);
