@@ -53,6 +53,7 @@ export function ServerPairingCard({ initialSession = null, initialPairingCodes =
   const [session, setSession] = useState<SessionState | null>(initialSession);
   const [pairingCodes, setPairingCodes] = useState(initialPairingCodes);
   const [scope, setScope] = useState<"admin" | "client">("admin");
+  const [deviceName, setDeviceName] = useState("");
   const [offer, setOffer] = useState<PairingOffer | null>(null);
   const [devices, setDevices] = useState<PairedDevice[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
@@ -119,7 +120,7 @@ export function ServerPairingCard({ initialSession = null, initialPairingCodes =
     setError(null);
     setCopied("idle");
     try {
-      const body: PairingOffer = await api("/api/auth/pairing", { method: "POST", body: JSON.stringify({ scopes: scope === "admin" || cloudHome ? ["admin", "client"] : ["client"] }) });
+      const body: PairingOffer = await api("/api/auth/pairing", { method: "POST", body: JSON.stringify({ scopes: scope === "admin" || cloudHome ? ["admin", "client"] : ["client"], ...(deviceName.trim() ? { label: deviceName.trim() } : {}) }) });
       setOffer(body);
       setNow(Date.now());
     } catch (e) {
@@ -182,7 +183,7 @@ export function ServerPairingCard({ initialSession = null, initialPairingCodes =
         <div data-settings-rows="" className={cn(SIMPLE_CARD, "flex flex-col")}>
           <SettingRow title={t("settings.simple.computer.pair")} subtitle={pairingCodes ? cloudHome ? t("remote.serverPairing.cloudPersonal") : undefined : t("remote.serverPairing.portal")}>
             {pairingCodes ? (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2"><input type="text" value={deviceName} onChange={(event) => setDeviceName(event.target.value)} placeholder="Tên người dùng / thiết bị" maxLength={60} className="h-8 w-44 rounded-md border border-hairline/60 bg-inset px-2.5 text-[13px] text-ink placeholder:text-ink-tertiary focus:border-accent-border focus:outline-none" />
                 {cloudHome ? null : (
                   <Select variant="ghost" value={scope} aria-label={t("remote.serverPairing.title")} onChange={(event) => setScope(event.target.value === "client" ? "client" : "admin")}>
                     <option value="admin">{t("remote.serverPairing.scope.admin")}</option>
@@ -222,7 +223,7 @@ export function ServerPairingCard({ initialSession = null, initialPairingCodes =
     <div ref={root} tabIndex={-1} data-phone-pairing="server" className="scroll-mt-4 rounded-xl focus:outline-none">
     <Card title={t("remote.serverPairing.title")} subtitle={t(pairingCodes ? "remote.serverPairing.subtitle" : "remote.serverPairing.portalSubtitle")}>
       {pairingCodes && cloudHome ? <p data-server-pairing-personal className="mt-3 text-[13px] text-ink-secondary">{t("remote.serverPairing.cloudPersonal")}</p> : null}
-      {pairingCodes ? <div className="mt-3 flex flex-wrap items-center gap-3">
+      {pairingCodes ? <div className="mt-3 flex flex-wrap items-center gap-3"><input type="text" value={deviceName} onChange={(event) => setDeviceName(event.target.value)} placeholder="Tên người dùng / thiết bị" maxLength={60} className="h-8 w-48 rounded-md border border-hairline/60 bg-inset px-2.5 text-[13px] text-ink placeholder:text-ink-tertiary focus:border-accent-border focus:outline-none" />
         {cloudHome ? null : <>
           <label className="flex items-center gap-1.5 text-[13px] text-ink">
             <input type="radio" name="server-pairing-scope" checked={scope === "admin"} onChange={() => setScope("admin")} />

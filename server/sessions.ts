@@ -404,7 +404,9 @@ export class SessionRegistry {
     const record: SessionRecord = {
       id: randomUUID(),
       tokenHash: sha256(token),
-      label: (deviceLabel(input.label) || deviceLabel(pairing.label) || deviceLabel(input.fallbackLabel) || "Unnamed device").slice(0, 80),
+      label: ((!pairing.browser && deviceLabel(pairing.label) && /^(Edge|Chrome|Firefox|Safari|Opera|Browser)( on (Windows|Mac|Linux|iPhone|iPad|Android))?$/.test(deviceLabel(input.label))
+        ? `${deviceLabel(pairing.label)} (${deviceLabel(input.label)})`
+        : deviceLabel(input.label) || deviceLabel(pairing.label) || deviceLabel(input.fallbackLabel)) || "Unnamed device").slice(0, 80),
       scopes: [...pairing.scopes],
       createdAt: now,
       lastSeenAt: now,
