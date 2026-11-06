@@ -12,6 +12,7 @@ import {
 } from "@/lib/mascot";
 import { BOT_AVATAR_CROPS } from "../../shared/bot-avatar";
 import { MASCOT_BODY_IDS } from "../../shared/mascot-bodies";
+import { ANIMATED_FIST_MASCOTS } from "../../shared/animated-mascots";
 import { HALLOWEEN_BODY_IDS } from "../../shared/halloween-bodies";
 import type { BotBodyId } from "../../shared/bot-body";
 import { BotAvatar, MausAvatar } from "./Avatar";
@@ -33,6 +34,7 @@ export function BotProfileAvatarCard({
   onPatch: (patch: AvatarPatch) => void;
 }) {
   const { fileRef, crop, uploading, generating, busy, error, upload, removeImage, generate } = useAvatarImage(bot, onPatch);
+  const isAnimated = Boolean(bot.avatarUrl?.startsWith("/mascots/"));
 
   return (
     <div className="overflow-hidden rounded-xl border border-hairline/40 bg-card">
@@ -49,7 +51,7 @@ export function BotProfileAvatarCard({
 
       <div className="p-3">
         <OrganizationAvatarIcons busy={busy} onUpload={(file) => void upload(file)} />
-        {crop !== "mascot" && bot.avatarUrl ? (
+        {crop !== "mascot" && bot.avatarUrl && !isAnimated ? (
           <AvatarFraming bot={bot} disabled={busy} onPatch={onPatch} />
         ) : (
           <div className="flex justify-center py-3">
@@ -183,6 +185,44 @@ export function BotProfileAvatarCard({
             </div>
           </>
         )}
+
+        <div className="mb-2 mt-4 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-secondary">
+          {t("botPanel.avatar.tabAnimated")}
+        </div>
+        <div className="grid grid-cols-4 gap-2 max-h-[260px] overflow-y-auto pr-1" data-animated-mascots>
+          {ANIMATED_FIST_MASCOTS.map((m) => {
+            const selected = bot.avatarUrl === m.url;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                disabled={busy}
+                aria-pressed={selected}
+                title={m.name}
+                onClick={() => {
+                  onPatch({
+                    avatarUrl: m.url,
+                    avatarCrop: "circle",
+                    avatarZoom: 1,
+                    avatarFocusX: 0.5,
+                    avatarFocusY: 0.5,
+                  });
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center rounded-xl p-2 transition-all disabled:opacity-50",
+                  selected
+                    ? "bg-control font-medium text-ink ring-2 ring-accent-border"
+                    : "text-ink-secondary hover:bg-control/60 hover:text-ink",
+                )}
+              >
+                <div className="flex size-10 items-center justify-center">
+                  <img src={m.url} alt={m.name} className="size-9 object-contain" />
+                </div>
+                <span className="mt-1 max-w-full truncate text-center text-[11px]">{m.name}</span>
+              </button>
+            );
+          })}
+        </div>
 
         <AvatarImageGenerator
           botLabel={bot.title || bot.name}
