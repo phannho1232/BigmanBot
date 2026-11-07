@@ -11,7 +11,7 @@ import { stripVTControlCharacters } from "node:util";
 
 import { DATA_DIR } from "./config.ts";
 import {
-  enginesPrefix, npmBinIn, npmEnvironment, npmInstallArgs, npmModulesIn, NPM_INSTALL_TIMEOUT_MS, oneNpmRunPer, PROBE_TIMEOUT_MS, runNpm, tail,
+  enginesPrefix, ensureNpmRuntime, npmBinIn, npmEnvironment, npmInstallArgs, npmModulesIn, NPM_INSTALL_TIMEOUT_MS, oneNpmRunPer, PROBE_TIMEOUT_MS, runNpm, tail,
 } from "./engine-install.ts";
 import { replaceFile } from "./engine-standalone.ts";
 import { resetPathCache } from "./env-path.ts";
@@ -159,6 +159,7 @@ export function updateNpmEngineStaged(options: StagedNpmUpdate): Promise<void> {
 }
 
 async function stagedOnce(options: StagedNpmUpdate, baseDir: string): Promise<void> {
+  await ensureNpmRuntime(baseDir);
   const { pkg, version } = options;
   const env = npmEnvironment(options.env);
   const staging = join(toolsDir(baseDir), `${STAGING_PREFIX}${randomUUID()}`);

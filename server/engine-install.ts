@@ -7,6 +7,7 @@ import type { EngineInstall, StandaloneRelease } from "./contracts.ts";
 import { DATA_DIR, stripWorkspaceCredentialEnv } from "./config.ts";
 import { npmEnginesPrefix } from "./engine-roots.ts";
 import { registerStandaloneBinDirs, standaloneAssetFor, standaloneRunEnv } from "./engine-standalone.ts";
+import { ensurePortableNode, portableNodeAvailable, registerPortableNodeBinDir, type PortableNodeInstallOptions } from "./node-runtime.ts";
 import { STANDALONE_RELEASES } from "./standalone-releases.ts";
 import { augmentedPath, findCliCandidates, registerPathDir, resetPathCache } from "./env-path.ts";
 import { execCli, killCliTree, spawnCli } from "./procs.ts";
@@ -47,6 +48,7 @@ export function npmCopyVersion(pkg: string, baseDir = DATA_DIR): string | null {
  * goes last instead, so a copy the person installs themselves takes over. */
 export function registerEnginesBinDir(baseDir = DATA_DIR, releases: readonly StandaloneRelease[] = STANDALONE_RELEASES): void {
   registerPathDir(enginesBinDir(baseDir));
+  registerPortableNodeBinDir(baseDir);
   registerStandaloneBinDirs(baseDir, releases);
 }
 
@@ -80,7 +82,7 @@ export function npmPackageOf(install: EngineInstall | undefined): string | null 
 }
 
 export function npmAvailable(): boolean {
-  return findCliCandidates("npm").length > 0;
+  return findCliCandidates("npm").length > 0 || portableNodeAvailable();
 }
 
 export type ServerInstall = NonNullable<EngineInstall["server"]>;
@@ -105,6 +107,7 @@ interface InstallOptions {
   timeoutMs?: number;
   env?: NodeJS.ProcessEnv;
   path?: string;
+  nodeOptions?: PortableNodeInstallOptions;
 }
 
 const running = new Map<string, Promise<void>>();
@@ -148,8 +151,14 @@ export function npmInstallArgs(prefix: string, pkg: string, version = "latest"):
   return ["install", "-g", "--prefix", prefix, "--loglevel=error", "--include=optional", `--allow-scripts=${pkg}`, `${pkg}@${version}`];
 }
 
+export async function ensureNpmRuntime(baseDir = DATA_DIR, path?: string, nodeOptions?: PortableNodeInstallOptions): Promise<void> {
+  if (path !== undefined || findCliCandidates("npm").length > 0) return;
+  await ensurePortableNode({ baseDir, ...nodeOptions });
+}
+
 /** The version npm's `latest` tag names for `pkg` now. */
 export async function npmLatestVersion(pkg: string, baseDir = DATA_DIR): Promise<string> {
+  await ensureNpmRuntime(baseDir);
   const prefix = enginesPrefix(baseDir);
   mkdirSync(prefix, { recursive: true });
   const result = await runNpm(["view", `${pkg}@latest`, "version", "--loglevel=error"], npmEnvironment(), prefix, PROBE_TIMEOUT_MS * 2);
@@ -161,6 +170,7 @@ export async function npmLatestVersion(pkg: string, baseDir = DATA_DIR): Promise
 }
 
 async function installOnce(pkg: string, options: InstallOptions): Promise<void> {
+  await ensureNpmRuntime(options.baseDir, options.path, options.nodeOptions);
   const prefix = enginesPrefix(options.baseDir);
   mkdirSync(prefix, { recursive: true });
   const env = npmEnvironment(options.env, options.path);
