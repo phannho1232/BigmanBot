@@ -33,7 +33,6 @@ import { SidebarPopoverMenu } from "./SidebarPopoverMenu";
 import { appCategoryLabel, CATEGORY_SECTION_SIZE, catalogSections, connectorDescription, curateVietnamCatalog, inCategory, isVietnamAppConnected, noteVietnamBrowserSite, rankCategories, readConnectedVietnamSites, removeVietnamBrowserSite, VIETNAM_BROWSER_APPS, VN_BROWSER_SITES_EVENT, type VietnamBrowserApp } from "@/lib/app-catalog";
 import { McpServersPanel } from "./McpServersPanel";
 import { HOSTED_MCP_APPS, type HostedApp, type HostedConnections } from "@/lib/hosted-mcp-apps";
-import { HighLevelCard } from "./HighLevelCard";
 import { EmailCard } from "./EmailCard";
 import { PostizCard } from "./PostizCard";
 import { POSTIZ_CATALOG_CARD, POSTIZ_SEARCH } from "@/lib/postiz";
@@ -157,7 +156,6 @@ export function PluginsPanel() {
   const [cardsRefresh, setCardsRefresh] = useState(0);
   const [category, setCategory] = useState<string | null>(null);
   // Appended after the older state so tests that seed state by call order keep their indices.
-  const [highLevelConnected, setHighLevelConnected] = useState<boolean | null>(null);
   const [xConnected, setXConnected] = useState<boolean | null>(null);
   const [postizConnected, setPostizConnected] = useState<boolean | null>(null);
   const [emailConnected, setEmailConnected] = useState<boolean | null>(null);
@@ -456,8 +454,6 @@ export function PluginsPanel() {
   const isConnected = (slug: string) => Boolean(status[slug]?.connected || status[slug]?.accounts?.length);
   const filter: AppsFilter = surface === "mcp" ? "mcp" : tab === "connected" ? "connected" : "all";
   const shownHosted = new Set(HOSTED_MCP_APPS.filter((app) => hostedConnected?.[app.id] === true && hostedShown(app, search, filter, hostedConnected)).map((app) => app.id));
-  const highLevelMatches = !search || `highlevel high level growably crm ${t("highlevel.description")}`.toLowerCase().includes(search.toLowerCase().trim());
-  const showHighLevel = highLevelConnected === true && highLevelMatches && (filter === "all" || filter === "connected");
   const showEmail = (!search || `email mail imap smtp mailbox ${t("email.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || (filter === "connected" && emailConnected !== false));
   const showX = xConnected === true && (!search || `${X_CARD_SEARCH} ${t("apps.x.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || filter === "connected");
   const showPostiz = postizConnected === true && (!search || `${POSTIZ_SEARCH} ${t("postiz.description")}`.toLowerCase().includes(search.toLowerCase().trim())) && (filter === "all" || filter === "connected");
@@ -480,7 +476,7 @@ export function PluginsPanel() {
     : [];
   const connectedVnCount = connectedVnApps.length;
   const connectedHosted = HOSTED_MCP_APPS.filter((app) => hostedConnected?.[app.id]);
-  const connectedCount = Object.values(status).filter(hasActiveConnection).length + connectedHosted.length + Number(highLevelConnected === true) + Number(emailConnected === true) + Number(xConnected === true) + Number(postizConnected === true) + connectedVnCount;
+  const connectedCount = Object.values(status).filter(hasActiveConnection).length + connectedHosted.length + Number(emailConnected === true) + Number(xConnected === true) + Number(postizConnected === true) + connectedVnCount;
   const connectedEmptyCopy = connectedInventoryCopy(inventoryPhase);
   const close = () => dispatch({ type: "togglePlugins", open: false });
   const setupNotice = connectorSetupNotice({ configured, stale, setup, remoteClient });
@@ -502,7 +498,7 @@ export function PluginsPanel() {
   const categoryInMore = category !== null && moreCategories.includes(category);
   const inCategoryView = filter === "all" && category !== null;
   const postizHere = showPostiz && (!inCategoryView || inCategory(POSTIZ_CATALOG_CARD, category));
-  const nativeCardsShown = (!inCategoryView && (shownHosted.size > 0 || showHighLevel || showEmail || showX)) || postizHere;
+  const nativeCardsShown = (!inCategoryView && (shownHosted.size > 0 || showEmail || showX)) || postizHere;
   const categoryCards = inCategoryView ? visible.filter((card) => inCategory(card, category)) : visible;
   const sectioned = filter === "all" && !search && category === null;
   const sections = sectioned ? catalogSections(visible, isConnected, ranked.inline) : [];
@@ -808,9 +804,6 @@ export function PluginsPanel() {
                 <McpServersPanel hostedCards={{ shown: (id) => !inCategoryView && shownHosted.has(id), onConnections: setHostedConnected }} refreshKey={cardsRefresh} />
                 <div data-native-card="x" className={showX && !inCategoryView ? "contents" : "hidden"}><XCard refreshKey={cardsRefresh} onConnection={setXConnected} /></div>
                 <div data-native-card="email" className={showEmail && !inCategoryView ? "contents" : "hidden"}><EmailCard refreshKey={cardsRefresh} onConnection={setEmailConnected} /></div>
-                <div data-native-card="highlevel" className={showHighLevel && !inCategoryView ? "contents" : "hidden"}>
-                  <HighLevelCard refreshKey={cardsRefresh} onConnection={setHighLevelConnected} />
-                </div>
                 <div data-native-card="postiz" className={postizHere ? "contents" : "hidden"}><PostizCard refreshKey={cardsRefresh} onConnection={setPostizConnected} /></div>
                 {allShown.map((card) => renderTile(card))}
               </AppsSection>
