@@ -52,6 +52,21 @@ const faceLabel = (state: MausState) => {
   return key ? t(key) : state;
 };
 
+const COLOR_FIST_MAP: Record<string, string> = {
+  green: "/mascots/nam_dam_dong_xanh_la.gif",
+  blue: "/mascots/nam_dam_dong_xanh_duong.gif",
+  red: "/mascots/nam_dam_dong_do.gif",
+  orange: "/mascots/nam_dam_dong_cam_goc.gif",
+  purple: "/mascots/nam_dam_dong_tim.gif",
+  cyan: "/mascots/nam_dam_dong_xanh_ngoc.gif",
+  magenta: "/mascots/nam_dam_dong_hong.gif",
+  yellow: "/mascots/nam_dam_dong_vang.gif",
+  teal: "/mascots/nam_dam_dong_luc_bao.gif",
+  salmon: "/mascots/nam_dam_dong_cam_dao.gif",
+  gray: "/mascots/nam_dam_dong_xam_bac.gif",
+  white: "/mascots/nam_dam_dong_tim_pastel.gif",
+};
+
 export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
   bot: Bot;
   activeState: MausState;
@@ -61,6 +76,8 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
   const image = useAvatarImage(bot, onPatch);
   const { fileRef, crop, uploading, generating, busy, error, upload, removeImage, generate } = image;
   const isAnimated = Boolean(bot.avatarUrl?.startsWith("/mascots/"));
+  const isFistSelected = isAnimated;
+  const currentFistUrl = COLOR_FIST_MAP[bot.color] || bot.avatarUrl || "/mascots/nam_dam_dong_cam_goc.gif";
   const showsImage = crop !== "mascot" && Boolean(bot.avatarUrl) && !isAnimated;
   const [tab, setTab] = useState<AvatarEditorTab>(isAnimated ? "animated" : showsImage ? "upload" : "bot");
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -79,16 +96,43 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
       key={id}
       type="button"
       disabled={busy}
-      aria-pressed={!showsImage && body === id}
+      aria-pressed={!showsImage && !isFistSelected && body === id}
       aria-label={t("mascot.useBody", { name })}
       title={name}
-      onClick={() => pickMascot({ mascotBody: id })}
+      onClick={() => onPatch({ avatarUrl: null, avatarCrop: "mascot", mascotBody: id })}
       className={cn(
         "flex h-[58px] items-center justify-center rounded-xl disabled:opacity-50",
-        !showsImage && body === id ? "bg-ink/[0.08] ring-[1.5px] ring-inset ring-ink/25" : "hover:bg-ink/[0.05]",
+        !showsImage && !isFistSelected && body === id ? "bg-ink/[0.08] ring-[1.5px] ring-inset ring-ink/25" : "hover:bg-ink/[0.05]",
       )}
     >
       <MausAvatar color={bot.color} faceColor={bot.mascotFaceColor} bodyId={id} size={40} animated={false} trackPointer={false} />
+    </button>
+  );
+
+  const fistButton = (
+    <button
+      key="fist-bigman"
+      type="button"
+      disabled={busy}
+      aria-pressed={isFistSelected}
+      aria-label="Linh vật Bigman"
+      title="Linh vật Bigman (Nắm đấm động)"
+      onClick={() => {
+        const url = COLOR_FIST_MAP[bot.color] || "/mascots/nam_dam_dong_cam_goc.gif";
+        onPatch({
+          avatarUrl: url,
+          avatarCrop: "circle",
+          avatarZoom: 1,
+          avatarFocusX: 0.5,
+          avatarFocusY: 0.5,
+        });
+      }}
+      className={cn(
+        "flex h-[58px] items-center justify-center rounded-xl disabled:opacity-50 transition-all",
+        isFistSelected ? "bg-ink/[0.08] ring-[1.5px] ring-inset ring-ink/25" : "hover:bg-ink/[0.05]",
+      )}
+    >
+      <img src={currentFistUrl} alt="Bigman" className="size-10 object-contain pointer-events-none" />
     </button>
   );
 
@@ -138,7 +182,8 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
       <div className="p-3">
         {tab === "bot" && (
           <>
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-6 gap-1.5">
+              {fistButton}
               {MASCOT_BODY_IDS.map((id) => bodyButton(id, bodyName(id)))}
             </div>
             <div className="flex flex-wrap justify-center gap-2 px-1 pb-1 pt-3.5">
@@ -150,7 +195,21 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
                   aria-pressed={bot.color === color}
                   aria-label={t("mascot.useColor", { color: colorName(color) })}
                   title={t(MAUS_COLOR_LABEL[color])}
-                  onClick={() => pickMascot({ color })}
+                  onClick={() => {
+                    if (isFistSelected) {
+                      const nextUrl = COLOR_FIST_MAP[color] || "/mascots/nam_dam_dong_cam_goc.gif";
+                      onPatch({
+                        color,
+                        avatarUrl: nextUrl,
+                        avatarCrop: "circle",
+                        avatarZoom: 1,
+                        avatarFocusX: 0.5,
+                        avatarFocusY: 0.5,
+                      });
+                    } else {
+                      pickMascot({ color });
+                    }
+                  }}
                   className={cn(
                     "size-6 rounded-full disabled:opacity-50",
                     bot.color === color && "ring-2 ring-ink/80 ring-offset-2 ring-offset-menu",

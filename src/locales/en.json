@@ -4173,6 +4173,7 @@
   "botPanel.conversations.showFewer": "Show fewer",
   "botPanel.avatar.edit": "Edit avatar",
   "botPanel.avatar.tabBot": "Bot",
+  "botPanel.avatar.tabAnimated": "Animated",
   "botPanel.avatar.tabGenerate": "Generate",
   "botPanel.avatar.tabUpload": "Upload",
   "botPanel.avatar.reset": "Reset",
