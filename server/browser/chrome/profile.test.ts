@@ -1,10 +1,10 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { removeTempDir } from "../../testing/cleanup.ts";
-import { browserRoot, compareVersions, downgradeRefusal, ensureProfile, markCleanExit, profileDir, profileHash, recordOpenedBy, versionOf, workspaceId } from "./profile.ts";
+import { browserRoot, cloneProfile, compareVersions, downgradeRefusal, ensureProfile, markCleanExit, profileDir, profileHash, recordOpenedBy, versionOf, workspaceId } from "./profile.ts";
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -65,5 +65,24 @@ describe("profiles", () => {
     expect(downgradeRefusal(opened, "153.0.8010.9")).toMatch(/older/);
     expect(compareVersions("153.0.10.0", "153.0.9.9")).toBe(1);
     expect(versionOf("Chrome/153.0.8010.12")).toBe("153.0.8010.12");
+  });
+
+  it("clones a profile, strips lockfiles and resets open tabs", () => {
+    const data = scratch();
+    const source = ensureProfile(data, "bot:alice");
+    writeFileSync(join(source.dir, "Default", "Cookies"), "cookie-data");
+    writeFileSync(join(source.dir, "SingletonLock"), "lock");
+    mkdirSync(join(source.dir, "Default", "Sessions"), { recursive: true });
+    writeFileSync(join(source.dir, "Default", "Sessions", "Session_123"), "session");
+
+    expect(cloneProfile(data, "bot:alice", "bot:bob")).toBe(true);
+    const bobDir = profileDir(data, "bot:bob");
+    expect(readFileSync(join(bobDir, "Default", "Cookies"), "utf8")).toBe("cookie-data");
+    expect(existsSync(join(bobDir, "SingletonLock"))).toBe(false);
+    expect(existsSync(join(bobDir, "Default", "Sessions", "Session_123"))).toBe(false);
+    const bobRecord = JSON.parse(readFileSync(join(bobDir, "omb-profile.json"), "utf8"));
+    expect(bobRecord.key).toBe("bot:bob");
+
+    expect(cloneProfile(data, "bot:nonexistent", "bot:charlie")).toBe(false);
   });
 });

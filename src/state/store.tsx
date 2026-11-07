@@ -2619,7 +2619,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // A copy of a restricted bot is restricted from its first moment.
           api("/api/bots", {
             method: "POST",
-            body: JSON.stringify(restrictedCopyRequest(source)),
+            body: JSON.stringify({ ...restrictedCopyRequest(source), duplicateFrom: source.id }),
           })
             .then(({ bot }) =>
               api(`/api/bots/${bot.id}`, {

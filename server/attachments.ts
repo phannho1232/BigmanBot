@@ -19,11 +19,11 @@ import { boxUploadsDir } from "./bot-box/plan.ts";
 export { FILE_MAX_BYTES } from "../shared/upload-limits.ts";
 export const ATTACHMENTS_DIR = join(DATA_DIR, "attachments");
 
-export const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+export const IMAGE_MAX_BYTES = 100 * 1024 * 1024;
 
-export const DEFAULT_ATTACHMENTS_MAX_BYTES = 512 * 1024 * 1024;
+export const DEFAULT_ATTACHMENTS_MAX_BYTES = 50 * 1024 * 1024 * 1024;
 /** A person's own Cloud is the only home of everything their computers held, on a volume a move grows to fit. */
-export const CLOUD_HOME_ATTACHMENTS_MAX_BYTES = 8 * 1024 * 1024 * 1024;
+export const CLOUD_HOME_ATTACHMENTS_MAX_BYTES = 100 * 1024 * 1024 * 1024;
 
 /** A team server can raise the ceiling with OMB_ATTACHMENTS_MAX_BYTES; a missing or invalid value keeps 512 MB, or 8 GB on a Cloud home. */
 export function attachmentsMaxBytes(env: NodeJS.ProcessEnv = process.env): number {

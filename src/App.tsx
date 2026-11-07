@@ -12,6 +12,7 @@ import { GuidedTour } from "@/components/onboarding/GuidedTour";
 import { LiveCallHost } from "@/components/LiveCallHost";
 import { ThreadRefsProvider } from "@/components/ThreadRefs";
 import { initAnalytics } from "@/lib/analytics";
+import { appVersion } from "@/lib/app-links";
 import { parseComputerHelp } from "@/lib/computer-control";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatView } from "@/components/ChatView";
@@ -450,6 +451,12 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
       <WindowCaptionButtons
         visible={capabilities.windowChrome === "win-caption" && Boolean(window.ogb?.windowControls)}
       />
+      <div
+        className="pointer-events-none fixed bottom-1.5 right-2.5 z-30 select-none rounded bg-panel/70 px-1.5 py-0.5 font-mono text-[10px] text-ink-tertiary backdrop-blur-xs border border-hairline/20 shadow-xs"
+        title={`Bigman Bot v${appVersion()}`}
+      >
+        v{appVersion()}
+      </div>
     </div>
   );
 }

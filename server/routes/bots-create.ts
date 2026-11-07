@@ -1,4 +1,7 @@
 import type { WireBot } from "../../shared/wire.ts";
+import { cloneProfile } from "../browser/chrome/profile.ts";
+import { browserSessionId, cloneBrowserProfileDirectory } from "../browser-engine.ts";
+import { browserProfilePartitionTarget, DATA_DIR } from "../config.ts";
 import type { BotLimit } from "../host/starter-bot-limit.ts";
 import { freshLook } from "../bot-look.ts";
 import { validateBotCwd } from "../bot-cwd.ts";
@@ -246,6 +249,19 @@ export function createBotCreateRoutes(deps: BotCreateRouteDeps): RouteHandler {
         for (const routine of createdRoutines) routines!.remove(routine.id);
         store.deleteBot(bot.id);
         throw error;
+      }
+      if (typeof body.duplicateFrom === "string") {
+        const sourceBot = store.bot(body.duplicateFrom);
+        if (sourceBot) {
+          const partitionTarget = sourceBot.browserProfile && sourceBot.browserProfile !== "guest"
+            ? browserProfilePartitionTarget(cfg, sourceBot.browserProfile)
+            : null;
+          const sourceKey = partitionTarget ? `shared:${partitionTarget.partitionId}` : `bot:${sourceBot.id}`;
+          cloneProfile(DATA_DIR, sourceKey, `bot:${bot.id}`);
+          const srcSession = partitionTarget?.partitionId ? partitionTarget.partitionId : browserSessionId(sourceBot.id, "", DATA_DIR);
+          const dstSession = browserSessionId(bot.id, "", DATA_DIR);
+          cloneBrowserProfileDirectory(srcSession, dstSession, DATA_DIR);
+        }
       }
       // Creation is complete: activation errors must not invite a duplicate retry or delete a bot whose routine may have run.
       const warnings: string[] = [];

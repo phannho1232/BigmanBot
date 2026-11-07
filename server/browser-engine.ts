@@ -736,3 +736,32 @@ export async function clearBrowserSessionState(
     return true;
   } catch { return false; }
 }
+
+function safeCopyProfileTree(source: string, destination: string): void {
+  mkdirSync(destination, { recursive: true, mode: 0o700 });
+  for (const entry of readdirSync(source, { withFileTypes: true })) {
+    if (/(?:SingletonLock|SingletonCookie|SingletonSocket|lockfile)$/iu.test(entry.name)) continue;
+    const srcPath = join(source, entry.name);
+    const dstPath = join(destination, entry.name);
+    try {
+      if (entry.isDirectory()) {
+        safeCopyProfileTree(srcPath, dstPath);
+      } else if (entry.isFile()) {
+        copyFileSync(srcPath, dstPath);
+      }
+    } catch {}
+  }
+}
+
+export function cloneBrowserProfileDirectory(sourceSession: string, targetSession: string, dataDir = DATA_DIR): boolean {
+  try {
+    const sourceDir = browserProfileDirectory(sourceSession, dataDir);
+    if (!existsSync(sourceDir)) return false;
+    const targetDir = browserProfileDirectory(targetSession, dataDir);
+    rmSync(targetDir, { recursive: true, force: true });
+    safeCopyProfileTree(sourceDir, targetDir);
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -474,7 +474,14 @@ export function profileMenuItems({
       ...(simple ? {} : { trailing: <ShortcutHint id="shortcuts-cheat-sheet" /> }),
       onSelect: onShortcuts,
     },
-    { key: "about", label: t("sidebar.menu.about"), icon: <Info size={18} />, separatorBefore: true, onSelect: onAbout },
+    {
+      key: "about",
+      label: t("sidebar.menu.about"),
+      icon: <Info size={18} />,
+      trailing: <span className="font-mono text-[11px] text-ink-tertiary">v{appVersion()}</span>,
+      separatorBefore: true,
+      onSelect: onAbout,
+    },
   ];
   const usageItem: SidebarMenuItem | null = usage ? {
     key: "usage",
@@ -660,6 +667,9 @@ export function SidebarProfileMenu({ iconOnly = false, rail = false, circle = fa
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-[14px] font-medium leading-5 text-ink">{name}</span>
+              <span className="truncate font-mono text-[11px] leading-4 text-ink-tertiary" title={`Bigman Bot v${appVersion()}`}>
+                v{appVersion()}
+              </span>
               <AccountMoveStatus kind={move.kind} place={move.place} />
             </span>
             {noteworthy && (

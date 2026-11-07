@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 /** Every Chrome-related file OMB keeps lives under `<data dir>/browser`. */
@@ -169,4 +169,39 @@ export function versionOf(product: string): string {
 
 export function removeProfile(dir: string): void {
   rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+}
+
+function safeCopyProfileTree(source: string, destination: string): void {
+  mkdirSync(destination, { recursive: true, mode: 0o700 });
+  for (const entry of readdirSync(source, { withFileTypes: true })) {
+    if (/(?:SingletonLock|SingletonCookie|SingletonSocket|lockfile)$/iu.test(entry.name)) continue;
+    const srcPath = join(source, entry.name);
+    const dstPath = join(destination, entry.name);
+    try {
+      if (entry.isDirectory()) {
+        safeCopyProfileTree(srcPath, dstPath);
+      } else if (entry.isFile()) {
+        copyFileSync(srcPath, dstPath);
+      }
+    } catch {}
+  }
+}
+
+export function cloneProfile(dataDir: string, sourceKey: string, targetKey: string): boolean {
+  const sourceDir = profileDir(dataDir, sourceKey);
+  if (!existsSync(sourceDir)) return false;
+  const targetDir = profileDir(dataDir, targetKey);
+  try {
+    rmSync(targetDir, { recursive: true, force: true });
+    safeCopyProfileTree(sourceDir, targetDir);
+    const record = readProfileRecord(targetDir);
+    if (record) {
+      writeProfileRecord(targetDir, { ...record, key: targetKey, createdAt: new Date().toISOString() });
+    }
+    forgetOpenTabs(targetDir);
+    markCleanExit(targetDir);
+    return true;
+  } catch {
+    return false;
+  }
 }

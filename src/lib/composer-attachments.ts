@@ -90,10 +90,10 @@ export function fileAttachment(name: string, path: string, size: number): FileAt
 }
 
 /** Must match the server's IMAGE_MAX_BYTES. */
-export const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
-export const FILE_MAX_BYTES = 25 * 1024 * 1024;
+export const IMAGE_MAX_BYTES = 100 * 1024 * 1024;
+export const FILE_MAX_BYTES = 1024 * 1024 * 1024;
 /** Must match the server's TURN_IMAGE_MAX_COUNT: a message carrying more images is refused at send. */
-export const TURN_IMAGE_MAX_COUNT = 10;
+export const TURN_IMAGE_MAX_COUNT = 20;
 
 /** Must match the server's TURN_IMAGE_MAX_BYTES: a message whose images total more is refused at send. */
 export const TURN_IMAGE_MAX_BYTES = 4 * IMAGE_MAX_BYTES;

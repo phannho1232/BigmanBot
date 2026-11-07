@@ -62,7 +62,7 @@ export async function namedUploadPaths(files: ReadonlyArray<{ file: string; name
       const source = openUpload(file);
       opened.push(source);
       total += source.size;
-      if (total > BROWSER_UPLOAD_MAX_BYTES) throw new BrowserUploadRefusal("Uploads are limited to 100 MiB per batch.");
+      if (total > BROWSER_UPLOAD_MAX_BYTES) throw new BrowserUploadRefusal(`Uploads are limited to ${Math.round(BROWSER_UPLOAD_MAX_BYTES / (1024 * 1024))} MiB per batch.`);
       return { file, name, source };
     });
     const paths: string[] = [];
@@ -93,7 +93,7 @@ function openUpload(source: string): { input: number; size: number } {
     if (process.platform === "linux" && readlinkSync(`/proc/self/fd/${input}`) !== source) throw new BrowserUploadRefusal(`${source} changed while staging the upload.`);
     const file = fstatSync(input, { bigint: true });
     if (!file.isFile()) throw new BrowserUploadRefusal(`${source} is not a file.`);
-    if (file.size > BigInt(FILE_MAX_BYTES)) throw new BrowserUploadRefusal("Uploads are limited to 25 MiB per file.");
+    if (file.size > BigInt(FILE_MAX_BYTES)) throw new BrowserUploadRefusal(`Uploads are limited to ${Math.round(FILE_MAX_BYTES / (1024 * 1024))} MiB per file.`);
     return { input, size: Number(file.size) };
   } catch (error) {
     closeSync(input);

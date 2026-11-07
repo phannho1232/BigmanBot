@@ -1,5 +1,6 @@
 import { useRef } from "react";
 
+import { appVersion } from "@/lib/app-links";
 import { cn } from "@/lib/cn";
 import type { SidebarDensity } from "@/lib/sidebar-preferences";
 import { useStore } from "@/state/store";
@@ -43,6 +44,9 @@ function SimpleSidebarFooter({ owner, archived }: { owner: string | null; archiv
         <SidebarProfileMenu simple={account} />
         <SidebarConnectApps />
         <UpdateIndicator className="size-9" />
+        <span className="ms-auto select-none font-mono text-[10px] text-ink-tertiary/70" title={`Bigman Bot v${appVersion()}`}>
+          v{appVersion()}
+        </span>
       </div>
     </div>
   );

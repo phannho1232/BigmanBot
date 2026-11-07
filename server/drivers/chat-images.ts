@@ -4,7 +4,7 @@ import type { SendTurnInput } from "../contracts.ts";
 export interface ChatImagePart { type: "image_url"; image_url: { url: string } }
 export interface ChatTextPart { type: "text"; text: string }
 export type ChatContentPart = ChatTextPart | ChatImagePart;
-const IMAGE_BYTES = 20 * 1024 * 1024;
+const IMAGE_BYTES = 100 * 1024 * 1024;
 const MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 export const CHAT_IMAGE_BUDGET = 32 * 1024 * 1024;
 
@@ -47,7 +47,7 @@ export function chatUserContent(turn: SendTurnInput): string | ChatContentPart[]
   if (!turn.images?.length) return turn.text;
   const budget = chatImageBudget();
   return [{ type: "text", text: turn.text }, ...turn.images.map(image => {
-    if (statSync(image.path).size > IMAGE_BYTES) throw new Error("Image exceeds 20 MB");
+    if (statSync(image.path).size > IMAGE_BYTES) throw new Error(`Image exceeds ${Math.round(IMAGE_BYTES / (1024 * 1024))} MB`);
     const part = chatImage({ mimeType: image.mime, data: readFileSync(image.path).toString("base64") });
     budget([part]);
     return part;
