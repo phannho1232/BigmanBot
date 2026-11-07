@@ -170,7 +170,10 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
     const streamsMessageImage = Boolean(
       m && method === "GET" && url.searchParams.get("preview") === "1",
     );
-    if (m && (method === "POST" || streamsMessageImage)) {
+    const isMessageFileGet = Boolean(
+      m && method === "GET" && (url.searchParams.get("preview") === "1" || url.searchParams.has("path")),
+    );
+    if (m && (method === "POST" || isMessageFileGet)) {
       if (method === "POST" && !String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
         return json(res, 415, { error: "content-type must be application/json" });
       }
@@ -192,7 +195,9 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
       }
       const href = method === "POST"
         ? (typeof body.path === "string" ? body.path : "")
-        : messageImageTargetAt(messageText, Number(rawReference));
+        : streamsMessageImage
+          ? messageImageTargetAt(messageText, Number(rawReference))
+          : (url.searchParams.get("path") ?? "");
       if (!href) return json(res, 400, { error: "path is required" });
 
       let roots: string[];
@@ -251,16 +256,21 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
           return json(res, 200, listing);
         }
       }
-      if ((streamsMessageImage || botAttachment?.kind === "image") && !file.mime.startsWith("image/")) {
+      if (streamsMessageImage && !file.mime.startsWith("image/")) {
         await file.handle.close();
         return json(res, 415, { error: "only images can be previewed here" });
       }
-      res.writeHead(200, {
+      const rawRange = Array.isArray(req.headers.range) ? req.headers.range[0] : req.headers.range;
+      const isDownload = url.searchParams.get("download") === "1";
+      const range = parseAudioRange(rawRange, file.bytes);
+      const headers = {
         "content-type": file.mime,
-        "content-length": String(file.bytes),
+        "accept-ranges": "bytes",
         ...(streamsMessageImage
           ? { "content-disposition": "inline" }
-          : { "content-disposition": messageFileDisposition(messageFileDownloadName(downloadName, file.name)) }),
+          : isDownload
+            ? { "content-disposition": messageFileDisposition(messageFileDownloadName(downloadName, file.name)) }
+            : { "content-disposition": "inline" }),
         "cache-control": "private, no-store",
         "cdn-cache-control": "no-store",
         "cloudflare-cdn-cache-control": "no-store",
@@ -273,6 +283,27 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
               "referrer-policy": "no-referrer",
             }
           : {}),
+      };
+      if (rawRange && range.kind === "unsatisfiable") {
+        await file.handle.close();
+        res.writeHead(416, { ...headers, "content-range": `bytes */${file.bytes}` });
+        return res.end();
+      }
+      if (rawRange && range.kind === "range") {
+        res.writeHead(206, {
+          ...headers,
+          "content-length": String(range.end - range.start + 1),
+          "content-range": `bytes ${range.start}-${range.end}/${file.bytes}`,
+        });
+        const stream = file.handle.createReadStream({ start: range.start, end: range.end, autoClose: true });
+        stream.on("error", () => res.destroy());
+        res.on("close", () => stream.destroy());
+        stream.pipe(res);
+        return;
+      }
+      res.writeHead(200, {
+        ...headers,
+        "content-length": String(file.bytes),
       });
       if (file.bytes === 0) {
         await file.handle.close();

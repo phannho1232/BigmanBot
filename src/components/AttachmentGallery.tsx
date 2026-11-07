@@ -2,7 +2,7 @@
 // authorization.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { ChevronDown, ChevronUp, Download, Film, LoaderCircle, Music, Play, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Film, Music, Play, X } from "lucide-react";
 import { attachmentBasename, FILE_MAX_BYTES, type TranscriptFileAttachment, type TranscriptImageAttachment } from "@/lib/composer-attachments";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -10,6 +10,7 @@ import { windowsPathDestinations } from "../../shared/markdown-windows-paths";
 import { localFilePath } from "./ChatMarkdown";
 import {
   AttachedFileChip,
+  messageFileUrl,
   AttachmentPreviewDialog,
   AttachmentThumbnail,
   previewImage,
@@ -218,38 +219,20 @@ async function readMessageVideo(
 
 function VideoAttachment({ file, message }: { file: GalleryFile; message: MessageAttachmentContext }) {
   const [preview, setPreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const request = useRef<AbortController | null>(null);
   const playButton = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  useEffect(() => () => request.current?.abort(), []);
+  const streamUrl = messageFileUrl(file.path, message);
+
   useEffect(() => {
     if (preview) videoRef.current?.focus();
-    return () => { if (preview) URL.revokeObjectURL(preview); };
   }, [preview]);
 
-  const load = async () => {
-    if (request.current) return;
-    const controller = new AbortController();
-    request.current = controller;
-    setLoading(true);
+  const load = () => {
     setError("");
-    setPreview(null);
-    try {
-      const blob = await loadMessageVideo(file, message, controller.signal);
-      if (!controller.signal.aborted) setPreview(URL.createObjectURL(blob));
-    } catch (reason) {
-      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : t("attach.videoUnavailable"));
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
-      if (request.current === controller) request.current = null;
-    }
+    setPreview(streamUrl);
   };
   const close = () => {
-    request.current?.abort();
-    request.current = null;
-    setLoading(false);
     setPreview(null);
     setError("");
     requestAnimationFrame(() => playButton.current?.focus());
@@ -265,6 +248,7 @@ function VideoAttachment({ file, message }: { file: GalleryFile; message: Messag
             tabIndex={0}
             controls
             playsInline
+            autoPlay
             preload="metadata"
             aria-label={t("attach.previewVideo", { name: file.name })}
             className="max-h-full max-w-full"
@@ -274,22 +258,21 @@ function VideoAttachment({ file, message }: { file: GalleryFile; message: Messag
           <button
             ref={playButton}
             type="button"
-            disabled={loading}
-            onClick={() => void load()}
+            onClick={load}
             aria-label={t("attach.previewVideo", { name: file.name })}
-            className="flex size-full flex-col items-center justify-center gap-2 p-3 text-center text-ink-secondary transition-colors hover:bg-raised/60 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60 disabled:cursor-wait disabled:hover:bg-transparent"
+            className="flex size-full flex-col items-center justify-center gap-2 p-3 text-center text-ink-secondary transition-colors hover:bg-raised/60 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
           >
-            {loading ? <LoaderCircle size={24} className="animate-spin" /> : <Play size={24} />}
-            <span className="text-[12px]">{loading ? t("attach.videoLoading") : error ? t("chat.retry") : t("attach.loadVideo")}</span>
-            {!error && !loading && <span className="text-[11px]">{t("attach.videoHint")}</span>}
+            <Play size={24} />
+            <span className="text-[12px]">{error ? t("chat.retry") : t("attach.loadVideo")}</span>
+            {!error && <span className="text-[11px]">{t("attach.videoHint")}</span>}
           </button>
         )}
-        {(preview || loading || error) && (
+        {(preview || error) && (
           <button type="button" aria-label={t("attach.closeVideo")} onClick={close} className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-panel/90 text-ink-secondary hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
             <X size={14} />
           </button>
         )}
-        {!preview && !loading && <Film size={13} className="pointer-events-none absolute left-2 top-2 text-ink-secondary/50" />}
+        {!preview && <Film size={13} className="pointer-events-none absolute left-2 top-2 text-ink-secondary/50" />}
       </div>
       {error && <p role="alert" className="px-3 py-2 text-[11px] text-danger">{error}</p>}
       <AttachedFileChip file={file} linked={file.linked} message={message} className="max-w-none rounded-none border-0 border-t border-hairline/30 bg-transparent" />
@@ -348,27 +331,13 @@ async function readMessageAudio(
 
 function AudioAttachment({ file, message }: { file: GalleryFile; message: MessageAttachmentContext }) {
   const [src, setSrc] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const request = useRef<AbortController | null>(null);
-  useEffect(() => () => request.current?.abort(), []);
-  useEffect(() => () => { if (src) URL.revokeObjectURL(src); }, [src]);
+  const audioUrl = messageFileUrl(file.path, message);
+  const downloadUrl = messageFileUrl(file.path, message, true);
 
-  const load = async () => {
-    if (request.current) return;
-    const controller = new AbortController();
-    request.current = controller;
-    setLoading(true);
+  const load = () => {
     setError("");
-    try {
-      const blob = await loadMessageAudio(file, message, controller.signal);
-      if (!controller.signal.aborted) setSrc(URL.createObjectURL(blob));
-    } catch (reason) {
-      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : t("attach.audioUnavailable"));
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
-      if (request.current === controller) request.current = null;
-    }
+    setSrc(audioUrl);
   };
 
   return (
@@ -376,14 +345,14 @@ function AudioAttachment({ file, message }: { file: GalleryFile; message: Messag
       <div className="flex items-center gap-2">
         {src ? <Music size={14} className="shrink-0 text-accent" aria-hidden="true" />
           : (
-            <button type="button" disabled={loading} onClick={() => void load()} aria-label={t("attach.previewAudio", { name: file.name })}
-              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent transition-colors hover:bg-accent/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:cursor-wait">
-              {loading ? <LoaderCircle size={14} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
+            <button type="button" onClick={load} aria-label={t("attach.previewAudio", { name: file.name })}
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent transition-colors hover:bg-accent/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
+              <Play size={13} fill="currentColor" />
             </button>
           )}
         <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink" title={file.name}>{file.name}</span>
-        {src && <a href={src} download={file.name} aria-label={t("attach.saveAria", { name: file.name })} title={t("attach.saveAria", { name: file.name })}
-          className="shrink-0 rounded-lg p-1 text-ink-secondary hover:bg-raised hover:text-ink"><Download size={14} /></a>}
+        <a href={downloadUrl} download={file.name} aria-label={t("attach.saveAria", { name: file.name })} title={t("attach.saveAria", { name: file.name })}
+          className="shrink-0 rounded-lg p-1 text-ink-secondary hover:bg-raised hover:text-ink"><Download size={14} /></a>
       </div>
       {src && !error && <audio src={src} controls autoPlay preload="metadata" aria-label={t("attach.previewAudio", { name: file.name })} onError={() => { setSrc(null); setError(t("attach.audioUnavailable")); }} className="h-9 w-full" />}
       {error && <p role="alert" className="text-[11px] text-danger">{error}</p>}

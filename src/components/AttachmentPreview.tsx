@@ -213,8 +213,10 @@ export async function messageImageOutsideWorkspace(src: string): Promise<boolean
   }
 }
 
-function revokeObjectUrlLater(url: string): void {
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+
+
+export function messageFileUrl(filePath: string, message: MessageAttachmentContext, download = false): string {
+  return `/api/threads/${encodeURIComponent(message.threadId)}/messages/${encodeURIComponent(message.messageId)}/file?path=${encodeURIComponent(filePath)}${download ? "&download=1" : ""}`;
 }
 
 /** Security: never request a transcript path directly, even when it looks like a URL. */
@@ -296,37 +298,28 @@ export function useLocalFileSave(filePath: string, name?: string, message?: Mess
     const controller = new AbortController();
     request.current = controller;
     try {
-      const response = await requestMessageFile(filePath, message, controller.signal, entry === undefined ? { list: true } : { entry });
-      if (response.headers.get("x-openmausbot-folder") === "1") {
-        const listing = await response.json() as MessageFolderListing;
-        if (!mounted.current || controller.signal.aborted) return;
-        setFolder(listing);
-        setState("idle");
-        return;
-      }
-      const blob = await response.blob();
-      if (!mounted.current || controller.signal.aborted) return;
-      const url = URL.createObjectURL(blob);
-      const saved = canonicalDownloadFilename({
-        contentDisposition: response.headers.get("content-disposition"),
-        fallback: name || entry || attachmentBasename(filePath),
-        source: filePath,
-        mime: blob.type || response.headers.get("content-type"),
-      });
-      try {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = saved;
-        link.style.display = "none";
-        document.body.append(link);
-        try {
-          link.click();
-        } finally {
-          link.remove();
+      if (entry === undefined) {
+        const response = await requestMessageFile(filePath, message, controller.signal, { list: true });
+        if (response.headers.get("x-openmausbot-folder") === "1") {
+          const listing = await response.json() as MessageFolderListing;
+          if (!mounted.current || controller.signal.aborted) return;
+          setFolder(listing);
+          setState("idle");
+          return;
         }
+      }
+      if (!mounted.current || controller.signal.aborted) return;
+      const saved = name || entry || attachmentBasename(filePath);
+      const downloadUrl = messageFileUrl(filePath, message, true);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = saved;
+      link.style.display = "none";
+      document.body.append(link);
+      try {
+        link.click();
       } finally {
-        // Chromium may not consume a blob URL until after the click task ends.
-        revokeObjectUrlLater(url);
+        link.remove();
       }
       if (!mounted.current || controller.signal.aborted) return;
       setSavedTo(saved);
