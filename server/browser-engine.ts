@@ -13,6 +13,9 @@ import { BROWSER_VIEWPORT, viewportArgs, type PageSize } from "./browser-page-si
 import { browserRuntimeEnv, ownsBrowserViewport } from "./browser-runtime.ts";
 import { spawnBotWork } from "./oom-score.ts";
 import { SIGN_IN_PROMPT } from "./system-prompt.ts";
+import { fingerprintPlatform } from "./browser/chrome/flags.ts";
+import { fingerprintSeed } from "./browser/chrome/profile.ts";
+import { isFingerprintChromium } from "./browser/chrome/resolve.ts";
 import { gateChromeSettings } from "./browser/egress/gate.ts";
 import {
   AGENT_BROWSER_VERSION,
@@ -636,9 +639,14 @@ export function agentBrowserIntegration(input: {
   // The gate goes last, so nothing the launcher sets can route Chrome around it; launcher arguments are kept beside its own.
   if (!input.attach) {
     const launch = { ...env, ...input.launcher };
+    const platform = input.platform ?? process.platform;
+    const fpEnabled = isFingerprintChromium(launch.AGENT_BROWSER_EXECUTABLE_PATH ?? sourceEnv.OMB_CHROME_PATH ?? "") || sourceEnv.OMB_FINGERPRINT_CHROMIUM === "1";
+    const fpArgs = fpEnabled ? [`--fingerprint=${fingerprintSeed(input.session)}`, `--fingerprint-platform=${fingerprintPlatform(platform)}`] : [];
     // A kept profile's disk cache would otherwise grow to Chrome's default of several hundred megabytes per profile.
-    if (env.AGENT_BROWSER_PROFILE) launch.AGENT_BROWSER_ARGS = [launch.AGENT_BROWSER_ARGS, PROFILE_CACHE_ARG].filter(Boolean).join("\n");
-    Object.assign(env, input.launcher, agentBrowserEgressEnv(launch, input.egressPort ?? 0, input.platform ?? process.platform));
+    if (env.AGENT_BROWSER_PROFILE || fpArgs.length > 0) {
+      launch.AGENT_BROWSER_ARGS = [launch.AGENT_BROWSER_ARGS, ...(env.AGENT_BROWSER_PROFILE ? [PROFILE_CACHE_ARG] : []), ...fpArgs].filter(Boolean).join("\n");
+    }
+    Object.assign(env, input.launcher, agentBrowserEgressEnv(launch, input.egressPort ?? 0, platform));
   }
   return { command: input.binaryPath, args: ["mcp", "--tools", "core", "--no-webmcp"], env };
 }

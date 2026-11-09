@@ -2,7 +2,7 @@ import { userInfo } from "node:os";
 import { describe, expect, it } from "vitest";
 
 import { gateChromeFlags } from "../egress/gate.ts";
-import { accountHome, chromeArgs, chromeEnv, fitPage, pageLimit, screenInfo, SERVER_SCREEN } from "./flags.ts";
+import { accountHome, chromeArgs, chromeEnv, fingerprintPlatform, fitPage, pageLimit, screenInfo, SERVER_SCREEN } from "./flags.ts";
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36";
 
@@ -70,6 +70,18 @@ describe("Chrome's command line", () => {
     expect(chromeArgs({ userDataDir: "/p", mode: "headless", host: "desktop" }).at(-1)).toBe("about:blank");
     expect(chromeArgs({ userDataDir: "/p", mode: "headless", host: "desktop", startUrl: null }).at(-1)).not.toBe("about:blank");
     expect(chromeArgs({ userDataDir: "/p", mode: "headless", host: "desktop", locale: "en-GB; rm -rf" })).not.toContain("--lang=en-GB; rm -rf");
+  });
+
+  it("passes per-profile C++ fingerprint seed and platform flags when fingerprint-chromium is used", () => {
+    expect(fingerprintPlatform("win32")).toBe("windows");
+    expect(fingerprintPlatform("darwin")).toBe("macos");
+    expect(fingerprintPlatform("linux")).toBe("linux");
+    const args = chromeArgs({
+      userDataDir: "/p", mode: "headless", host: "desktop", platform: "win32",
+      fingerprintSeed: 1234567, fingerprintTimezone: "Asia/Ho_Chi_Minh",
+    });
+    expect(args).toEqual(expect.arrayContaining(["--fingerprint=1234567", "--fingerprint-platform=windows", "--timezone=Asia/Ho_Chi_Minh"]));
+    expect(() => chromeArgs({ userDataDir: "/p", mode: "headless", host: "desktop", fingerprintSeed: 0 })).toThrow(/fingerprint seed/);
   });
 
   it("sets the time zone on servers only, and marks the process for the sweep", () => {

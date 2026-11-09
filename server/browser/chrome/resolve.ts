@@ -49,12 +49,29 @@ const AGENT_BROWSER_LAYOUTS: Partial<Record<NodeJS.Platform, string>> = {
   linux: "chrome",
   win32: "chrome.exe",
 };
+const FINGERPRINT_CHROMIUM_LAYOUTS: Partial<Record<NodeJS.Platform, string>> = {
+  darwin: "Chromium.app/Contents/MacOS/Chromium",
+  linux: "chrome",
+  win32: "chrome.exe",
+};
 
 const paths = (platform: NodeJS.Platform) => platform === "win32" ? win32 : posix;
 
 /** Chromium's headless shell cannot pass for Chrome: its TLS handshake differs and it has no `window.chrome`. */
 export function isHeadlessShell(path: string): boolean {
   return /chrome-headless-shell/iu.test(path);
+}
+
+/** Whether `path` names an adryfish/fingerprint-chromium or ungoogled-chromium binary that accepts `--fingerprint=<seed>`. */
+export function isFingerprintChromium(path: string): boolean {
+  return /(?:fingerprint[-_]?chromium|ungoogled[-_]?chromium)/iu.test(path);
+}
+
+/** Where `scripts/install-fingerprint-chromium.mjs` unpacks fingerprint-chromium inside `<dataDir>/browser`. */
+export function fingerprintChromiumExecutable(dataDir: string, platform: NodeJS.Platform = process.platform): string | null {
+  const layout = FINGERPRINT_CHROMIUM_LAYOUTS[platform];
+  if (!layout) return null;
+  return paths(platform).join(dataDir, "browser", "fingerprint-chromium", layout);
 }
 
 export function installedGoogleChrome(host: ChromeHost): string | null {
@@ -110,6 +127,10 @@ export function resolveChromePlan(host: ChromeHost, engine: ChromeEngine | null)
     return { kind: "chrome", chrome: { path: paths(platform).isAbsolute(named) ? named : resolve(named), source: "named" }, fallback: null };
   }
   if (!engine?.managed) return { kind: "legacy", reason: "agent-browser was named, so it picks its own browser" };
+  const fpExecutable = fingerprintChromiumExecutable(host.dataDir, platform);
+  if (fpExecutable && host.exists(fpExecutable)) {
+    return { kind: "chrome", chrome: { path: fpExecutable, source: "downloaded" }, fallback: null };
+  }
   const pin = platform === "darwin" || platform === "win32" ? chromeForTestingPin(platform, host.arch) : null;
   const installed = installedGoogleChrome(host);
   if (installed && !chromePolicyManaged(host)) return { kind: "chrome", chrome: { path: installed, source: "installed" }, fallback: pin };

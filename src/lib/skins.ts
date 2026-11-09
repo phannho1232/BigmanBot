@@ -1,5 +1,5 @@
+﻿import { paintAuroraField } from "./aurora-field";
 import { hasPriorRun } from "./prior-run";
-import { t } from "@/lib/i18n";
 
 export const SKIN_IDS = [
   "midnight",
@@ -13,6 +13,8 @@ export const SKIN_IDS = [
   "meadow",
   "pop",
   "halloween",
+  "diwali",
+  "aurora",
 ] as const;
 export type SkinId = (typeof SKIN_IDS)[number];
 
@@ -23,17 +25,19 @@ export type Skin = {
 };
 
 export const SKINS: readonly Skin[] = [
-  { id: "midnight", get name() { return t("i18nExt.g3.skins.midnightName"); }, get tagline() { return t("i18nExt.g3.skins.midnightTagline"); } },
-  { id: "atelier", get name() { return t("i18nExt.g3.skins.atelierName"); }, get tagline() { return t("i18nExt.g3.skins.atelierTagline"); } },
-  { id: "foundry", get name() { return t("i18nExt.g3.skins.foundryName"); }, get tagline() { return t("i18nExt.g3.skins.foundryTagline"); } },
-  { id: "lagoon", get name() { return t("i18nExt.g3.skins.lagoonName"); }, get tagline() { return t("i18nExt.g3.skins.lagoonTagline"); } },
-  { id: "graphite", get name() { return t("i18nExt.g3.skins.graphiteName"); }, get tagline() { return t("i18nExt.g3.skins.graphiteTagline"); } },
-  { id: "linen", get name() { return t("i18nExt.g3.skins.linenName"); }, get tagline() { return t("i18nExt.g3.skins.linenTagline"); } },
-  { id: "dusk", get name() { return t("i18nExt.g3.skins.duskName"); }, get tagline() { return t("i18nExt.g3.skins.duskTagline"); } },
-  { id: "daylight", get name() { return t("i18nExt.g3.skins.daylightName"); }, get tagline() { return t("i18nExt.g3.skins.daylightTagline"); } },
-  { id: "meadow", get name() { return t("i18nExt.g3.skins.meadowName"); }, get tagline() { return t("i18nExt.g3.skins.meadowTagline"); } },
-  { id: "pop", get name() { return t("i18nExt.g3.skins.popName"); }, get tagline() { return t("i18nExt.g3.skins.popTagline"); } },
-  { id: "halloween", get name() { return t("i18nExt.g3.skins.halloweenName"); }, get tagline() { return t("i18nExt.g3.skins.halloweenTagline"); } },
+  { id: "midnight", name: "Midnight", tagline: "The original. Cool and dark." },
+  { id: "atelier", name: "Atelier", tagline: "Daylight on paper, warm and quiet." },
+  { id: "foundry", name: "Foundry", tagline: "Night shift. Dark, warm, lit in brass." },
+  { id: "lagoon", name: "Lagoon", tagline: "Cool daylight. Porcelain and deep teal." },
+  { id: "graphite", name: "Graphite", tagline: "Quiet charcoal and softened steel blue." },
+  { id: "linen", name: "Linen", tagline: "Clean daylight with a restrained navy accent." },
+  { id: "dusk", name: "Dusk", tagline: "Muted plum after dark, calm and low-key." },
+  { id: "daylight", name: "Daylight", tagline: "Midnight in reverse. Near-white, ink-black bubbles." },
+  { id: "meadow", name: "Meadow", tagline: "Fresh white with a calm green. The MausBot look." },
+  { id: "pop", name: "Pop", tagline: "Cream paper, thick ink outlines, hard shadows. Chunky and cheerful." },
+  { id: "halloween", name: "Halloween", tagline: "Plum after dark, lit in pumpkin orange. Bats optional." },
+  { id: "diwali", name: "Diwali", tagline: "Indigo night, lit in marigold and diya gold. Fireworks optional." },
+  { id: "aurora", name: "Aurora", tagline: "Near-black, crossed by a band of green light. Glass on top." },
 ];
 
 /** "system" follows the OS between the light and dark skins below; anything else pins one skin. */
@@ -103,6 +107,7 @@ export function subscribeSkin(listener: () => void): () => void {
 
 function paintSkin(id: SkinId): void {
   document.documentElement.dataset.skin = id;
+  if (id === "aurora") paintAuroraField();
   for (const listener of listeners) listener();
   // On Windows the caption buttons sit in a native overlay the main process paints, out of CSS's reach.
   try {

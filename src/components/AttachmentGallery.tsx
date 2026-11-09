@@ -2,8 +2,8 @@
 // authorization.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { ChevronDown, ChevronUp, Download, Film, Music, Play, X } from "lucide-react";
-import { attachmentBasename, FILE_MAX_BYTES, type TranscriptFileAttachment, type TranscriptImageAttachment } from "@/lib/composer-attachments";
+import { ChevronDown, ChevronUp, Download, Film, LoaderCircle, Music, Play, X } from "lucide-react";
+import { attachmentBasename, PREVIEW_MAX_BYTES, type TranscriptFileAttachment, type TranscriptImageAttachment } from "@/lib/composer-attachments";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { windowsPathDestinations } from "../../shared/markdown-windows-paths";
@@ -191,9 +191,9 @@ async function readMessageVideo(
     throw new Error(t("attach.videoUnavailable"));
   }
   const declared = Number(response.headers.get("content-length"));
-  if (declared > FILE_MAX_BYTES) {
+  if (declared > PREVIEW_MAX_BYTES) {
     await response.body?.cancel();
-    throw new Error(t("attach.fileTooLarge"));
+    throw previewTooLarge(declared);
   }
   // Keep this bounded even if a reverse proxy omits Content-Length.
   const reader = response.body?.getReader();
@@ -206,7 +206,8 @@ async function readMessageVideo(
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > FILE_MAX_BYTES) throw new Error(t("attach.fileTooLarge"));
+      // Bytes read so far are not the file size, so this says only the preview limit; still no Retry.
+      if (size > PREVIEW_MAX_BYTES) throw Object.assign(new Error(t("attach.fileTooLarge")), { code: "file_too_large" });
       chunks.push(new Uint8Array(value));
       progress();
     }
@@ -217,24 +218,57 @@ async function readMessageVideo(
   return new Blob(chunks, { type: mime });
 }
 
+function megabytes(bytes: number): string {
+  return `${Math.ceil(bytes / (1024 * 102.4)) / 10} MB`;
+}
+
+/** Only the inline player reads the whole file into memory; the download below still saves it. */
+export function previewTooLarge(bytes: number): Error {
+  const message = t("attach.previewTooLarge", { size: megabytes(bytes), limit: megabytes(PREVIEW_MAX_BYTES) });
+  return Object.assign(new Error(message), { code: "file_too_large" });
+}
+
 function VideoAttachment({ file, message }: { file: GalleryFile; message: MessageAttachmentContext }) {
   const [preview, setPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [tooLarge, setTooLarge] = useState(false);
+  const request = useRef<AbortController | null>(null);
   const playButton = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamUrl = messageFileUrl(file.path, message);
-
+  useEffect(() => () => request.current?.abort(), []);
   useEffect(() => {
     if (preview) videoRef.current?.focus();
+    return () => { if (preview) URL.revokeObjectURL(preview); };
   }, [preview]);
 
-  const load = () => {
+  const load = async () => {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
     setError("");
-    setPreview(streamUrl);
+    setPreview(null);
+    try {
+      const blob = await loadMessageVideo(file, message, controller.signal);
+      if (!controller.signal.aborted) setPreview(URL.createObjectURL(blob));
+    } catch (reason) {
+      if (!controller.signal.aborted) {
+        setError(reason instanceof Error ? reason.message : t("attach.videoUnavailable"));
+        setTooLarge((reason as { code?: unknown } | null)?.code === "file_too_large");
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+      if (request.current === controller) request.current = null;
+    }
   };
   const close = () => {
+    request.current?.abort();
+    request.current = null;
+    setLoading(false);
     setPreview(null);
     setError("");
+    setTooLarge(false);
     requestAnimationFrame(() => playButton.current?.focus());
   };
 
@@ -248,7 +282,6 @@ function VideoAttachment({ file, message }: { file: GalleryFile; message: Messag
             tabIndex={0}
             controls
             playsInline
-            autoPlay
             preload="metadata"
             aria-label={t("attach.previewVideo", { name: file.name })}
             className="max-h-full max-w-full"
@@ -258,21 +291,22 @@ function VideoAttachment({ file, message }: { file: GalleryFile; message: Messag
           <button
             ref={playButton}
             type="button"
-            onClick={load}
+            disabled={loading || tooLarge}
+            onClick={() => void load()}
             aria-label={t("attach.previewVideo", { name: file.name })}
-            className="flex size-full flex-col items-center justify-center gap-2 p-3 text-center text-ink-secondary transition-colors hover:bg-raised/60 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
+            className={`flex size-full flex-col items-center justify-center gap-2 p-3 text-center text-ink-secondary transition-colors hover:bg-raised/60 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60 ${tooLarge ? "disabled:cursor-default" : "disabled:cursor-wait"} disabled:hover:bg-transparent`}
           >
-            <Play size={24} />
-            <span className="text-[12px]">{error ? t("chat.retry") : t("attach.loadVideo")}</span>
-            {!error && <span className="text-[11px]">{t("attach.videoHint")}</span>}
+            {loading ? <LoaderCircle size={24} className="animate-spin" /> : <Play size={24} />}
+            <span className="text-[12px]">{loading ? t("attach.videoLoading") : error && !tooLarge ? t("chat.retry") : t("attach.loadVideo")}</span>
+            {!error && !loading && <span className="text-[11px]">{t("attach.videoHint")}</span>}
           </button>
         )}
-        {(preview || error) && (
+        {(preview || loading || error) && (
           <button type="button" aria-label={t("attach.closeVideo")} onClick={close} className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-panel/90 text-ink-secondary hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
             <X size={14} />
           </button>
         )}
-        {!preview && <Film size={13} className="pointer-events-none absolute left-2 top-2 text-ink-secondary/50" />}
+        {!preview && !loading && <Film size={13} className="pointer-events-none absolute left-2 top-2 text-ink-secondary/50" />}
       </div>
       {error && <p role="alert" className="px-3 py-2 text-[11px] text-danger">{error}</p>}
       <AttachedFileChip file={file} linked={file.linked} message={message} className="max-w-none rounded-none border-0 border-t border-hairline/30 bg-transparent" />
@@ -304,7 +338,7 @@ async function readMessageAudio(
     throw new Error(t("attach.audioUnavailable"));
   }
   const declared = Number(response.headers.get("content-length"));
-  if (declared > FILE_MAX_BYTES) {
+  if (declared > PREVIEW_MAX_BYTES) {
     await response.body?.cancel();
     throw new Error(t("attach.fileTooLarge"));
   }
@@ -318,7 +352,7 @@ async function readMessageAudio(
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > FILE_MAX_BYTES) throw new Error(t("attach.fileTooLarge"));
+      if (size > PREVIEW_MAX_BYTES) throw new Error(t("attach.fileTooLarge"));
       chunks.push(new Uint8Array(value));
       progress();
     }

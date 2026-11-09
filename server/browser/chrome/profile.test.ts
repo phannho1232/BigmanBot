@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { removeTempDir } from "../../testing/cleanup.ts";
-import { browserRoot, cloneProfile, compareVersions, downgradeRefusal, ensureProfile, markCleanExit, profileDir, profileHash, recordOpenedBy, versionOf, workspaceId } from "./profile.ts";
+import { browserRoot, cloneProfile, compareVersions, downgradeRefusal, ensureProfile, fingerprintSeed, markCleanExit, profileDir, profileHash, recordOpenedBy, versionOf, workspaceId } from "./profile.ts";
 
 const dirs: string[] = [];
 const scratch = () => {
@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 describe("profiles", () => {
-  it("gives each workspace its own random id and each key its own folder", () => {
+  it("gives each workspace its own random id and each key its own folder and fingerprint seed", () => {
     const data = scratch();
     const id = workspaceId(data);
     expect(id).toMatch(/^[0-9a-f]{32}$/);
@@ -26,6 +26,8 @@ describe("profiles", () => {
     expect(workspaceId(scratch())).not.toBe(id);
     expect(profileHash(id, "bot:alice")).toHaveLength(24);
     expect(profileHash(id, "bot:alice")).not.toBe(profileHash(id, "bot:bob"));
+    expect(fingerprintSeed(profileHash(id, "bot:alice"))).toBe(fingerprintSeed(profileHash(id, "bot:alice")));
+    expect(fingerprintSeed(profileHash(id, "bot:alice"))).not.toBe(fingerprintSeed(profileHash(id, "bot:bob")));
     expect(profileDir(data, "bot:alice")).toBe(join(browserRoot(data), "profiles", profileHash(id, "bot:alice")));
     expect(profileDir(data, "temp:alice:run1")).toContain(join("browser", "temp"));
     expect(() => profileDir(data, "nonsense")).toThrow(/profile key/);
@@ -46,6 +48,7 @@ describe("profiles", () => {
       intl: { accept_languages: "en-IN,en" },
     });
     expect(made.record).toMatchObject({ key: "bot:alice", backend: "local", egress: "direct", chromeVersion: null, createdAt: "2026-10-15T00:00:00.000Z" });
+    expect(typeof made.record.fingerprintSeed).toBe("number");
     writeFileSync(join(made.dir, "Default", "Preferences"), JSON.stringify({ ...preferences, profile: { ...preferences.profile, exit_type: "Crashed" }, extra: 1 }));
     expect(ensureProfile(data, "bot:alice").created).toBe(false);
     markCleanExit(made.dir);
@@ -67,7 +70,7 @@ describe("profiles", () => {
     expect(versionOf("Chrome/153.0.8010.12")).toBe("153.0.8010.12");
   });
 
-  it("clones a profile, strips lockfiles and resets open tabs", () => {
+  it("clones a profile, strips lockfiles, resets open tabs, and assigns a distinct fingerprint seed", () => {
     const data = scratch();
     const source = ensureProfile(data, "bot:alice");
     writeFileSync(join(source.dir, "Default", "Cookies"), "cookie-data");
@@ -82,6 +85,7 @@ describe("profiles", () => {
     expect(existsSync(join(bobDir, "Default", "Sessions", "Session_123"))).toBe(false);
     const bobRecord = JSON.parse(readFileSync(join(bobDir, "omb-profile.json"), "utf8"));
     expect(bobRecord.key).toBe("bot:bob");
+    expect(bobRecord.fingerprintSeed).not.toBe(source.record.fingerprintSeed);
 
     expect(cloneProfile(data, "bot:nonexistent", "bot:charlie")).toBe(false);
   });

@@ -44,6 +44,12 @@ export function profileHash(workspace: string, key: string): string {
   return createHash("sha256").update(workspace).update("\0").update(key).digest("hex").slice(0, 24);
 }
 
+/** adryfish/fingerprint-chromium's `--fingerprint` takes a positive 31-bit integer seed. */
+export function fingerprintSeed(marker: string): number {
+  const digest = createHash("sha256").update("omb-fp\0").update(marker).digest();
+  return 100_000 + (digest.readUInt32BE(0) % 2_047_383_647);
+}
+
 /** A temporary browser's profile sits apart, so the sweep can delete what nothing uses. */
 export function profileDir(dataDir: string, key: string): string {
   const hash = profileHash(workspaceId(dataDir), key);
@@ -58,6 +64,8 @@ export interface ProfileRecord {
   identity: string | null;
   /** The newest Chrome that opened it; an older one must not. */
   chromeVersion: string | null;
+  /** Persistent C++ hardware fingerprint seed for fingerprint-chromium. */
+  fingerprintSeed?: number;
   createdAt: string;
   migratedFrom?: string;
 }
@@ -131,7 +139,8 @@ export function ensureProfile(dataDir: string, key: string, { acceptLanguages = 
   const existing = readProfileRecord(dir);
   if (existing) return { dir, record: existing, created: false };
   mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const record: ProfileRecord = { key, backend, egress: "direct", identity: null, chromeVersion: null, createdAt: now().toISOString() };
+  const seed = fingerprintSeed(profileHash(workspaceId(dataDir), key));
+  const record: ProfileRecord = { key, backend, egress: "direct", identity: null, chromeVersion: null, fingerprintSeed: seed, createdAt: now().toISOString() };
   mergePreferences(dir, profilePreferences(acceptLanguages));
   writeProfileRecord(dir, record);
   return { dir, record, created: true };
@@ -196,7 +205,8 @@ export function cloneProfile(dataDir: string, sourceKey: string, targetKey: stri
     safeCopyProfileTree(sourceDir, targetDir);
     const record = readProfileRecord(targetDir);
     if (record) {
-      writeProfileRecord(targetDir, { ...record, key: targetKey, createdAt: new Date().toISOString() });
+      const seed = fingerprintSeed(profileHash(workspaceId(dataDir), targetKey));
+      writeProfileRecord(targetDir, { ...record, key: targetKey, fingerprintSeed: seed, createdAt: new Date().toISOString() });
     }
     forgetOpenTabs(targetDir);
     markCleanExit(targetDir);

@@ -7,8 +7,9 @@ import { webSocketTransport } from "./cdp/transport.ts";
 import { fitPage, pageLimit, type BrowserMode, type HostKind, type ScreenSpec } from "./chrome/flags.ts";
 import { launchChrome, type ChromeProcess, type LaunchOptions } from "./chrome/launch.ts";
 import { clearSingleton, staleSingletonLock, type ProcessRegistry } from "./chrome/processes.ts";
+import { isFingerprintChromium } from "./chrome/resolve.ts";
 import { languageList } from "./chrome/wrapper.ts";
-import { downgradeRefusal, ensureProfile, forgetOpenTabs, markCleanExit, profileDir, profileHash, recordOpenedBy, versionOf, workspaceId } from "./chrome/profile.ts";
+import { downgradeRefusal, ensureProfile, fingerprintSeed, forgetOpenTabs, markCleanExit, profileDir, profileHash, recordOpenedBy, versionOf, workspaceId } from "./chrome/profile.ts";
 
 export type BackendKind = "local" | "my-chrome" | "cdp-url";
 
@@ -113,10 +114,13 @@ export class LocalBackend implements Backend {
     if (request.fresh) forgetOpenTabs(dir);
     const headless = request.mode === "headless";
     const locale = options.locale?.() ?? null;
+    const timezone = options.timezone?.() ?? null;
     const egressPort = await options.egressPort(request.key);
     const screen = headless ? await options.screen() : null;
     const limit = screen ? pageLimit(screen, platform) : null;
     const viewport = fitPage(request.viewport, limit);
+    const profileMarker = profileHash(workspaceId(options.dataDir), request.key);
+    const fpEnabled = isFingerprintChromium(binary.path) || process.env.OMB_FINGERPRINT_CHROMIUM === "1";
     const chrome: ChromeProcess = await (options.launch ?? launchChrome)({
       executablePath: binary.path,
       userDataDir: dir,
@@ -130,10 +134,11 @@ export class LocalBackend implements Backend {
       sandbox: options.sandbox ?? true,
       startUrl: request.fresh || created ? "about:blank" : null,
       viewport,
-      timezone: options.timezone?.() ?? null,
+      timezone,
       sandboxHelper: options.sandboxHelper ?? null,
-      profileMarker: profileHash(workspaceId(options.dataDir), request.key),
+      profileMarker,
       registry: options.registry ?? null,
+      ...(fpEnabled ? { fingerprintSeed: record.fingerprintSeed ?? fingerprintSeed(profileMarker), fingerprintTimezone: timezone } : {}),
       ...(options.handshakeTimeoutMs === undefined ? {} : { handshakeTimeoutMs: options.handshakeTimeoutMs }),
     });
     const version = versionOf(chrome.version.product);
