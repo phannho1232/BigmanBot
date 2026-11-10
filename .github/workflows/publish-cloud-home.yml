@@ -34,10 +34,14 @@ jobs:
       - name: Checkout BigmanBot repository
         uses: actions/checkout@v4
 
-      - name: Free runner disk space for Chrome and CLI layers
+      - name: Free runner disk space and ensure swap for Vite bundle
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          if ! swapon --show | grep -q '/swapextras'; then
+            sudo fallocate -l 4G /swapextras && sudo chmod 600 /swapextras && sudo mkswap /swapextras && sudo swapon /swapextras || true
+          fi
           df -h
+          free -h
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
