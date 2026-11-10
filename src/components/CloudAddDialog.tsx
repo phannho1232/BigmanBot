@@ -6,6 +6,7 @@ import type { CloudColor } from "../../electron/cloud-buy.mjs";
 import type { CloudAccountState, CloudCheckoutOutcome } from "../../electron/cloud-account.mjs";
 import type { CloudOffer } from "../../electron/cloud-home.mjs";
 import { track } from "@/lib/analytics";
+import { openExternalLink, PRICING_URL, withSource } from "@/lib/app-links";
 import { cn } from "@/lib/cn";
 import { cloudColor, cloudNameShown, DEFAULT_CLOUD_COLOR } from "@/lib/cloud-look";
 import { cloudAddView, offerPlan, sameTerms, startedSleeps, type CloudAddView, type CloudSignInPhase } from "@/lib/cloud-plan";
@@ -19,7 +20,7 @@ import { PayScreen } from "./cloud-buy/PayScreen";
 import { CLOSE, ON_NIGHT, SHEET, StagingMark } from "./cloud-buy/parts";
 import { SetupScreen, TeamReadyScreen, TeamSetupScreen } from "./cloud-buy/SetupScreen";
 import { BrowserSignInScreen, codeDigits, SignInScreen } from "./cloud-buy/SignInScreen";
-import { VpsMmoCloudFlow } from "./vpsmmo-cloud/VpsMmoCloudFlow";
+import { OwnServerLink } from "./PlaceAddSheet";
 
 export interface CloudAddActions {
   /** A plan card's button: the in-app sign-in when signed out, then (or else) that plan's checkout. */
@@ -266,8 +267,21 @@ export function CloudAddDialog({ now = Date.now }: { now?: () => number }) {
     return () => window.removeEventListener("blur", stop);
   }, [counting]);
   if (request && activeLocale() === "vi") {
-    return <CloudAddSheet kind="offer" wide staging={false} onClose={close}>
-      <VpsMmoCloudFlow profileEmail={profileEmail} onClose={close} />
+    return <CloudAddSheet kind="has-cloud" staging={false} onClose={close}>
+      <div className="border-b border-hairline/60 px-[30px] pt-7 pb-5">
+        <h2 id="cloud-add-title" className="text-[19px] font-semibold tracking-tight text-ink">BigmanBot Cloud 24/7</h2>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-ink-secondary">
+          Chọn gói Pro, Max hoặc Team trên cổng Website chính thức để nhận máy chủ Cloud riêng hoạt động 24/7 kèm tên miền <code className="text-ink">.bigmanbot.com</code> và ghép đôi 1 chạm vào ứng dụng.
+        </p>
+        <button
+          type="button"
+          onClick={() => void openExternalLink(withSource(PRICING_URL, request.source))}
+          className="ui-button ui-button-primary mt-4 inline-flex items-center justify-center"
+        >
+          Chọn gói &amp; Thanh toán trên Website
+        </button>
+      </div>
+      <OwnServerLink onBack={null} onConnected={close} />
     </CloudAddSheet>;
   }
   if (!open || !view || !request || !bridge || view.kind === "settings") return null;

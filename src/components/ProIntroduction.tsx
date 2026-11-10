@@ -41,7 +41,7 @@ export function ProSettingsCard() {
           <Crown className="text-ink-secondary" size={18} aria-hidden="true" />
           <div><h3 className="text-[14px] font-semibold text-ink">{t("pro.name")}</h3>
             <p className="mt-1 text-[12px] text-ink-secondary">{t("pro.settingsSummary")}</p>
-            <p className="mt-1 text-[12px] text-ink-secondary">Các gói máy chủ VPS Linux Việt Nam 24/7 từ 249.000đ/tháng (chu kỳ 1 năm · Uplink 10 Gbps · NVMe).</p>
+            <p className="mt-1 text-[12px] text-ink-secondary">Các gói máy chủ Cloud 24/7 từ 390.000đ/tháng (Pro · Max · Team · kèm tên miền HTTPS .bigmanbot.com riêng).</p>
             <p className="mt-1 text-[12px] text-ink-secondary">{t("pro.disclaimer")}</p></div>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -96,7 +96,7 @@ export function CloudPlanRow({ place, usage = null, upgrade }: { place: "account
     const trial = offerTrialDays(offer) !== null;
     if (activeLocale() === "vi") {
       return (
-        <SettingRow title={t("pro.name")} subtitle={place === "plan" ? "Từ 249.000đ/tháng (thanh toán theo năm · VPS Việt Nam 24/7)" : t("pro.settingsSummary")}>
+        <SettingRow title={t("pro.name")} subtitle={place === "plan" ? "Từ 390.000đ/tháng (máy chủ Cloud 24/7 · Pro, Max, Team)" : t("pro.settingsSummary")}>
           <div className="flex items-center gap-3">
             <button type="button" data-cloud-offer="vpsmmo" className="ui-button ui-button-primary"
               onClick={() => dispatch({ type: "openCloudAdd", source: "app_settings" })}>Thuê máy chủ Cloud</button>

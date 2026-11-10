@@ -8,6 +8,7 @@ import type { RailAddChoices, RailPlace } from "../../electron/cloud-rail.mjs";
 import { EXAMPLE_ADDRESS, parseServerInput } from "../../electron/server-address.mjs";
 import { CONNECT_PROBLEM_KEYS, type ServerProbe, type ServerProbeProblem } from "../../electron/server-probe.mjs";
 import { track } from "@/lib/analytics";
+import { openExternalLink, PRICING_URL, withSource } from "@/lib/app-links";
 import { cn } from "@/lib/cn";
 import { CLOUD_LIST_NAME_LIMIT, CLOUD_SWATCH_ORDER, SWATCH_COLOR, swatchFill } from "@/lib/cloud-extra";
 import { useCopyFeedback } from "@/lib/copy-text";
@@ -18,7 +19,6 @@ import { AddCloudFlow } from "./cloud-buy/AddCloudFlow";
 import { NewOrganization } from "./cloud-buy/NewOrganization";
 import { BackLink, FIELD, Heading, PRIMARY_WIDE } from "./cloud-buy/parts";
 import { SwatchRadios } from "./SwatchRadios";
-import { VpsMmoCloudFlow } from "./vpsmmo-cloud/VpsMmoCloudFlow";
 
 const PAIR_COMMAND = "npx openmausbot pair";
 
@@ -250,22 +250,32 @@ export function PlaceAddSheet({ choices, places = [], connect = null, onClose, o
     onClose();
     void workspaces?.add?.("cloud").catch(() => {});
   };
-  const isVi = activeLocale() === "vi", inChromeRail = typeof window !== "undefined" && window.location?.protocol === "file:";
-  return <RailSheet wide={view === "cloud" && (wide || (isVi && !inChromeRail))} focusKey={view} onClose={onClose}>
+  const isVi = activeLocale() === "vi";
+  const openWebCloudPricing = () => {
+    track("rail_add", { step: "cloud" });
+    void openExternalLink(withSource(PRICING_URL, "app_rail"));
+    if (server) setView("server");
+    else onClose();
+  };
+  return <RailSheet wide={view === "cloud" && wide && !isVi} focusKey={view} onClose={onClose}>
     {view === "choose" && <div data-place-add="choose" className="flex flex-col gap-5 px-[30px] pb-[26px] pt-7">
       <Heading title={t(local ? "rail.addAny" : "rail.add")} />
       {local && <Choice kind="local" icon={<Laptop size={19} />} title={t("rail.local")} sub={t("rail.localSub")} onClick={() => setView("local")} />}
       <div className="flex flex-col gap-3 sm:flex-row">
         {organization && <Choice kind="organization" icon={<Building2 size={19} />} title={t("rail.org")} sub={t("rail.orgSub")} onClick={() => setView("organization")} />}
-        {choices.cloud && <Choice kind="cloud" icon={<Cloud size={19} />} title={t("rail.buy")} sub={t("rail.buySub")} onClick={() => (isVi && inChromeRail ? firstCloud() : setView("cloud"))} />}
+        {choices.cloud && <Choice kind="cloud" icon={<Cloud size={19} />} title={t("rail.buy")} sub={t("rail.buySub")} onClick={() => (isVi ? openWebCloudPricing() : setView("cloud"))} />}
         {server && <Choice kind="server" icon={<Server size={19} />} title={t("connect.title")} sub={t("connect.choiceSub")} onClick={() => setView("server")} />}
         {account && <Choice kind="account" icon={<UserRound size={19} />} title={t("accounts.add")} sub={t("rail.accountSub")} onClick={() => onAccount!()} />}
       </div>
     </div>}
     {view === "local" && <NewLocalWorkspace places={places} onBack={several ? () => setView("choose") : null} onDone={onClose} />}
     {view === "server" && <OwnServerLink onBack={several && !connect ? () => setView("choose") : null} onConnected={onClose} connect={connect} />}
-    {view === "cloud" && (isVi && !inChromeRail
-      ? <VpsMmoCloudFlow onClose={onClose} onBack={several ? () => setView("choose") : null} />
+    {view === "cloud" && (isVi
+      ? <div data-place-add="web-cloud" className="flex flex-col gap-4 px-[30px] pb-[26px] pt-7">
+          {several && <div><BackLink label={t("rail.back")} onClick={() => setView("choose")} /></div>}
+          <Heading title="BigmanBot Cloud 24/7" sub="Đăng ký gói Pro, Max hoặc Team trên cổng Website chính thức để tự động cấp phát máy chủ Cloud riêng kèm tên miền HTTPS .bigmanbot.com." />
+          <button type="button" data-autofocus className={PRIMARY_WIDE} onClick={openWebCloudPricing}>Chọn gói Cloud 24/7 trên Website</button>
+        </div>
       : <AddCloudFlow onClose={onClose} onFirstCloud={firstCloud} onWide={setWide} onBack={several ? () => setView("choose") : null} />)}
     {view === "organization" && <NewOrganization onClose={onClose} onBack={several ? () => setView("choose") : null} />}
   </RailSheet>;
