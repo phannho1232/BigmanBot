@@ -1,3 +1,4 @@
+import { paintAuroraField } from "./aurora-field";
 import { hasPriorRun } from "./prior-run";
 import { t } from "@/lib/i18n";
 
@@ -13,6 +14,8 @@ export const SKIN_IDS = [
   "meadow",
   "pop",
   "halloween",
+  "diwali",
+  "aurora",
 ] as const;
 export type SkinId = (typeof SKIN_IDS)[number];
 
@@ -34,6 +37,8 @@ export const SKINS: readonly Skin[] = [
   { id: "meadow", get name() { return t("i18nExt.g3.skins.meadowName"); }, get tagline() { return t("i18nExt.g3.skins.meadowTagline"); } },
   { id: "pop", get name() { return t("i18nExt.g3.skins.popName"); }, get tagline() { return t("i18nExt.g3.skins.popTagline"); } },
   { id: "halloween", get name() { return t("i18nExt.g3.skins.halloweenName"); }, get tagline() { return t("i18nExt.g3.skins.halloweenTagline"); } },
+  { id: "diwali", get name() { return t("i18nExt.g3.skins.diwaliName"); }, get tagline() { return t("i18nExt.g3.skins.diwaliTagline"); } },
+  { id: "aurora", get name() { return t("i18nExt.g3.skins.auroraName"); }, get tagline() { return t("i18nExt.g3.skins.auroraTagline"); } },
 ];
 
 /** "system" follows the OS between the light and dark skins below; anything else pins one skin. */
@@ -103,6 +108,7 @@ export function subscribeSkin(listener: () => void): () => void {
 
 function paintSkin(id: SkinId): void {
   document.documentElement.dataset.skin = id;
+  if (id === "aurora") paintAuroraField();
   for (const listener of listeners) listener();
   // On Windows the caption buttons sit in a native overlay the main process paints, out of CSS's reach.
   try {
