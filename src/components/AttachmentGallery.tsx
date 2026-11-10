@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { ChevronDown, ChevronUp, Download, Film, Music, Play, X } from "lucide-react";
-import { attachmentBasename, FILE_MAX_BYTES, type TranscriptFileAttachment, type TranscriptImageAttachment } from "@/lib/composer-attachments";
+import { attachmentBasename, PREVIEW_MAX_BYTES, type TranscriptFileAttachment, type TranscriptImageAttachment } from "@/lib/composer-attachments";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { windowsPathDestinations } from "../../shared/markdown-windows-paths";
@@ -191,9 +191,9 @@ async function readMessageVideo(
     throw new Error(t("attach.videoUnavailable"));
   }
   const declared = Number(response.headers.get("content-length"));
-  if (declared > FILE_MAX_BYTES) {
+  if (declared > PREVIEW_MAX_BYTES) {
     await response.body?.cancel();
-    throw new Error(t("attach.fileTooLarge"));
+    throw previewTooLarge(declared);
   }
   // Keep this bounded even if a reverse proxy omits Content-Length.
   const reader = response.body?.getReader();
@@ -206,7 +206,8 @@ async function readMessageVideo(
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > FILE_MAX_BYTES) throw new Error(t("attach.fileTooLarge"));
+      // Bytes read so far are not the file size, so this says only the preview limit; still no Retry.
+      if (size > PREVIEW_MAX_BYTES) throw Object.assign(new Error(t("attach.fileTooLarge")), { code: "file_too_large" });
       chunks.push(new Uint8Array(value));
       progress();
     }
@@ -217,9 +218,20 @@ async function readMessageVideo(
   return new Blob(chunks, { type: mime });
 }
 
+function megabytes(bytes: number): string {
+  return `${Math.ceil(bytes / (1024 * 102.4)) / 10} MB`;
+}
+
+/** Only the inline player reads the whole file into memory; the download below still saves it. */
+export function previewTooLarge(bytes: number): Error {
+  const message = t("attach.previewTooLarge", { size: megabytes(bytes), limit: megabytes(PREVIEW_MAX_BYTES) });
+  return Object.assign(new Error(message), { code: "file_too_large" });
+}
+
 function VideoAttachment({ file, message }: { file: GalleryFile; message: MessageAttachmentContext }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
+
   const playButton = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamUrl = messageFileUrl(file.path, message);
@@ -304,7 +316,7 @@ async function readMessageAudio(
     throw new Error(t("attach.audioUnavailable"));
   }
   const declared = Number(response.headers.get("content-length"));
-  if (declared > FILE_MAX_BYTES) {
+  if (declared > PREVIEW_MAX_BYTES) {
     await response.body?.cancel();
     throw new Error(t("attach.fileTooLarge"));
   }
@@ -318,7 +330,7 @@ async function readMessageAudio(
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > FILE_MAX_BYTES) throw new Error(t("attach.fileTooLarge"));
+      if (size > PREVIEW_MAX_BYTES) throw new Error(t("attach.fileTooLarge"));
       chunks.push(new Uint8Array(value));
       progress();
     }

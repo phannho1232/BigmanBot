@@ -205,7 +205,7 @@ describe("updateNoteworthy", () => {
 describe("outward links", () => {
   it("sends Help Center to the docs the website also links to", () => {
     expect(HELP_CENTER_URL).toBe(DOCS_URL);
-    expect(DOCS_URL).toBe("https://github.com/milind-soni/OpenMausBot/tree/main/docs");
+    expect(DOCS_URL).toBe("https://github.com/phannho1232/BigmanBot/tree/main/docs");
   });
 
   it("sends Send Feedback to the Discord community", () => {
@@ -330,7 +330,7 @@ describe("Get the phone app", () => {
   it("offers iPhone and Android with the links the website and Cloud page use", () => {
     expect(PHONE_APPS.map((app) => [app.id, app.url])).toEqual([["ios", IOS_APP_STORE_URL], ["android", ANDROID_APK_URL]]);
     expect(IOS_APP_STORE_URL).toBe("https://apps.apple.com/in/app/mausbot/id6803387923");
-    expect(ANDROID_APK_URL).toBe("https://github.com/milind-soni/OpenMausBot/releases/download/android-v1.5.0/OpenMausBot.apk");
+    expect(ANDROID_APK_URL).toBe("https://github.com/phannho1232/BigmanBot/releases/download/android-v1.5.0/OpenMausBot.apk");
   });
 
   const render = (connect?: PhoneAppConnect[]) => {
@@ -434,11 +434,12 @@ describe("Simple mode's account menu", () => {
     return all;
   }, []);
 
-  it("leads with usage, support and Settings, then Automations and Team map, then where this window is and Cloud", () => {
+  it("leads with Automations and Team map, then usage and Settings, then the phone app and support, then where this window is and Cloud", () => {
     const items = build();
     expect(groups(items)).toEqual([
-      ["usage", "support", "settings"],
       ["automations", "team-map"],
+      ["usage", "settings"],
+      ["support"],
       ["place", "switch-place", "account"],
     ]);
     expect(items.find((item) => item.key === "support")!.submenu!.map((item) => item.key)).toEqual(["shortcuts", "about", "update"]);
@@ -466,10 +467,11 @@ describe("Simple mode's account menu", () => {
   });
 
   it("gives the usage row a trailing meta and a chevron, with the reset as its second line", () => {
-    const usage = build({ usageSummary: { value: "12% used", weekly: true, resets: "Resets in 3 days" } })[0]!;
-    expect(usage).toMatchObject({ label: "Weekly usage", value: "12% used", subtitle: "Resets in 3 days", chevron: true });
-    expect(build()[0]).toMatchObject({ label: "Usage", chevron: true });
-    expect(build()[0]!.value).toBeUndefined();
+    const usageRow = (items: SidebarMenuItem[]) => items.find((item) => item.key === "usage")!;
+    expect(usageRow(build({ usageSummary: { value: "12% used", weekly: true, resets: "Resets in 3 days" } })))
+      .toMatchObject({ label: "Weekly usage", value: "12% used", subtitle: "Resets in 3 days", chevron: true });
+    expect(usageRow(build())).toMatchObject({ label: "Usage", chevron: true });
+    expect(usageRow(build()).value).toBeUndefined();
   });
 
   it("keeps Advanced's account menu as it was", () => {
@@ -521,12 +523,14 @@ describe("Simple mode's account menu", () => {
     const update = { key: "update", label: "OpenMausBot 0.2.0 ready, restart", onSelect: noop };
     expect(groups(build({ move }))).toEqual([
       ["cloud-move"],
-      ["usage", "support", "settings"],
+
       ["automations", "team-map"],
+      ["usage", "settings"],
+      ["support"],
       ["place", "switch-place", "account"],
     ]);
     expect(groups(build({ move, update, updateTop: { label: "Update ready", action: "Restart" } })).slice(0, 2)).toEqual([["cloud-move"], ["update"]]);
-    expect(groups(build({ move: [] }))[0]).toEqual(["usage", "support", "settings"]);
+    expect(groups(build({ move: [] }))[0]).toEqual(["automations", "team-map"]);
   });
 
   it("gives a moving move one row shaped like Usage and Settings, and a failing one the reason written under its Try again", () => {
