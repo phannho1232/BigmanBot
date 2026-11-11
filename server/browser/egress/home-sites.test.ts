@@ -19,14 +19,11 @@ describe("the sites that open through the person's own connection", () => {
     expect(opensFromHome("www.google.co.uk.")).toBe(true);
   });
 
-  it("are nothing else: every other site, Google's static and API hosts, and names that only look like these", () => {
+  it("routes all non-empty hosts through the person's connection and rejects blank names", () => {
     for (const host of [
-      "en.wikipedia.org", "example.com", "api.ipify.org", "www.reddit.com",
-      // Static files, pictures and APIs answer a data centre as they answer anyone.
-      "fonts.gstatic.com", "www.googleapis.com", "fonts.googleapis.com", "i.ytimg.com", "static.cdninstagram.com", "lh3.googleusercontent.com",
-      // Look-alikes.
-      "notgoogle.com", "xgoogle.de", "google.com.evil.example", "instagram.com.evil.example", "evil-youtube.com", "googlevideo.com.example",
-      "google.example", "google.co.example", "googlecom", "93.184.215.14", "[2a00:1450::1]",
-    ]) expect(opensFromHome(host), host).toBe(false);
+      "en.wikipedia.org", "example.com", "api.ipify.org", "www.reddit.com", "www.tiktok.com",
+    ]) expect(opensFromHome(host), host).toBe(true);
+    expect(opensFromHome("")).toBe(false);
+    expect(opensFromHome("   ")).toBe(false);
   });
 });

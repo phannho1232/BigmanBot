@@ -317,6 +317,7 @@ export class BrowserLive {
   private readonly clocks = new Map<string, HoldClock>();
   private readonly holdLimits: HoldLimits;
   private readonly sessionResets = new Map<string, Promise<boolean>>();
+  private readonly sessionConnecting = new Set<string>();
   /** Each watched browser's page dialogs, and the views that watch them. */
   private readonly dialogs = new Map<string, { watch: DialogWatch; views: Set<string> }>();
   private readonly devTools?: BrowserLiveDevTools;
@@ -615,23 +616,28 @@ export class BrowserLive {
     let status: ObjectValue;
     try { status = await this.command(viewer, ["stream", "status"], STATUS_PROBE_MS); }
     catch (error) {
-      // Only a bot call or a person's action can hold the engine past this read; with neither, it has hung.
-      if (!(error instanceof BrowserBusyError) || this.runtime.working(viewer.session)) throw error;
+      // Only a bot call, a person's action or another view opening the session can hold the engine past this read.
+      if (!(error instanceof BrowserBusyError) || this.runtime.working(viewer.session) || this.sessionConnecting.has(viewer.session)) throw error;
       this.resetSession(viewer, "a status read the browser never answered");
       throw new BrowserUnresponsiveError();
     }
-    if (status.enabled !== true) {
-      try { status = await this.command(viewer, ["stream", "enable"]); }
-      catch (error) {
-        if (error instanceof BrowserBusyError) throw error;
-        status = await this.command(viewer, ["stream", "status"]);
+    this.sessionConnecting.add(viewer.session);
+    try {
+      if (status.enabled !== true) {
+        try { status = await this.command(viewer, ["stream", "enable"]); }
+        catch (error) {
+          if (error instanceof BrowserBusyError) throw error;
+          status = await this.command(viewer, ["stream", "status"]);
+        }
       }
+      const port = browserStreamPort(status);
+      // `open` without a URL is an idempotent launch, never navigation away from the bot's page.
+      if (status.connected !== true) await this.command(viewer, ["open"]);
+      await this.runtime.launched(viewer.session, viewer.spec);
+      return port;
+    } finally {
+      this.sessionConnecting.delete(viewer.session);
     }
-    const port = browserStreamPort(status);
-    // `open` without a URL is an idempotent launch, never navigation away from the bot's page.
-    if (status.connected !== true) await this.command(viewer, ["open"]);
-    await this.runtime.launched(viewer.session, viewer.spec);
-    return port;
   }
 
   private async connectWhenFree(viewer: Viewer): Promise<number> {

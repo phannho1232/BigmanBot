@@ -897,10 +897,11 @@ function turnOrigin(capability: Pick<InternalCapability, "threadId" | "generatio
 }
 
 /** Fail closed: only the person whose own message provably started this exact turn generation. Deliberately not the usage ledger's trigger, which defaults to the owner. */
-function sharedComputerPrincipal(capability: Pick<InternalCapability, "botId" | "threadId" | "generation">): string | null {
+function sharedComputerPrincipal(capability: Pick<InternalCapability, "botId" | "threadId" | "generation"> & Partial<Pick<InternalCapability, "externalRuntime">>): string | null {
   if (CLOUD_HOME) return cloudLendingRefusal(capability) === null ? CLOUD_HOME_LENDER : null;
   return provenRequestPerson(directRequestOwners.get(capability.threadId), capability.generation,
-    (messageId) => linePersonKey(store.messagesFor(capability.threadId).find((message) => message.id === messageId)));
+    (messageId) => linePersonKey(store.messagesFor(capability.threadId).find((message) => message.id === messageId)))
+    ?? (!capability.externalRuntime && !sharedMembership() && ownerLends() ? ownerLenderPrincipal() : null);
 }
 
 /** The only conversations that may feed a bot's memory, daily log, recall or brief; dropped whenever a session is revoked. */

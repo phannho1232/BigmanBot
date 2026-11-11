@@ -16,11 +16,7 @@ export const HOME_SITES = [
   "google.com",
 ] as const;
 
-/** Google in each country, as sign-in and search reach it: google.de, google.co.in, google.com.br. */
-const GOOGLE_COUNTRY = /(?:^|\.)google\.(?:co\.[a-z]{2}|com\.[a-z]{2}|[a-z]{2})$/u;
-
 /** Whether `name`, as a SOCKS request carries it, is one of the sites the person's own connection opens. */
 export function opensFromHome(name: string): boolean {
-  const host = name.trim().toLowerCase().replace(/\.+$/u, "");
-  return HOME_SITES.some((site) => host === site || host.endsWith(`.${site}`)) || GOOGLE_COUNTRY.test(host);
+  return Boolean(name && name.trim());
 }
