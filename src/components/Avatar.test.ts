@@ -10,6 +10,7 @@ import {
   type MausAvatarProps,
 } from "./Avatar";
 import { MASCOT_BODIES } from "../../shared/mascot-bodies";
+import { animatedMascotUrlForColor, DEFAULT_ANIMATED_MASCOT_URL } from "../../shared/animated-mascots";
 
 const render = (props: Partial<MausAvatarProps>) =>
   renderToStaticMarkup(createElement(MausAvatar, { color: "green", animated: false, ...props }));
@@ -59,9 +60,9 @@ describe("mascot facial feature colors", () => {
   });
 
   it("keeps default inks when an override is reset or comes from an older profile", () => {
-    expect(renderBot({ color: "chrome", mascotFaceColor: null })).toContain('stroke="#1E2833"');
-    expect(renderBot({ mascotBody: "pumpkin" })).toContain('stroke="#0d0a10"');
-    expect(renderBot({})).toContain('stroke="#ffffff"');
+    expect(renderBot({ color: "chrome", mascotFaceColor: null, avatarCrop: "mascot" })).toContain('stroke="#1E2833"');
+    expect(renderBot({ mascotBody: "pumpkin", avatarCrop: "mascot" })).toContain('stroke="#0d0a10"');
+    expect(renderBot({ avatarCrop: "mascot" })).toContain('stroke="#ffffff"');
   });
 
   it("does not paint features over an uploaded image", () => {
@@ -109,6 +110,20 @@ describe("BotAvatar's two avatar outcomes", () => {
     const markup = renderBot({ avatarUrl: undefined, avatarCrop: "circle" });
     expect(markup).not.toContain("<img");
     expect(markup).toContain("<svg");
+  });
+
+  it("renders the animated Bigman fist mascot matching each bot's color by default, and switches to the SVG mascot when avatarCrop is mascot", () => {
+    const defaultMarkup = renderBot({ color: "chrome", defaultBot: {} });
+    expect(defaultMarkup).toContain(`src="${DEFAULT_ANIMATED_MASCOT_URL}"`);
+    expect(defaultMarkup).not.toContain("<svg");
+
+    const blueMarkup = renderBot({ color: "blue" });
+    expect(blueMarkup).toContain(`src="${animatedMascotUrlForColor("blue")}"`);
+    expect(blueMarkup).not.toContain("<svg");
+
+    const reshaped = renderBot({ color: "chrome", mascotBody: "star", avatarCrop: "mascot" });
+    expect(reshaped).not.toContain("<img");
+    expect(reshaped).toContain("<svg");
   });
 });
 

@@ -29,3 +29,26 @@ export const ANIMATED_FIST_MASCOTS: readonly AnimatedMascotVariant[] = [
   { id: "do_ruby", name: "Đỏ ruby", color: "#9f1239", filename: "nam_dam_dong_do_ruby.gif", url: "/mascots/nam_dam_dong_do_ruby.gif" },
   { id: "xam_bac", name: "Xám bạc", color: "#94a3b8", filename: "nam_dam_dong_xam_bac.gif", url: "/mascots/nam_dam_dong_xam_bac.gif" },
 ] as const;
+
+export const COLOR_FIST_MAP: Readonly<Record<string, string>> = {
+  green: "/mascots/nam_dam_dong_xanh_la.gif",
+  blue: "/mascots/nam_dam_dong_xanh_duong.gif",
+  red: "/mascots/nam_dam_dong_do.gif",
+  orange: "/mascots/nam_dam_dong_cam_goc.gif",
+  purple: "/mascots/nam_dam_dong_tim.gif",
+  cyan: "/mascots/nam_dam_dong_xanh_ngoc.gif",
+  pink: "/mascots/nam_dam_dong_hong.gif",
+  magenta: "/mascots/nam_dam_dong_hong.gif",
+  yellow: "/mascots/nam_dam_dong_vang.gif",
+  teal: "/mascots/nam_dam_dong_luc_bao.gif",
+  coral: "/mascots/nam_dam_dong_cam_dao.gif",
+  salmon: "/mascots/nam_dam_dong_cam_dao.gif",
+  silver: "/mascots/nam_dam_dong_xam_bac.gif",
+  gray: "/mascots/nam_dam_dong_xam_bac.gif",
+  chrome: DEFAULT_ANIMATED_MASCOT_URL,
+  white: "/mascots/nam_dam_dong_tim_pastel.gif",
+};
+
+export function animatedMascotUrlForColor(color?: string | null): string {
+  return (color && COLOR_FIST_MAP[color]) || DEFAULT_ANIMATED_MASCOT_URL;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { MausAvatar } from "@/components/Avatar";
+import { BotAvatar } from "@/components/Avatar";
 import { cn } from "@/lib/cn";
 import type { MausState } from "@/lib/mascot";
 import { reducedMotion } from "@/lib/onboarding";
@@ -197,8 +197,8 @@ export function Spotlight({
           )}
         >
           <div className="shrink-0 drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]">
-            <MausAvatar
-              color="green"
+            <BotAvatar
+              bot={{ color: "green" }}
               state={mascot}
               size={38}
               trackPointer={false}

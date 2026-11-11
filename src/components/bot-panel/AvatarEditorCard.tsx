@@ -8,7 +8,7 @@ import type { LocaleKey } from "@/locales";
 import { colorSwatch, MAUS_COLOR_LABEL, MAUS_COLOR_NAMES, PICKABLE_STATES, type MausState } from "@/lib/mascot";
 import type { Bot } from "@/state/store";
 import { MASCOT_BODY_IDS } from "../../../shared/mascot-bodies";
-import { ANIMATED_FIST_MASCOTS } from "../../../shared/animated-mascots";
+import { ANIMATED_FIST_MASCOTS, COLOR_FIST_MAP } from "../../../shared/animated-mascots";
 import { FESTIVAL_IDS, FESTIVALS, isCarvedBody, type BotBodyId } from "../../../shared/bot-body";
 import { useFestivalDress, wornBody } from "@/lib/festival-dress";
 import { MausAvatar } from "../Avatar";
@@ -51,21 +51,6 @@ const faceLabel = (state: MausState) => {
   return key ? t(key) : state;
 };
 
-const COLOR_FIST_MAP: Record<string, string> = {
-  green: "/mascots/nam_dam_dong_xanh_la.gif",
-  blue: "/mascots/nam_dam_dong_xanh_duong.gif",
-  red: "/mascots/nam_dam_dong_do.gif",
-  orange: "/mascots/nam_dam_dong_cam_goc.gif",
-  purple: "/mascots/nam_dam_dong_tim.gif",
-  cyan: "/mascots/nam_dam_dong_xanh_ngoc.gif",
-  magenta: "/mascots/nam_dam_dong_hong.gif",
-  yellow: "/mascots/nam_dam_dong_vang.gif",
-  teal: "/mascots/nam_dam_dong_luc_bao.gif",
-  salmon: "/mascots/nam_dam_dong_cam_dao.gif",
-  gray: "/mascots/nam_dam_dong_xam_bac.gif",
-  white: "/mascots/nam_dam_dong_tim_pastel.gif",
-};
-
 export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
   bot: Bot;
   activeState: MausState;
@@ -98,7 +83,7 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
       aria-pressed={!showsImage && !isFistSelected && body === id}
       aria-label={t("mascot.useBody", { name })}
       title={name}
-      onClick={() => onPatch({ avatarUrl: null, avatarCrop: "mascot", mascotBody: id })}
+      onClick={() => pickMascot(isFistSelected ? { avatarUrl: null, mascotBody: id } : { mascotBody: id })}
       className={cn(
         "flex h-[58px] items-center justify-center rounded-xl disabled:opacity-50",
         !showsImage && !isFistSelected && body === id ? "bg-ink/[0.08] ring-[1.5px] ring-inset ring-ink/25" : "hover:bg-ink/[0.05]",

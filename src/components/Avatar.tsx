@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import { CHROME_EYES, CHROME_GRADIENT, MAUS_COLORS, type MausColor, type MausMotion, type MausState } from "@/lib/mascot";
 import { CursorAvatar, type CursorAvatarHandle } from "./CursorAvatar";
 import { avatarCropRadius, botAvatarProfile, clampAvatarFocus, clampAvatarZoom, mascotFaceInk, type BotAvatarCrop, type MascotFaceColor } from "../../shared/bot-avatar";
+import { animatedMascotUrlForColor } from "../../shared/animated-mascots";
 import { MASCOT_BODIES, botMascotBody } from "../../shared/mascot-bodies";
 import { isCarvedBody, type BotBodyId } from "../../shared/bot-body";
 import { useFestivalDress, wornBody } from "@/lib/festival-dress";
@@ -227,6 +228,7 @@ export type BotAvatarProps = Omit<MausAvatarProps, "color" | "gradient"> & {
     avatarFocusY?: number;
     mascotBody?: BotBodyId | null;
     mascotFaceColor?: MascotFaceColor | null;
+    defaultBot?: unknown;
   };
 };
 
@@ -246,7 +248,11 @@ export function resolveBotAvatarOutcome(params: {
 }
 
 export function BotAvatar({ bot, size = 44, label, readable = false, ...mascotProps }: BotAvatarProps) {
-  const profile = botAvatarProfile(bot);
+  const baseProfile = botAvatarProfile(bot);
+  const useColorFist = !baseProfile.avatarUrl && !bot.avatarCrop && !bot.mascotFaceColor;
+  const profile = useColorFist
+    ? { avatarCrop: "circle" as const, avatarUrl: animatedMascotUrlForColor(bot.color) }
+    : baseProfile;
   const festival = useFestivalDress();
   const [imageFailed, setImageFailed] = useState(false);
 
