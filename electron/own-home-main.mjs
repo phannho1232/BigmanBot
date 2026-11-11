@@ -56,7 +56,7 @@ export function serverRequests(place, fetchImpl) {
     async who() {
       const [session, described] = await Promise.all([request("GET", "/api/auth/session").then(answer), request("GET", "/.well-known/openmausbot/environment").then(answer)]);
       const signedIn = session.ok && session.body?.kind === "session";
-      return { signedIn, own: signedIn && session.body.own === true, environmentId: typeof described.body?.environmentId === "string" ? described.body.environmentId : null,
+      return { signedIn, own: signedIn && (session.body.own === true || (session.body.cloudHome === true && Array.isArray(session.body.scopes) && session.body.scopes.includes("admin") && !session.body.team && session.body.hosted !== true)), environmentId: typeof described.body?.environmentId === "string" ? described.body.environmentId : null,
         takesMove: Number(described.body?.capabilities?.move) >= 1, status: session.status };
     },
   };

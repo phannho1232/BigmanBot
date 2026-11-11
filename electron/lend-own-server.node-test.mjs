@@ -73,7 +73,8 @@ test("only this desktop's admin pairing on a server that is no Cloud, team or ho
   assert.equal(ownServerSession({ ...owner, scopes: ["client"] }), false, "a narrower pairing");
   assert.equal(ownServerSession({ ...owner, scopes: undefined }), false);
   assert.equal(ownServerSession({ ...owner, team: { id: "t", role: "admin" } }), false, "a team's server");
-  assert.equal(ownServerSession({ ...owner, cloudHome: true }), false, "a Cloud is lent by its own rules");
+  assert.equal(ownServerSession({ ...owner, own: undefined, cloudHome: true }), true, "a personal Cloud paired by link");
+  assert.equal(ownServerSession({ ...owner, own: undefined, cloudHome: true, scopes: ["client"] }), false, "a guest on a personal Cloud");
   assert.equal(ownServerSession({ ...owner, hosted: true }), false);
   assert.equal(ownServerSession({ ...owner, kind: "loopback" }), false);
 });
@@ -98,8 +99,8 @@ test("once the person allows it, a server of their own gets the apps on the scre
   assert.equal(mac.summaries.at(-1).terminalSwitch, false, "the Clouds' terminal switch stays out of the menu without a Cloud");
 });
 
-test("a narrower pairing, a server others sign in to, a team's server or a Cloud is never asked about and is never lent", async t => {
-  for (const [what, server] of [["client scope", selfHosted({ scopes: ["client"] })], ["others sign in there", selfHosted({ own: false })], ["team", selfHosted({ extra: { team: { id: "t", role: "admin" } } })], ["Cloud", selfHosted({ extra: { cloudHome: true } })]]) {
+test("a narrower pairing, a server others sign in to, a team's server or a hosted workspace is never asked about and is never lent", async t => {
+  for (const [what, server] of [["client scope", selfHosted({ scopes: ["client"] })], ["others sign in there", selfHosted({ own: false })], ["team", selfHosted({ extra: { team: { id: "t", role: "admin" } } })], ["hosted", selfHosted({ extra: { hosted: true } })]]) {
     const mac = await desktop(t, server);
     assert.equal(await mac.sharing.ownServer(garage), null, what);
     assert.equal(await mac.sharing.ownOffer(garage), false, what);

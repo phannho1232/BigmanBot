@@ -143,7 +143,7 @@ export function cloudLendingVerdict(binding, current, env) {
  * allows it here (lendOwn), without the maintainer flag. Security: never a non-admin pairing, a server others sign in to,
  * a team's server or a Cloud (a Cloud is lent as one, by its own rules). */
 export function ownServerSession(auth) {
-  return auth?.kind === "session" && auth.own === true && Array.isArray(auth.scopes) && auth.scopes.includes("admin") && auth.cloudHome !== true && !auth.team && auth.hosted !== true;
+  return auth?.kind === "session" && (auth.own === true || auth.cloudHome === true) && Array.isArray(auth.scopes) && auth.scopes.includes("admin") && !auth.team && auth.hosted !== true;
 }
 
 /** What a Cloud that keeps MCP servers for this computer hears: it runs them, and which installs here it is. */
