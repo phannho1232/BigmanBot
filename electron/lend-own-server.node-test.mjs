@@ -33,11 +33,12 @@ async function scratch(t) {
  * description offers no lending, as before pairing. */
 function selfHosted({ scopes = ["admin", "client"], own = true, extra = {}, mcp = true } = {}) {
   const json = (value, status = 200) => ({ ok: status < 400, status, headers: { get: () => null }, body: (async function* () { yield Buffer.from(JSON.stringify(value)); })() });
-  const state = { environmentId: randomUUID(), sessionId: randomUUID(), scopes, own, extra, connects: [], disconnects: [], polls: 0 };
+  const state = { environmentId: randomUUID(), sessionId: randomUUID(), scopes, own, extra, connects: [], disconnects: [], polls: 0, links: [] };
+  state.WebSocket = class { constructor(url, init) { state.links.push({ url, headers: init?.headers }); queueMicrotask(() => this.onopen?.()); } send() {} close(code = 1000, reason = "") { this.onclose?.({ code, reason }); } };
   state.fetch = async (url, init) => {
     const route = new URL(url).pathname;
     const owner = state.own && state.scopes.includes("admin");
-    if (route === "/api/auth/session") return json({ kind: "session", id: state.sessionId, scopes: state.scopes, ...(owner ? { own: true, lending: { sharedComputers: true, lendingDetails: true, fileEdits: true, ...(mcp ? { lentMcp: true } : {}) } } : {}), ...state.extra });
+    if (route === "/api/auth/session") return json({ kind: "session", id: state.sessionId, scopes: state.scopes, ...(owner ? { own: true, lending: { sharedComputers: true, lendingDetails: true, deviceLink: true, myChromeLink: true, fileEdits: true, ...(mcp ? { lentMcp: true } : {}) } } : {}), ...state.extra });
     if (route === "/.well-known/openmausbot/environment") return json({ environmentId: state.environmentId, capabilities: { remoteSessions: true } });
     const body = init?.body ? JSON.parse(init.body) : {};
     if (route === "/api/shared-computers/connect") { state.connects.push(body); return json({ ok: true }); }
@@ -59,7 +60,7 @@ async function desktop(t, server, { ownClouds = () => [] } = {}) {
   const file = path.join(dir, "profile", "computer-sharing.json");
   const summaries = [];
   const make = () => createComputerSharing({ file, environments: () => [garage], enabled: async () => false, home: path.join(dir, "home"), cuaConnection: async () => null,
-    fetch: (url, init) => server.fetch(url, init), ownClouds, localEnvironments: () => [server.environmentId], onChange: summary => summaries.push(summary) });
+    fetch: (url, init) => server.fetch(url, init), WebSocket: server.WebSocket, ownClouds, localEnvironments: () => [server.environmentId], onChange: summary => summaries.push(summary) });
   let sharing = make();
   t.after(() => sharing.close());
   return { file, summaries, get sharing() { return sharing; }, restart: () => { sharing.close(); sharing = make(); sharing.start({ maintainer: false }); return sharing; } };
@@ -88,9 +89,9 @@ test("once the person allows it, a server of their own gets the apps on the scre
   assert.equal(lent.enabled, true);
   await until(() => server.connects.length === 1 && mac.sharing.state(garage.id).connected, "the server to take this computer");
   const [connect] = server.connects;
-  assert.deepEqual({ computer: connect.computer, terminal: connect.terminal, folders: connect.folders, mcpServers: connect.mcpServers, environments: connect.environments, fileEdits: connect.fileEdits },
-    { computer: true, terminal: false, folders: [], mcpServers: true, environments: [server.environmentId], fileEdits: true });
-  assert.equal("internet" in connect || "chrome" in connect, false, "the device link is a Cloud's alone");
+  assert.deepEqual({ computer: connect.computer, terminal: connect.terminal, folders: connect.folders, internet: connect.internet, chrome: connect.chrome, mcpServers: connect.mcpServers, environments: connect.environments, fileEdits: connect.fileEdits },
+    { computer: true, terminal: false, folders: [], internet: true, chrome: true, mcpServers: true, environments: [server.environmentId], fileEdits: true });
+  await until(() => server.links.length === 1, "the device link to open");
   assert.equal(await mac.sharing.ownOffer(garage), null, "answered for this pairing");
   assert.deepEqual(mac.summaries.at(-1).lending, [garage.id]);
   assert.deepEqual(mac.summaries.at(-1).clouds, ["Garage"], "the menu-bar item names it like a Cloud");

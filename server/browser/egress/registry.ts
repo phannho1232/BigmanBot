@@ -151,9 +151,9 @@ export class BrowserEgress {
    * person's computer while it lends its connection, else this server's own (when that computer is away, or none shares
    * its connection, the bot is told once). Every other site always goes this server's own way. */
   private through(session: string): GateUpstream | null {
-    const device = this.setup?.host === "cloud" ? this.setup.device?.(session) ?? null : null;
+    const device = this.setup?.host && this.setup.host !== "desktop" ? this.setup.device?.(session) ?? null : null;
     if (device && "open" in device) { this.toldAway.delete(session); return device; }
-    if (!device) { this.toldAway.delete(session); return null; }
+    if (!device || ("unshared" in device && this.setup?.host !== "cloud")) { this.toldAway.delete(session); return null; }
     const kind = "away" in device ? "away" : "unshared";
     if (this.toldAway.get(session)?.kind !== kind) this.toldAway.set(session, { kind, text: "away" in device ? awayNotice(device.away) : UNSHARED_NOTICE });
     return null;

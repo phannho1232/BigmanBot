@@ -153,7 +153,8 @@ const lendsMcp = environments => {
 };
 
 /** A Cloud grant lends the internet connection unless it was unticked: one kept without `internet` lends it too. */
-const lendsInternet = grant => Boolean(grant?.cloud) && grant.internet !== false;
+const lendsInternet = grant => Boolean(grant?.cloud || grant?.own) && grant.internet !== false;
+const lendsChrome = grant => grant?.cloud ? grant.chrome === true : Boolean(grant?.own) && grant.chrome !== false;
 
 /** Whether the person said no to lending this Cloud before lending was automatic: their own Off (`stopped.reason` "you",
  * or an Off kept from before the reason was) or the internet connection unticked. Lending then starts Paused. */
@@ -431,7 +432,7 @@ export function createComputerSharing({ file, fetch: fetchImpl, environments, lo
     const described = await describe(env, false);
     if (!ownServerSession(described.auth)) throw Object.assign(new Error(t("native.lend.notOwnServer")), { problem: "not-own" });
     if (!described.supported) throw new Error(UPDATE_SERVER);
-    takes(env, { ...described, link: false, chrome: false });
+    takes(env, described);
     return described.info;
   };
   /** The Clouds that keep MCP servers for this computer to run. */
@@ -455,7 +456,7 @@ export function createComputerSharing({ file, fetch: fetchImpl, environments, lo
       const signIn = await Promise.resolve().then(() => linkHeaders(env)).catch(() => ({}));
       const ended = await runDeviceLink({
         url: linkUrl(env.origin, linkPath(grant.id)), signal, WebSocket: linkSocket, egress, traffic: traffic(env.id), onStream: browsed(env), chrome,
-        lends: () => ({ internet: lendsInternet(grant), chrome: grant.chrome === true && supportsChrome.has(env.id) }),
+        lends: () => ({ internet: lendsInternet(grant), chrome: lendsChrome(grant) && supportsChrome.has(env.id) }),
         headers: { ...signIn, origin: env.origin, ...BACKGROUND_HEADERS, "x-omb-computer-secret": grant.secret },
         onOpen: () => { opened = true; failures = 0; linked.add(env.id); changed(); },
       });
@@ -517,8 +518,8 @@ export function createComputerSharing({ file, fetch: fetchImpl, environments, lo
             folders: folders.map(({ id, name, write }) => ({ id, name, write })), terminal: grant.terminal, computer: grant.computer,
             // So My Cloud's bots say "your PC" on Windows and "your Mac" only on a Mac; only a server that takes it gets it.
             ...(supportsDetails.has(env.id) && LENT_PLATFORMS.has(process.platform) ? { platform: process.platform } : {}),
-            ...(grant.cloud && supportsLink.has(env.id) ? { internet: lendsInternet(grant) } : {}),
-            ...(grant.cloud && supportsChrome.has(env.id) ? { chrome: grant.chrome === true } : {}),
+            ...((grant.cloud || grant.own) && supportsLink.has(env.id) ? { internet: lendsInternet(grant) } : {}),
+            ...((grant.cloud || grant.own) && supportsChrome.has(env.id) ? { chrome: lendsChrome(grant) } : {}),
             ...(supportsTimeouts.has(env.id) ? { commandTimeouts: true } : {}),
             ...(supportsLong.has(env.id) ? { longCommands: true } : {}),
             ...(supportsEdits.has(env.id) ? { fileEdits: true } : {}),
@@ -527,7 +528,7 @@ export function createComputerSharing({ file, fetch: fetchImpl, environments, lo
           if (signal.aborted) break;
           status.set(env.id, { connected: true });
           changed();
-          if (supportsLink.has(env.id) && (lendsInternet(grant) || (grant.cloud && grant.chrome === true && supportsChrome.has(env.id)))) live.link ??= keepLink(env, grant, signal).catch(() => {});
+          if (supportsLink.has(env.id) && (lendsInternet(grant) || (lendsChrome(grant) && supportsChrome.has(env.id)))) live.link ??= keepLink(env, grant, signal).catch(() => {});
           while (!signal.aborted) {
             await gate();
             awake();
@@ -628,9 +629,9 @@ export function createComputerSharing({ file, fetch: fetchImpl, environments, lo
     ? { internet: true, link: !supportsLink.has(env.id) ? "unsupported" : linked.has(env.id) ? "on" : "connecting" }
     : { internet: lendsInternet(lent) };
   /** The same for the person's Chrome: "on", "connecting", or "unsupported" by a Cloud that does not take it. */
-  const chromeState = (env, lent) => lent?.cloud && lent.chrome === true && lent.enabled === true && status.get(env.id)?.connected
+  const chromeState = (env, lent) => lendsChrome(lent) && lent.enabled === true && status.get(env.id)?.connected
     ? { chrome: true, chromeLink: !supportsChrome.has(env.id) ? "unsupported" : linked.has(env.id) ? "on" : "connecting" }
-    : { chrome: lent?.cloud ? lent.enabled === true && lent.chrome === true : false };
+    : { chrome: Boolean(lent?.enabled === true && lendsChrome(lent)) };
   const state = id => {
     const grant = records[id];
     return { enabled: grant?.enabled === true, folders: Array.isArray(grant?.folders) ? grant.folders : [], terminal: grant?.terminal === true, computer: grant?.computer === true,

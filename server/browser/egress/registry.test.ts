@@ -210,17 +210,29 @@ describe("one gate per browser session", () => {
     }
   });
 
-  it("only on MausBot Cloud: a desktop or a self-hosted server never sends its browsing anywhere else, nor says it is away", async () => {
-    for (const host of ["desktop", "server"] as const) {
-      const offered: string[] = [];
-      const other = new BrowserEgress();
-      other.configure({ host, config: () => ({}), listeners: new OwnListeners(host, { env: {}, ...noScans }), ownership, resolve: async () => [],
-        device: () => ({ open: async (target) => { offered.push(target.host); return { refused: "port" }; } }) });
-      const otherPort = await other.open("bot-1");
-      try {
-        expect(await socksCode(otherPort, "www.instagram.com", 443), `${host}: its own way`).toBe(4);
-        expect(offered, `${host} sent a connection to the person's computer`).toEqual([]);
-      } finally { await other.close(); }
-    }
+  it("a desktop never sends its browsing anywhere else; a server uses a lent computer's connection when offered and stays quiet when unshared", async () => {
+    const desktopOffered: string[] = [];
+    const desktopEgress = new BrowserEgress();
+    desktopEgress.configure({ host: "desktop", config: () => ({}), listeners: new OwnListeners("desktop", { env: {}, ...noScans }), ownership, resolve: async () => [],
+      device: () => ({ open: async (target) => { desktopOffered.push(target.host); return { refused: "port" }; } }) });
+    const desktopPort = await desktopEgress.open("bot-1");
+    try {
+      expect(await socksCode(desktopPort, "www.instagram.com", 443)).toBe(4);
+      expect(desktopOffered).toEqual([]);
+    } finally { await desktopEgress.close(); }
+
+    let serverDevice: { open(target: { host: string; port: number }): Promise<{ refused: string }> } | { away: string } | { unshared: true } | null = { unshared: true };
+    const serverOffered: string[] = [];
+    const serverEgress = new BrowserEgress();
+    serverEgress.configure({ host: "server", config: () => ({}), listeners: new OwnListeners("server", { env: {}, ...noScans }), ownership, resolve: async () => [],
+      device: () => serverDevice });
+    const serverPort = await serverEgress.open("bot-1");
+    try {
+      expect(await socksCode(serverPort, "www.instagram.com", 443)).toBe(4);
+      expect(serverEgress.takeNotice("bot-1")).toBeNull();
+      serverDevice = { open: async (target: { host: string; port: number }) => { serverOffered.push(target.host); return { refused: "port" }; } };
+      expect(await socksCode(serverPort, "www.instagram.com", 443)).toBe(2);
+      expect(serverOffered).toEqual(["www.instagram.com"]);
+    } finally { await serverEgress.close(); }
   });
 });

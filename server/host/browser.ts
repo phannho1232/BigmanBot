@@ -71,7 +71,7 @@ export interface BrowserHostDeps {
    * Without it, no browser a turn holds may. */
   lendRefusal?(turn: TurnOwner): LendRefusal | null;
   /** My Cloud's way to the person's own Chrome on the computer that lends it, and which computer that is. */
-  lentChrome?: { route(): ChromeRoute | null; lender(): ChromeLender | null };
+  lentChrome?: { route(): ChromeRoute | null; lender(): ChromeLender | null; lendable?(): boolean };
   /** The engine memory guard, told which browsers each thread's turn starts or holds. */
   engineMemory?: { useBrowsers(browsers: EngineBrowsers): void };
   /** Whose browser a conversation's turns use on a Team Cloud: the member's, the group chat's or the team's. Every
@@ -302,7 +302,7 @@ export function createBrowserHost(deps: BrowserHostDeps) {
   function lentChromeSummary(): { myChromeOn?: ChromeLender; myChromeLendable?: true } {
     const lender = lentChrome?.lender() ?? null;
     if (lender) return { myChromeOn: lender };
-    return lentChrome ? { myChromeLendable: true } : {};
+    return lentChrome && (lentChrome.lendable?.() ?? true) ? { myChromeLendable: true } : {};
   }
   /** On My Cloud a My Chrome profile stays the person's Chrome while no computer lends it: its calls say so, and never
    * fall back to the built-in browser, whose sign-ins differ. */
