@@ -88,6 +88,10 @@ extraResources:
     to: android-platform-tools
 
 mac:
+  publish:
+    - provider: github
+      owner: ImTheOne-9
+      repo: BigmanBot-Mac-Releases
   # Two single-arch artifacts rather than one universal binary: the app is
   # architecture-specific, and universal would make users download both halves.
   # electron-updater picks by filename (arm64-marked files on Apple silicon,
