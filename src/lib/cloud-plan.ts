@@ -10,8 +10,10 @@ function switchesDown(tier: string | undefined, target: string): boolean {
   const below = CHEAPEST_FIRST.indexOf(target);
   return tier !== undefined && below >= 0 && CHEAPEST_FIRST.indexOf(tier) > below;
 }
+const VI_PLAN_LABEL: Record<string, string> = { starter: "Starter", personal: "Personal", pro: "Pro", max: "Max", team: "Team", enterprise: "Enterprise" };
 export function cloudPlanLabel(tier?: string): string {
-  return tier === undefined ? "Pro" : Object.hasOwn(PLAN_LABEL, tier) ? PLAN_LABEL[tier] : "Cloud";
+  const table = activeLocale() === "vi" ? VI_PLAN_LABEL : PLAN_LABEL;
+  return tier === undefined ? "Pro" : Object.hasOwn(table, tier) ? table[tier] : "Cloud";
 }
 
 export type CloudPlanView =

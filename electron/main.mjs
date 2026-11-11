@@ -95,7 +95,7 @@ import { createHostScreenLease } from "./host-screen-lease.mjs";
 import { acquireDataDirLease } from "./data-dir-lease.mjs";
 import { reviveAfterFailedSwitch, switchLocalEnvironment } from "./environment-switch.mjs";
 import { createManagedDesktopClient, createManagedDesktopRelay, createManagedDesktopStore } from "./managed-desktop.mjs";
-import { CHECKOUT_SOURCES, cloudMenuSublabel, cloudTarget, createCloudAccountClient as cloudAccountClient, createCloudAccountStore } from "./cloud-account.mjs";
+import { CHECKOUT_SOURCES, cloudMenuSublabel, bigmanCloudTarget as cloudTarget, createBigmanCloudAccountClient as cloudAccountClient, createCloudAccountStore } from "./bigman-cloud-account.mjs";
 import { installCloudPlanIpc } from "./cloud-plan-ipc.mjs";
 import { cloudLinkOpensSheet, colorDotIcons, createCloudLook, createCloudReadyNotice, installCloudBuy, lookFile } from "./cloud-buy.mjs";
 import { createTrialNotices } from "./cloud-trial-notice.mjs";
@@ -383,7 +383,7 @@ let desktopCompanionRelay = null;
 
 const CREDENTIALS_FILE = path.join(app.getPath("userData"), "credentials.bin");
 
-const nativeText = createDesktopText(app), nativeT = nativeText.t; const createCloudAccountClient = options => cloudAccountClient({ ...options, t: nativeT });
+const nativeText = createDesktopText(app), nativeT = nativeText.t; const createCloudAccountClient = options => cloudAccountClient({ ...options, openAuthWindow: openBigmanAuthWindow, t: nativeT });
 /** True when the store could not be read, which is not the same as nothing saved. */
 let credentialStoreUnavailable = false;
 
@@ -824,6 +824,133 @@ function syncPhoneSecretKey(proc) {
   } catch (error) {
     slog(`phone credential key sync failed: ${error?.message ?? error}`);
   }
+}
+
+let bigmanAuthWindow = null;
+function openBigmanAuthWindow({ url, onAbort }) {
+  if (bigmanAuthWindow && !bigmanAuthWindow.isDestroyed()) {
+    try { bigmanAuthWindow.close(); } catch {}
+    bigmanAuthWindow = null;
+  }
+  return new Promise((resolve) => {
+    let settled = false;
+    let pollTimer = null;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      if (bigmanAuthWindow === authWin) bigmanAuthWindow = null;
+      if (!authWin.isDestroyed()) {
+        try { authWin.close(); } catch {}
+      }
+      resolve(result);
+    };
+    const authWin = new BrowserWindow({
+      width: 520,
+      height: 700,
+      minWidth: 420,
+      minHeight: 540,
+      parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
+      modal: false,
+      show: false,
+      title: "Đăng nhập Bigman Bot",
+      icon: APP_ICON,
+      backgroundColor: windowBackground(nativeTheme.shouldUseDarkColors),
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+        partition: "persist:bigman-auth",
+      },
+    });
+    bigmanAuthWindow = authWin;
+    onAbort?.(() => finish(null));
+
+    const checkUrlForTokens = (rawUrl) => {
+      if (typeof rawUrl !== "string" || !rawUrl.startsWith("https://bigmanbot.com")) return false;
+      try {
+        const parsed = new URL(rawUrl);
+        if (parsed.hash && parsed.hash.includes("access_token=")) {
+          const params = new URLSearchParams(parsed.hash.slice(1));
+          const accessToken = params.get("access_token");
+          if (accessToken) {
+            finish({
+              accessToken,
+              refreshToken: params.get("refresh_token") || "",
+              expiresIn: Number(params.get("expires_in")) || 3600,
+            });
+            return true;
+          }
+        }
+      } catch {}
+      return false;
+    };
+
+    const probePageStorage = async () => {
+      if (settled || authWin.isDestroyed()) return;
+      const currentUrl = authWin.webContents.getURL();
+      if (checkUrlForTokens(currentUrl)) return;
+      if (!currentUrl.startsWith("https://bigmanbot.com")) return;
+      try {
+        const found = await authWin.webContents.executeJavaScript(`
+          (() => {
+            try {
+              if (location.hash && location.hash.includes("access_token=")) {
+                const p = new URLSearchParams(location.hash.slice(1));
+                const at = p.get("access_token");
+                if (at) return { accessToken: at, refreshToken: p.get("refresh_token") || "", expiresIn: Number(p.get("expires_in")) || 3600 };
+              }
+              const raw = localStorage.getItem("sb-djokqsynkwoqpfyowbuz-auth-token");
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed.access_token === "string") {
+                  return { accessToken: parsed.access_token, refreshToken: parsed.refresh_token || "", expiresIn: Number(parsed.expires_in) || 3600 };
+                }
+              }
+            } catch {}
+            return null;
+          })()
+        `);
+        if (found && typeof found.accessToken === "string") {
+          finish(found);
+        }
+      } catch {}
+    };
+
+    authWin.once("ready-to-show", () => {
+      if (!settled && !authWin.isDestroyed()) {
+        authWin.show();
+        authWin.focus();
+      }
+    });
+    authWin.on("closed", () => finish(null));
+    authWin.webContents.on("will-redirect", (_e, targetUrl) => { checkUrlForTokens(targetUrl); });
+    authWin.webContents.on("will-navigate", (_e, targetUrl) => { checkUrlForTokens(targetUrl); });
+    authWin.webContents.on("did-navigate", (_e, targetUrl) => {
+      if (!checkUrlForTokens(targetUrl)) void probePageStorage();
+    });
+    authWin.webContents.on("did-navigate-in-page", (_e, targetUrl) => {
+      if (!checkUrlForTokens(targetUrl)) void probePageStorage();
+    });
+    authWin.webContents.on("did-finish-load", () => { void probePageStorage(); });
+
+    pollTimer = setInterval(() => { void probePageStorage(); }, 1000);
+    pollTimer.unref?.();
+
+    void authWin.webContents.session
+      .clearStorageData({ origin: "https://bigmanbot.com", storages: ["localstorage", "cookies"] })
+      .catch(() => {})
+      .then(() => {
+        if (!settled && !authWin.isDestroyed()) {
+          return authWin.loadURL(url);
+        }
+      })
+      .catch(() => {});
+  });
 }
 
 const cloudEncryption = { available: async () => (await safeStorage.isAsyncEncryptionAvailable()) && (process.platform !== "linux" || safeStorage.getSelectedStorageBackend() !== "basic_text"), encrypt: value => safeStorage.encryptStringAsync(value), decrypt: value => safeStorage.decryptStringAsync(value) }; let activeSignIn = null; const cloudAccountStore = () => (activeSignIn ??= createCloudAccountStore({ file: path.join(app.getPath("userData"), cloudTarget(process.env).file), encryption: cloudEncryption }));
@@ -2509,9 +2636,22 @@ const workspaceOnly = (handler) => (event, ...args) => {
 };
 const localWorkspaceOnly = (channel, handler) => localOnly(channel, workspaceOnly(handler));
 // No renderer-supplied address, token, paid flag or callback can choose an account or activate Pro.
-for (const method of ["state", "begin", "signInAgain", "reopen", "cancel", "refresh", "signOut", "openDashboard", "offer"]) {
+for (const method of ["state", "begin", "signInAgain", "reopen", "cancel", "refresh", "signOut", "openDashboard", "offer", "signInGoogle"]) {
   ipcMain.handle(`cloud-account:${method}`, localWorkspaceOnly(`cloud-account:${method}`, () => (method === "signOut" ? accounts.signOutActive() : ensureCloudAccount()[method]())));
 }
+ipcMain.handle("cloud-account:signInPassword", localWorkspaceOnly("cloud-account:signInPassword", (_event, email, password) =>
+  ensureCloudAccount().signInPassword(typeof email === "string" ? email.slice(0, 254) : "", typeof password === "string" ? password.slice(0, 256) : "")));
+ipcMain.handle("cloud-account:connectServer", localWorkspaceOnly("cloud-account:connectServer", async (_event, serverId) => {
+  const client = ensureCloudAccount();
+  const state = client.state();
+  const id = typeof serverId === "string" && serverId.trim() ? serverId.trim() : null;
+  const other = id && state.status === "connected" ? otherOwnClouds(state.clouds).find(entry => entry.id === id) ?? null : null;
+  if (other) {
+    await openOwnCloud(other.id);
+    return client.state();
+  }
+  return connectCloudHome();
+}));
 ipcMain.handle("cloud-account:checkout", localWorkspaceOnly("cloud-account:checkout", async (_event, plan, source) => {
   if (!(await cloudOffersReady())) throw new Error("MausBot Cloud isn't offered in this app.");
   const client = ensureCloudAccount();
@@ -3051,6 +3191,9 @@ app.whenReady().then(async () => {
   if (app.isPackaged && !desktopRemoteAccess) void ensureManagedDesktop().start().then(() => companyBackupSchedule.start()).catch(() => {});
   // Fresh local use never makes a Cloud request; start only restores an existing grant.
   if (app.isPackaged && !desktopRemoteAccess) {
+    for (const legacyFile of ["cloud-account.bin", "cloud-accounts.bin", "staging-cloud-account.bin", "staging-cloud-accounts.bin"]) {
+      try { fs.rmSync(path.join(app.getPath("userData"), legacyFile), { force: true }); } catch {}
+    }
     cloudAccountRestoring = true;
     cloudAccountStarted = ensureCloudAccount().start().catch(() => {}).then(() => accountRing()?.start()).finally(() => { cloudAccountRestoring = false; });
   }

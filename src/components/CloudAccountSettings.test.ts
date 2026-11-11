@@ -572,3 +572,36 @@ it("a Team plan has no Cloud of its own: the team's Cloud under its name, Open {
   push({ ...onTeam({ status: "ready", origin: "https://omb-t-2.fly.dev" }), entitlement: { plan: "pro", tier: "pro", status: "active", expiresAt: 1_900_000_000_000, version: 3 } });
   all(render().html, ["Setting up the Cloud", 'data-cloud-phone="steps"']);
 });
+it("renders BigmanSignInForm when signInPassword is available, and BigmanServersCard when bigmanServers are present", async () => {
+  setLocale("vi");
+  bridge.signInPassword = vi.fn().mockResolvedValue({ outcome: "signed-in", state: free });
+  bridge.signInGoogle = vi.fn().mockResolvedValue({ status: "connecting" });
+  bridge.connectServer = vi.fn().mockResolvedValue(free);
+  await ready({ status: "signed-out" });
+  let html = render().html;
+  all(html, ["data-bigman-signin", "Tiếp tục với Google", "bigmanbot.com"]);
+  push({
+    ...free,
+    entitlement: { plan: "pro", tier: "pro", status: "active", expiresAt: 1_900_000_000_000, version: 1 },
+    machine: { status: "ready", origin: "https://vip.bigmanbot.com" },
+    bigmanServers: [
+      {
+        id: "srv-1",
+        name: "Bigman Pro VPS",
+        planCode: "pro",
+        domain: "vip.bigmanbot.com",
+        origin: "https://vip.bigmanbot.com",
+        ipAddress: "103.1.2.3",
+        status: "ready",
+        rawStatus: "active",
+        bootstrapStatus: "ready",
+        expiresAt: 1_900_000_000_000,
+      },
+    ],
+  });
+  html = render().html;
+  all(html, ["data-bigman-servers", "Bigman Pro VPS", "vip.bigmanbot.com", "Kết nối vào ứng dụng"]);
+  click("Kết nối vào ứng dụng");
+  await flush();
+  expect(bridge.connectServer).toHaveBeenCalledExactlyOnceWith("srv-1");
+});

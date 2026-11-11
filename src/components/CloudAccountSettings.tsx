@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CloudAccountState, CloudPlanBridge, CloudPlanSnapshot } from "../../electron/cloud-account.mjs";
+import type { BigmanCloudServer, CloudAccountBridge, CloudAccountState, CloudPlanBridge, CloudPlanSnapshot } from "../../electron/cloud-account.mjs";
 import type { CloudCredit, CloudMachine, CloudTrial } from "../../electron/cloud-home.mjs";
 import { planTeam, teamPlan } from "../../electron/cloud-team-plan.mjs";
 import { cloudFilesBridge } from "@/lib/cloud-files";
@@ -181,6 +181,184 @@ export function TeamPeopleCard({ team }: { team: { name: string; cloudPage?: str
   </Card>;
 }
 
+function BigmanSignInForm({ bridge, busy, onSignedIn, onGoogle }: {
+  bridge: CloudAccountBridge;
+  busy: boolean;
+  onSignedIn: (state: CloudAccountState) => void;
+  onGoogle: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const disabled = busy || submitting;
+
+  const submit = async () => {
+    if (disabled || !bridge.signInPassword) return;
+    const trimmed = email.trim();
+    if (!trimmed || !password) return;
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      const result = await bridge.signInPassword(trimmed, password);
+      if (result.outcome === "signed-in") {
+        setPassword("");
+        onSignedIn(result.state);
+      } else {
+        setFormError(result.message || "Email hoặc mật khẩu không chính xác.");
+      }
+    } catch {
+      setFormError("Không thể kết nối tới máy chủ Bigman Bot. Vui lòng thử lại.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div data-bigman-signin className="flex w-full max-w-[380px] flex-col gap-2.5">
+      <form
+        className="flex flex-col gap-2.5"
+        onSubmit={e => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <input
+          type="email"
+          dir="ltr"
+          autoComplete="email"
+          disabled={disabled}
+          value={email}
+          onChange={e => {
+            setEmail(e.target.value);
+            if (formError) setFormError(null);
+          }}
+          placeholder="Email tài khoản Bigman Bot (you@company.com)"
+          aria-label="Email"
+          className="ui-input w-full text-[13px]"
+        />
+        <input
+          type="password"
+          dir="ltr"
+          autoComplete="current-password"
+          disabled={disabled}
+          value={password}
+          onChange={e => {
+            setPassword(e.target.value);
+            if (formError) setFormError(null);
+          }}
+          placeholder="Mật khẩu"
+          aria-label="Mật khẩu"
+          className="ui-input w-full text-[13px]"
+        />
+        {formError && <p role="alert" className="text-[12px] text-danger">{formError}</p>}
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <button
+            type="submit"
+            disabled={disabled || !email.trim() || !password}
+            className="ui-button ui-button-primary"
+          >
+            {submitting ? "Đang đăng nhập…" : t("cloudAccount.signIn")}
+          </button>
+          <button
+            type="button"
+            disabled={disabled}
+            className="ui-button"
+            onClick={onGoogle}
+          >
+            Tiếp tục với Google
+          </button>
+        </div>
+      </form>
+      <p className="text-[12px] text-ink-secondary">
+        Chưa có tài khoản Bigman Bot?{" "}
+        <button
+          type="button"
+          className="font-medium text-accent-text underline underline-offset-2 hover:text-ink"
+          onClick={() => void window.ogb?.openExternal?.("https://bigmanbot.com/login")}
+        >
+          Đăng ký hoặc quản lý tại bigmanbot.com
+        </button>
+      </p>
+    </div>
+  );
+}
+
+function bigmanServersCard({ servers, busy, failed, onConnectServer, onOpenPricing }: {
+  servers: BigmanCloudServer[];
+  busy: boolean;
+  failed: boolean;
+  onConnectServer: (serverId: string) => void;
+  onOpenPricing: () => void;
+}) {
+  if (!servers.length) return null;
+  return (
+    <Card
+      title="Máy chủ Bigman Cloud của bạn"
+      subtitle="Danh sách máy chủ Cloud đã đăng ký trên tài khoản bigmanbot.com của bạn."
+    >
+      <div data-bigman-servers className="flex flex-col gap-2.5">
+        {servers.map(srv => {
+          const isReady = srv.status === "ready";
+          const statusLabel = isReady
+            ? "Đang hoạt động"
+            : srv.status === "provisioning"
+              ? "Đang khởi tạo…"
+              : srv.status === "stopped"
+                ? "Đang tạm dừng"
+                : "Cần kiểm tra";
+          return (
+            <div
+              key={srv.id}
+              data-bigman-server={srv.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline/40 bg-surface/50 px-3.5 py-3"
+            >
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-[14px] font-medium text-ink">{srv.name}</span>
+                  <span className="rounded-md bg-ink/[0.07] px-1.5 py-0.5 text-[11px] font-semibold uppercase text-ink">
+                    {srv.planCode}
+                  </span>
+                  <span className={isReady ? "text-[12px] text-emerald-500" : "text-[12px] text-ink-secondary"}>
+                    • {statusLabel}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-ink-secondary">
+                  {srv.domain && <span dir="ltr">{srv.domain}</span>}
+                  {srv.ipAddress && <span dir="ltr">IP: {srv.ipAddress}</span>}
+                  {srv.expiresAt && <span>Hết hạn: {day(srv.expiresAt)}</span>}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {isReady ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="ui-button ui-button-primary"
+                    onClick={() => onConnectServer(srv.id)}
+                  >
+                    Kết nối vào ứng dụng
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="ui-button"
+                    onClick={onOpenPricing}
+                  >
+                    Xem tiến trình trên Web
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {failed && <p role="alert" className="text-[13px] text-danger">{t("cloudHome.connectFailed")}</p>}
+      </div>
+    </Card>
+  );
+}
+
 export function CloudAccountSettings({ linkRequest = 0, cloudHome = false, teamHome, onConnectPhone, onAddCloud, onSignIn }: {
   linkRequest?: number; cloudHome?: boolean; teamHome?: { name: string; cloudPage?: string }; onConnectPhone?: () => void; onAddCloud?: () => void; onSignIn?: () => void;
 } = {}) {
@@ -218,6 +396,18 @@ export function CloudAccountSettings({ linkRequest = 0, cloudHome = false, teamH
     setHomeFailed(false);
     void perform(async () => {
       try { return await bridge.connectHome(); } catch { setHomeFailed(true); return bridge.state(); }
+    });
+  };
+  const connectServer = (serverId: string) => {
+    if (!bridge) return;
+    setHomeFailed(false);
+    void perform(async () => {
+      try {
+        return bridge.connectServer ? await bridge.connectServer(serverId) : await bridge.connectHome();
+      } catch {
+        setHomeFailed(true);
+        return bridge.state();
+      }
     });
   };
   const openTeam = (teamId: string) => {
@@ -279,8 +469,17 @@ export function CloudAccountSettings({ linkRequest = 0, cloudHome = false, teamH
       {message && <p role="status" className="mb-3 text-[13px] text-ink-secondary">{message}</p>}
       {(view.kind === "signed-out" || view.kind === "removed") && <div className="flex flex-col items-start gap-3">
         {addCloudButton}
-        <button type="button" disabled={busy} className={addCloudButton ? "text-[13px] font-medium text-accent-text underline underline-offset-2 hover:text-ink" : "ui-button"}
-          onClick={() => onSignIn ? onSignIn() : void perform(() => bridge.begin())}>{t("cloudAccount.signIn")}</button>
+        {bridge.signInPassword ? (
+          <BigmanSignInForm
+            bridge={bridge}
+            busy={busy}
+            onSignedIn={next => { revision.current++; setAccount(next); setError(false); }}
+            onGoogle={() => void perform(() => (bridge.signInGoogle ? bridge.signInGoogle() : bridge.begin()))}
+          />
+        ) : (
+          <button type="button" disabled={busy} className={addCloudButton ? "text-[13px] font-medium text-accent-text underline underline-offset-2 hover:text-ink" : "ui-button"}
+            onClick={() => onSignIn ? onSignIn() : void perform(() => bridge.begin())}>{t("cloudAccount.signIn")}</button>
+        )}
       </div>}
       {account?.status === "connecting" && <div className="flex flex-col items-start gap-3">
         <p role="status" className="text-[13px] text-ink-secondary">{t("cloudAccount.browser")}</p>
@@ -320,7 +519,14 @@ export function CloudAccountSettings({ linkRequest = 0, cloudHome = false, teamH
       {error && <p role="alert" className="mt-3 text-[13px] text-danger">{t("cloudAccount.actionFailed")}</p>}
       {!account && <button type="button" disabled={busy} className="ui-button mt-3" onClick={() => void perform(() => bridge.state())}>{t("organization.refresh")}</button>}
     </Card>
-    {machine && (onTeamPlan
+    {account?.status === "connected" && account.bigmanServers && account.bigmanServers.length > 0 && bigmanServersCard({
+      servers: account.bigmanServers,
+      busy,
+      failed: homeFailed,
+      onConnectServer: connectServer,
+      onOpenPricing: () => void perform(() => bridge.openDashboard()),
+    })}
+    {machine && !(account?.status === "connected" && account.bigmanServers && account.bigmanServers.length > 0) && (onTeamPlan
       ? cloudHomeCard({ machine, busy, failed: homeFailed, onConnect: () => { if (team) openTeam(team.id); }, team: { name: team?.name ?? null } })
       : cloudHomeCard({ machine, busy, failed: homeFailed, onConnect: connectHome, trial: Boolean(account?.trial), waking: account?.waking === true, moving }))}
     {signed && view.kind === "paid" && !onTeamPlan && cloudPhoneCard({ ready: machine?.status === "ready", busy, failed: phoneFailed, onUse: openOnPhone })}

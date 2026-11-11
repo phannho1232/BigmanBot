@@ -9,7 +9,7 @@
 // module for a page is an id and an address.
 import { unreadableRecord } from "./managed-desktop.mjs";
 
-const TOKEN = /^omc_[A-Za-z0-9_-]{43}$/;
+const TOKEN = /^(?:omc_[A-Za-z0-9_-]{43}|bmb_[A-Za-z0-9_-]{20,8192})$/;
 const VERSION = 1;
 
 const usable = (record, origin) => record?.origin === origin && TOKEN.test(record.token ?? "") && typeof record.account?.id === "string" && Boolean(record.account.id)
@@ -202,6 +202,12 @@ export function createCloudAccounts({ active, saved, client, makeClient, origin,
       const entry = adder;
       if (!entry) return { outcome: "expired" };
       const result = await entry.client.emailVerify(code);
+      if (result.outcome !== "signed-in") return result;
+      return finish(entry);
+    },
+    async addPassword(email, password) {
+      const entry = adder && !adder.finished ? adder : startAdding();
+      const result = await entry.client.signInPassword(email, password);
       if (result.outcome !== "signed-in") return result;
       return finish(entry);
     },

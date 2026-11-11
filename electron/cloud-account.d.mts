@@ -1,6 +1,21 @@
 /** Remove from list's answer: done (`removed`), refused by the Admin now, the Cloud no longer theirs (`gone`), an Admin
  * without it (`unsupported`), or no answer (`failed`). */
 export type CloudRemoveOutcome = "removed" | "refused" | "gone" | "unsupported" | "failed";
+export interface BigmanCloudServer {
+  id: string;
+  name: string;
+  planCode: string;
+  domain: string | null;
+  origin: string | null;
+  ipAddress: string | null;
+  status: "ready" | "provisioning" | "stopped" | "failed";
+  rawStatus: string;
+  bootstrapStatus: string;
+  expiresAt: number | null;
+}
+export type CloudPasswordSignInResult =
+  | { outcome: "signed-in"; state: CloudAccountState }
+  | { outcome: "invalid-email" | "invalid-credentials" | "rate-limited" | "failed"; message?: string };
 export interface CloudAccountState {
   status: "signed-out" | "connecting" | "connected" | "reauth-required" | "unavailable";
   message?: string;
@@ -60,6 +75,8 @@ export interface CloudAccountState {
   waking?: true;
   /** Connected: the plan's renewal, only while this account pays for a plan that runs: what Cancel and Keep act on (display only). */
   renewal?: import("./cloud-list.mjs").CloudRenewal;
+  /** Connected: Bigman Cloud servers owned by this account. */
+  bigmanServers?: BigmanCloudServer[];
 }
 /** The cancel sheet's reasons. */
 export type CloudCancelAnswer = "feature" | "price" | "setup" | "broken" | "later" | "other";
@@ -144,6 +161,12 @@ export interface CloudAccountBridge {
   signInStart?(email: string): Promise<CloudSignInStart>;
   signInVerify?(code: string): Promise<CloudSignInVerify>;
   signInCancel?(): Promise<void>;
+  /** Direct email + password sign-in against Bigman Bot account. */
+  signInPassword?(email: string, password: string): Promise<CloudPasswordSignInResult>;
+  /** Opens Google OAuth sign-in popup window. */
+  signInGoogle?(): Promise<CloudAccountState>;
+  /** Connects a specific Bigman Cloud server by id. */
+  connectServer?(serverId: string): Promise<CloudAccountState>;
   /** The checkout this app opened, again (never a new one while main keeps it); the plan and source only when none is kept. */
   reopenCheckout?(plan: string, source: string): Promise<CloudCheckoutResult>;
   /** Copies that checkout's page to the clipboard in main; false when none is kept. */
@@ -183,6 +206,9 @@ export type AccountAddResult =
   | { outcome: "switched" | "added" | "already"; email?: string; view: AccountsView }
   | { outcome: "wrong-code"; triesLeft: number }
   | { outcome: Exclude<import("./cloud-signin.mjs").CloudSignInVerifyFailure, "wrong-code"> };
+export type AccountAddPasswordResult =
+  | { outcome: "switched" | "added" | "already"; email?: string; view: AccountsView }
+  | { outcome: "invalid-email" | "invalid-credentials" | "rate-limited" | "failed"; message?: string };
 /** This app's own pages only: main refuses any other page. Absent on an older app. */
 export interface AccountsBridge {
   list(): Promise<AccountsView>;
@@ -191,6 +217,7 @@ export interface AccountsBridge {
   /** Add another account: the active account goes on until this succeeds. The attempt and the token stay in main. */
   addStart(email: string): Promise<CloudSignInStart>;
   addVerify(code: string): Promise<AccountAddResult>;
+  addPassword?(email: string, password: string): Promise<AccountAddPasswordResult>;
   addBrowser(): Promise<{ outcome: "browser" | "failed"; code?: string }>;
   addReopen(): Promise<void>;
   /** How the browser's way ended, asked once the list changes: null until it has. */

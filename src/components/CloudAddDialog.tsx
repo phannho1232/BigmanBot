@@ -266,7 +266,95 @@ export function CloudAddDialog({ now = Date.now }: { now?: () => number }) {
     window.addEventListener("blur", stop);
     return () => window.removeEventListener("blur", stop);
   }, [counting]);
+  const [pw, setPw] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
+  useEffect(() => {
+    if (request?.signIn && account?.status === "connected") {
+      close();
+    }
+  }, [request?.signIn, account?.status]);
   if (request && activeLocale() === "vi") {
+    if (request.signIn && bridge?.signInPassword) {
+      const submitViSignIn = () => {
+        if (busy || !bridge.signInPassword) return;
+        const trimmed = form.email.trim();
+        if (!trimmed || !pw) return;
+        setBusy(true);
+        setPwError(null);
+        void bridge.signInPassword(trimmed, pw).then(result => {
+          if (result.outcome === "signed-in") {
+            setPw("");
+            setAccount(result.state);
+            close();
+          } else {
+            setPwError(result.message || "Email hoặc mật khẩu không chính xác.");
+          }
+        }, () => setPwError("Không thể kết nối tới Bigman Bot.")).finally(() => setBusy(false));
+      };
+      return <CloudAddSheet kind="sign-in" staging={false} onClose={close}>
+        <div className="px-[30px] pt-7 pb-6">
+          <h2 id="cloud-add-title" className="text-[19px] font-semibold tracking-tight text-ink">Đăng nhập Bigman Bot Cloud</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-secondary">
+            Đăng nhập bằng tài khoản <code className="text-ink">bigmanbot.com</code> của bạn để đồng bộ gói dịch vụ và máy chủ Cloud.
+          </p>
+          <form
+            className="mt-4 flex flex-col gap-3"
+            onSubmit={e => {
+              e.preventDefault();
+              submitViSignIn();
+            }}
+          >
+            <input
+              type="email"
+              dir="ltr"
+              data-autofocus
+              autoComplete="email"
+              disabled={busy}
+              value={form.email}
+              onChange={e => {
+                setForm({ email: e.target.value, code: form.code });
+                if (pwError) setPwError(null);
+              }}
+              placeholder="Email (you@company.com)"
+              aria-label="Email"
+              className="ui-input w-full text-[13px]"
+            />
+            <input
+              type="password"
+              dir="ltr"
+              autoComplete="current-password"
+              disabled={busy}
+              value={pw}
+              onChange={e => {
+                setPw(e.target.value);
+                if (pwError) setPwError(null);
+              }}
+              placeholder="Mật khẩu"
+              aria-label="Mật khẩu"
+              className="ui-input w-full text-[13px]"
+            />
+            {pwError && <p role="alert" className="text-[12px] text-danger">{pwError}</p>}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="submit"
+                disabled={busy || !form.email.trim() || !pw}
+                className="ui-button ui-button-primary"
+              >
+                {busy ? "Đang đăng nhập…" : t("cloudAccount.signIn")}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="ui-button"
+                onClick={() => run(async () => setAccount(await (bridge.signInGoogle ? bridge.signInGoogle() : bridge.begin())))}
+              >
+                Tiếp tục với Google
+              </button>
+            </div>
+          </form>
+        </div>
+      </CloudAddSheet>;
+    }
     return <CloudAddSheet kind="has-cloud" staging={false} onClose={close}>
       <div className="border-b border-hairline/60 px-[30px] pt-7 pb-5">
         <h2 id="cloud-add-title" className="text-[19px] font-semibold tracking-tight text-ink">BigmanBot Cloud 24/7</h2>

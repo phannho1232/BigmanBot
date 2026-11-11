@@ -99,6 +99,10 @@ export function installAccounts({ ipcMain, ownPage, placePage, account, client, 
     const result = await ring().addVerify(text(code, 16));
     return "email" in result || ["switched", "added", "already"].includes(result.outcome) ? { ...result, view: view() } : result;
   });
+  own("accounts:add-password", async (email, password) => {
+    const result = await ring().addPassword(text(email, 254), text(password, 256));
+    return "email" in result || ["switched", "added", "already"].includes(result.outcome) ? { ...result, view: view() } : result;
+  });
   own("accounts:add-browser", () => ring().addBrowser());
   own("accounts:add-reopen", () => ring().addReopen());
   own("accounts:add-result", () => ring().addResult());

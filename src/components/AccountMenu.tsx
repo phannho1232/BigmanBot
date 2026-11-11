@@ -90,6 +90,8 @@ function AddAccount({ start, onDone, onBack }: { start: string; onDone: (note: s
   const bridge = window.ogb?.accounts;
   const [phase, setPhase] = useState<CloudSignInPhase>(EMAIL_STEP);
   const [email, setEmail] = useState(start);
+  const [password, setPassword] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [browser, setBrowser] = useState(false);
@@ -103,6 +105,32 @@ function AddAccount({ start, onDone, onBack }: { start: string; onDone: (note: s
       if (result.outcome === "sent") { setPhase({ step: "code", intent: false, email: result.email, resendAt: result.resendAt, problem: null, triesLeft: null, ...(result.signupOpen === false ? { signupOpen: false } : {}) }); setCode(""); }
       else setPhase({ step: "email", intent: false, problem: result.outcome });
     }, () => setPhase({ step: "email", intent: false, problem: "failed" })).finally(() => setBusy(false));
+  };
+  const submitPassword = () => {
+    if (busy || !bridge?.addPassword) return;
+    const trimmed = email.trim();
+    if (!trimmed || !password) return;
+    setBusy(true);
+    setPwError(null);
+    void bridge.addPassword(trimmed, password).then((result) => {
+      if (result.outcome === "switched") onDone(null);
+      else if (result.outcome === "added") onDone(t("accounts.added", { email: result.email ?? trimmed }));
+      else if (result.outcome === "already") onDone(t("accounts.already", { email: result.email ?? trimmed }));
+      else setPwError(("message" in result && result.message) || "Email hoặc mật khẩu không chính xác.");
+    }, () => setPwError("Không thể kết nối tới Bigman Bot.")).finally(() => setBusy(false));
+  };
+  const startBrowser = () => {
+    setBusy(true);
+    void bridge?.addBrowser().then((result) => {
+      if (result.outcome === "browser") setBrowser(true);
+      else {
+        setPhase({ step: "email", intent: false, problem: "failed" });
+        setPwError("Không thể mở cửa sổ đăng nhập.");
+      }
+    }, () => {
+      setPhase({ step: "email", intent: false, problem: "failed" });
+      setPwError("Không thể mở cửa sổ đăng nhập.");
+    }).finally(() => setBusy(false));
   };
   const verify = (digits: string) => {
     if (!bridge || phase.step !== "code") return;
@@ -133,10 +161,70 @@ function AddAccount({ start, onDone, onBack }: { start: string; onDone: (note: s
     <Heading title={t("accounts.browserTitle")} sub={t("accounts.browserBody")} />
     <button type="button" className={QUIET} onClick={() => { void bridge?.addReopen().catch(() => {}); }}>{t("accounts.browserOpen")}</button>
   </div>;
+  if (bridge?.addPassword) {
+    return (
+      <div data-cloud-signin="password" className={SCREEN}>
+        <Heading title="Đăng nhập tài khoản Bigman Bot" sub="Đăng nhập bằng tài khoản Bigman Bot (bigmanbot.com) của bạn." />
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={e => {
+            e.preventDefault();
+            submitPassword();
+          }}
+        >
+          <input
+            type="email"
+            dir="ltr"
+            autoFocus
+            autoComplete="email"
+            disabled={busy}
+            value={email}
+            onChange={e => {
+              setEmail(e.target.value);
+              if (pwError) setPwError(null);
+            }}
+            placeholder="you@company.com"
+            aria-label="Email"
+            className="h-11 w-full rounded-[11px] border border-hairline/70 bg-surface px-3.5 text-[14px] text-ink outline-none focus:border-ink/40"
+          />
+          <input
+            type="password"
+            dir="ltr"
+            autoComplete="current-password"
+            disabled={busy}
+            value={password}
+            onChange={e => {
+              setPassword(e.target.value);
+              if (pwError) setPwError(null);
+            }}
+            placeholder="Mật khẩu"
+            aria-label="Mật khẩu"
+            className="h-11 w-full rounded-[11px] border border-hairline/70 bg-surface px-3.5 text-[14px] text-ink outline-none focus:border-ink/40"
+          />
+          {pwError && <p role="alert" className="text-[13px] text-danger">{pwError}</p>}
+          <button
+            type="submit"
+            disabled={busy || !email.trim() || !password}
+            className={PRIMARY}
+          >
+            {busy ? "Đang đăng nhập…" : t("cloudAccount.signIn")}
+          </button>
+        </form>
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <button type="button" disabled={busy} className={QUIET} onClick={startBrowser}>
+            Tiếp tục với Google / trình duyệt
+          </button>
+          <button type="button" disabled={busy} className={QUIET} onClick={onBack}>
+            Quay lại
+          </button>
+        </div>
+      </div>
+    );
+  }
   return <SignInScreen phase={phase} email={email} code={code} profileEmail={null} busy={busy} now={now} onBack={onBack} onEmail={setEmail} onSend={send}
     onChangeEmail={() => { setPhase(EMAIL_STEP); void bridge?.addCancel().catch(() => {}); }}
     onCode={(value) => { const digits = codeDigits(value); setCode(digits); if (digits.length === 8 && !busy) verify(digits); }}
-    onResend={send} onBrowser={() => { setBusy(true); void bridge?.addBrowser().then((result) => { if (result.outcome === "browser") setBrowser(true); else setPhase({ step: "email", intent: false, problem: "failed" }); }, () => setPhase({ step: "email", intent: false, problem: "failed" })).finally(() => setBusy(false)); }} />;
+    onResend={send} onBrowser={startBrowser} />;
 }
 
 /** Over any place's page, on the rail's own page, or over this computer's: who is signed in here and Sign out, or a plain line
