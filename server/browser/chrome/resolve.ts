@@ -31,6 +31,8 @@ export interface ChromeHost {
   registryKeyExists(key: string): boolean;
   /** LaunchServices' answer for a bundle id on macOS. */
   appForBundleId(bundleId: string): string | null;
+  /** The PATH agent-browser is started with, when it differs from `env.PATH`. */
+  enginePath?: () => string;
 }
 
 export interface ChromeEngine {
@@ -49,12 +51,29 @@ const AGENT_BROWSER_LAYOUTS: Partial<Record<NodeJS.Platform, string>> = {
   linux: "chrome",
   win32: "chrome.exe",
 };
+const FINGERPRINT_CHROMIUM_LAYOUTS: Partial<Record<NodeJS.Platform, string>> = {
+  darwin: "Chromium.app/Contents/MacOS/Chromium",
+  linux: "chrome",
+  win32: "chrome.exe",
+};
 
 const paths = (platform: NodeJS.Platform) => platform === "win32" ? win32 : posix;
 
 /** Chromium's headless shell cannot pass for Chrome: its TLS handshake differs and it has no `window.chrome`. */
 export function isHeadlessShell(path: string): boolean {
   return /chrome-headless-shell/iu.test(path);
+}
+
+/** Whether `path` names an adryfish/fingerprint-chromium or ungoogled-chromium binary that accepts `--fingerprint=<seed>`. */
+export function isFingerprintChromium(path: string): boolean {
+  return /(?:fingerprint[-_]?chromium|ungoogled[-_]?chromium)/iu.test(path);
+}
+
+/** Where `scripts/install-fingerprint-chromium.mjs` unpacks fingerprint-chromium inside `<dataDir>/browser`. */
+export function fingerprintChromiumExecutable(dataDir: string, platform: NodeJS.Platform = process.platform): string | null {
+  const layout = FINGERPRINT_CHROMIUM_LAYOUTS[platform];
+  if (!layout) return null;
+  return paths(platform).join(dataDir, "browser", "fingerprint-chromium", layout);
 }
 
 export function installedGoogleChrome(host: ChromeHost): string | null {
@@ -109,7 +128,7 @@ const LINUX_CACHE_EXECUTABLES = ["chrome-linux64/chrome", "chrome-linux/chrome"]
 /** A Linux server where agent-browser already finds a browser keeps it rather than downloading another. */
 export function engineFindsLinuxBrowser(host: ChromeHost): boolean {
   const { join } = posix;
-  const onPath = (host.env.PATH ?? "").split(":").filter(Boolean);
+  const onPath = (host.enginePath?.() ?? host.env.PATH ?? "").split(":").filter(Boolean);
   if (onPath.some((directory) => LINUX_ENGINE_BROWSERS.some((name) => host.exists(join(directory, name))))) return true;
   const cached = (directory: string, prefix: string) => host.list(directory)
     .some((name) => name.startsWith(prefix) && LINUX_CACHE_EXECUTABLES.some((executable) => host.exists(join(directory, name, executable))));
@@ -117,7 +136,8 @@ export function engineFindsLinuxBrowser(host: ChromeHost): boolean {
     || cached(host.env.PLAYWRIGHT_BROWSERS_PATH || join(host.home, ".cache", "ms-playwright"), "chromium-");
 }
 
-export function resolveChromePlan(host: ChromeHost, engine: ChromeEngine | null): ChromePlan {
+/** `downloading`: a Chrome for Testing download is under way, so a browser agent-browser finds later does not replace it. */
+export function resolveChromePlan(host: ChromeHost, engine: ChromeEngine | null, options: { downloading?: boolean } = {}): ChromePlan {
   const { env, platform } = host;
   if (env.OMB_BROWSER_LEGACY_SHELL?.trim() === "1") return { kind: "legacy", reason: "OMB_BROWSER_LEGACY_SHELL=1" };
   const named = env.OMB_CHROME_PATH?.trim() || env.AGENT_BROWSER_EXECUTABLE_PATH?.trim();
@@ -127,6 +147,10 @@ export function resolveChromePlan(host: ChromeHost, engine: ChromeEngine | null)
     return { kind: "chrome", chrome: { path: paths(platform).isAbsolute(named) ? named : resolve(named), source: "named" }, fallback: null };
   }
   if (!engine?.managed) return { kind: "legacy", reason: "agent-browser was named, so it picks its own browser" };
+  const fpExecutable = fingerprintChromiumExecutable(host.dataDir, platform);
+  if (fpExecutable && host.exists(fpExecutable)) {
+    return { kind: "chrome", chrome: { path: fpExecutable, source: "downloaded" }, fallback: null };
+  }
   // The Linux desktop app keeps its bundled browser; a Linux server downloads Chrome for Testing like a Mac.
   const pin = platform === "linux" && env.OMB_RESOURCES_PATH ? null : chromeForTestingPin(platform, host.arch);
   const installed = installedGoogleChrome(host);
@@ -137,7 +161,7 @@ export function resolveChromePlan(host: ChromeHost, engine: ChromeEngine | null)
   if (pin) {
     const executable = chromeForTestingExecutable(host.dataDir, pin);
     if (host.exists(executable)) return { kind: "chrome", chrome: { path: executable, source: "downloaded" }, fallback: null };
-    if (platform === "linux" && engineFindsLinuxBrowser(host)) return { kind: "legacy", reason: "agent-browser found a browser on this server" };
+    if (platform === "linux" && !options.downloading && engineFindsLinuxBrowser(host)) return { kind: "legacy", reason: "agent-browser found a browser on this server" };
     return { kind: "download", pin };
   }
   return { kind: "legacy", reason: installed ? "Google Chrome here is managed by an organization" : "no Chrome is installed and none is pinned for this platform" };
@@ -165,7 +189,7 @@ function launchServicesApp(bundleId: string): string | null {
 }
 
 /** The registry and LaunchServices take a process each, so each answer is read once per host; files are checked every time. */
-export function chromeHost(options: { dataDir: string; env?: NodeJS.ProcessEnv; platform?: NodeJS.Platform; arch?: string }): ChromeHost {
+export function chromeHost(options: { dataDir: string; env?: NodeJS.ProcessEnv; platform?: NodeJS.Platform; arch?: string; enginePath?: () => string }): ChromeHost {
   const env = options.env ?? process.env;
   const platform = options.platform ?? process.platform;
   const answers = new Map<string, string | null>();
@@ -178,6 +202,7 @@ export function chromeHost(options: { dataDir: string; env?: NodeJS.ProcessEnv; 
     arch: options.arch ?? process.arch,
     env,
     dataDir: options.dataDir,
+    ...(options.enginePath ? { enginePath: options.enginePath } : {}),
     home: (platform === "win32" ? env.USERPROFILE : env.HOME) || homedir(),
     exists: existsSync,
     list: (directory) => { try { return readdirSync(directory); } catch { return []; } },

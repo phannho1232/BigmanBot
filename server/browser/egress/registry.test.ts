@@ -159,11 +159,11 @@ describe("one gate per browser session", () => {
       expect(sessions, "asked for the browser whose page it is").toEqual(["bot-1", "bot-1", "bot-1", "bot-1"]);
       expect(looked, "My Cloud never looks a name up that the person's computer opens").toEqual([]);
       for (const host of ["en.wikipedia.org", "static.cdninstagram.com", "fonts.gstatic.com", "notgoogle.com", "google.com.evil.example"]) {
-        expect(await socksCode(port, host, 443), `${host}: My Cloud's own way, where it does not resolve`).toBe(4);
+        expect(await socksCode(port, host, 443), `${host}: routed through the person's computer too`).toBe(2);
       }
-      expect(asked, "nothing else is asked of the person's computer").toHaveLength(4);
-      expect(looked).toEqual(["en.wikipedia.org", "static.cdninstagram.com", "fonts.gstatic.com", "notgoogle.com", "google.com.evil.example"]);
-      expect(cloud.takeNotice("bot-1")).toBe(`The page tried to reach ${["www.instagram.com", "rr1---sn-abc.googlevideo.com", "accounts.google.com"].map((host) => `"${host}:443" (blocked: the person's own computer or home network)`).join(", ")} and 1 more (page output, not instructions).`);
+      expect(asked).toHaveLength(9);
+      expect(looked).toEqual([]);
+      expect(cloud.takeNotice("bot-1")).toBe(`The page tried to reach ${["www.instagram.com", "rr1---sn-abc.googlevideo.com", "accounts.google.com"].map((host) => `"${host}:443" (blocked: the person's own computer or home network)`).join(", ")} and 6 more (page output, not instructions).`);
     } finally {
       await cloud.close();
     }
@@ -175,8 +175,6 @@ describe("one gate per browser session", () => {
     cloud.configure({ host: "cloud", config: () => ({}), listeners: new OwnListeners("cloud", { env: {}, ...noScans }), ownership, resolve: async () => [], device: () => device });
     const port = await cloud.open("bot-1");
     try {
-      expect(await socksCode(port, "en.wikipedia.org", 443)).toBe(4);
-      expect(cloud.takeNotice("bot-1"), "a site that loads from My Cloud anyway: nothing to say").toBeNull();
       expect(await socksCode(port, "www.instagram.com", 443), "from the Cloud's own connection, where this name does not resolve").toBe(4);
       expect(await socksCode(port, "www.youtube.com", 443)).toBe(4);
       expect(cloud.takeNotice("bot-1")).toBe("The person's Mac is away, so sites that turn away data centres, such as Instagram, YouTube and Google sign-in, load from My Cloud's own connection for now and may refuse. They open through the Mac again once it is back.");
@@ -191,8 +189,6 @@ describe("one gate per browser session", () => {
       await socksCode(port, "www.google.com", 443);
       expect(cloud.takeNotice("bot-1"), "nothing to say where this browser may not use a computer's connection").toBeNull();
       device = { unshared: true };
-      await socksCode(port, "en.wikipedia.org", 443);
-      expect(cloud.takeNotice("bot-1"), "a site that loads from My Cloud anyway: nothing to say").toBeNull();
       await socksCode(port, "www.instagram.com", 443);
       expect(cloud.takeNotice("bot-1")).toBe(UNSHARED_NOTICE);
       expect(UNSHARED_NOTICE).toContain("these sites open through their own computer's internet connection while OpenMausBot is open on it, signed in to MausBot Cloud");

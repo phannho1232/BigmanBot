@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({ effects: [] as EffectCallback[], dispatch: vi.fn(), api: vi.fn(), create: vi.fn(), setDraft: vi.fn(), ready: false, hook: 0, admin: false,
-  profile: {} as Record<string, unknown>, track: vi.fn(), advanced: true, appSettingsOpen: false, openBot: vi.fn(), close: vi.fn() }));
+  profile: {} as Record<string, unknown>, track: vi.fn(), advanced: true, appSettingsOpen: false, openBot: vi.fn(), close: vi.fn(), teamName: null as string | null }));
 vi.mock("@/state/thread-navigation", async importOriginal => ({
   ...await importOriginal<typeof import("@/state/thread-navigation")>(), openBot: fixture.openBot,
 }));
@@ -29,10 +29,11 @@ vi.mock("@/lib/create-configured-bot", async importOriginal => ({
 }));
 vi.mock("@/state/store", async importOriginal => {
   const store = await importOriginal<typeof import("@/state/store")>();
-  return { ...store, api: fixture.api, BotEditorStore: () => null, useStore: () => ({ state: { ...store.initialState, appSettingsOpen: fixture.appSettingsOpen }, dispatch: fixture.dispatch }) };
+  return { ...store, api: fixture.api, BotEditorStore: () => null, useStore: () => ({ state: { ...store.initialState, appSettingsOpen: fixture.appSettingsOpen, ...(fixture.teamName ? { config: { team: { id: "acme", name: fixture.teamName } } } : {}) }, dispatch: fixture.dispatch }) };
 });
 import { NewBotDialog } from "./NewBotDialog";
 import { setTeamChats } from "@/state/team-chats";
+import { setTeamPeople } from "@/state/team-people";
 import { Select } from "./Select";
 import type { BotCreationDraft } from "@/lib/bot-creation-draft";
 
@@ -56,8 +57,13 @@ function chooseStartingRole(dialog: Node[], value: string) {
   (select.props as unknown as { onChange: (event: { target: { value: string } }) => void }).onChange({ target: { value } });
 }
 function render(defaultsMode = false, onCreated?: () => void | Promise<void>) {
-  let tree!: ReturnType<typeof NewBotDialog>;
-  function Capture() { fixture.hook = 0; tree = NewBotDialog({ defaultsMode, onCreated, onClose: fixture.close }); return tree; }
+  let tree: ReactNode = null;
+  function Capture() {
+    fixture.hook = 0;
+    const editor = (NewBotDialog({ defaultsMode, onCreated, onClose: fixture.close }) as Node).props.children as Node;
+    tree = (editor.type as (props: unknown) => ReactNode)(editor.props);
+    return tree;
+  }
   const html = renderToStaticMarkup(createElement(Capture));
   return { html, nodes: nodes(tree) };
 }
@@ -69,22 +75,23 @@ beforeEach(() => {
   fixture.appSettingsOpen = false;
   fixture.openBot.mockReset();
   fixture.close.mockReset();
+  fixture.teamName = null;
   fixture.api.mockReturnValue(new Promise(() => {}));
 });
-afterEach(() => { vi.unstubAllGlobals(); setTeamChats(null); });
+afterEach(() => { vi.unstubAllGlobals(); setTeamChats(null); setTeamPeople(null); });
 
 describe("bot draft dialog", () => {
   it("preserves upstream audience selection for browser admins before creation", () => {
     fixture.admin = true;
     vi.stubGlobal("window", {});
-    expect(render().html).toContain("Ai có thể xem");
-    expect(render().html).toContain("Chỉ quản trị viên");
-    expect(render(true).html).not.toContain("Ai có thể xem");
+    expect(render().html).toContain("Who can see it");
+    expect(render().html).toContain("Admins only");
+    expect(render(true).html).not.toContain("Who can see it");
     fixture.admin = false;
-    expect(render().html).not.toContain("Ai có thể xem");
+    expect(render().html).not.toContain("Who can see it");
     fixture.admin = true;
     vi.stubGlobal("window", { ogb: {} });
-    expect(render().html).not.toContain("Ai có thể xem");
+    expect(render().html).not.toContain("Who can see it");
   });
   it.each([false, true])("closes after a successful creation when its caller fails (async=%s)", async asyncFailure => {
     fixture.ready = true;
@@ -121,13 +128,13 @@ describe("bot draft dialog", () => {
   it("opens immediately with all sections and no creation request", () => {
     const result = render();
     expect(result.html).toContain('role="dialog"');
-    for (const section of ["Danh tính", "Chỉ dẫn cốt lõi", "Kỹ năng", "Bộ nhớ", "Tác vụ định kỳ", "Quyền truy cập", "Mô hình AI", "Phân quyền &amp; Phê duyệt", "Giọng nói &amp; Thông báo"]) {
+    for (const section of ["Identity", "Soul", "Skills", "Memory", "Routines", "Access", "Model", "Permissions", "Voice &amp; alerts"]) {
       expect(result.html).toContain(section);
     }
     fixture.advanced = false;
     const simple = render().html;
-    expect(simple, "Simple mode picks no model: new bots use the default").not.toContain(">Mô hình AI<");
-    expect(simple).toContain(">Phân quyền &amp; Phê duyệt<");
+    expect(simple, "Simple mode picks no model: new bots use the default").not.toContain(">Model<");
+    expect(simple).toContain(">Permissions<");
     fixture.effects[0]();
     expect(fixture.api).toHaveBeenCalledExactlyOnceWith("/api/bot-defaults");
     expect(fixture.dispatch).not.toHaveBeenCalled();
@@ -158,7 +165,7 @@ describe("bot draft dialog", () => {
 
   it("can cancel a loading draft without creating or deleting a bot", () => {
     const result = render();
-    result.nodes.find(node => node.type === "button" && node.props["aria-label"] === "Đóng")!.props.onClick!();
+    result.nodes.find(node => node.type === "button" && node.props["aria-label"] === "Close")!.props.onClick!();
     expect(fixture.close).toHaveBeenCalledOnce();
     expect(fixture.dispatch).not.toHaveBeenCalled();
     expect(fixture.api).not.toHaveBeenCalled();
@@ -190,6 +197,28 @@ describe("bot draft dialog", () => {
     const added = fixture.dispatch.mock.calls.findIndex(([action]) => action.type === "botAdded");
     expect(added).toBeGreaterThanOrEqual(0);
     expect(fixture.openBot.mock.invocationCallOrder[0]).toBeGreaterThan(fixture.dispatch.mock.invocationCallOrder[added]);
+  });
+
+  it("on a team's Cloud, says who can use the new bot, preset to Just me, and asks the server for no sharing of its own", async () => {
+    const ada = { email: "ada@acme.test", name: "Ada", role: "admin" as const, you: true as const, here: true };
+    setTeamPeople({ people: [ada], me: ada, admin: true, needsYou: [] });
+    fixture.teamName = "Acme";
+    fixture.admin = true;
+    vi.stubGlobal("window", {});
+    fixture.ready = true;
+    fixture.create.mockResolvedValue({ bot: { id: "created", name: "Fixture" }, warnings: [] });
+    const dialog = render();
+    const choice = dialog.nodes.find(named("WhoCanUse"))!;
+    expect(choice.props).toMatchObject({ team: "Acme", everyone: false });
+    const select = output(choice).find(node => node.type === Select)!;
+    expect((select.props as unknown as { value: string }).value).toBe("me");
+    expect(renderToStaticMarkup(choice)).toContain("Just me");
+    expect(renderToStaticMarkup(choice)).toContain("Everyone in Acme");
+    expect(dialog.html, "the older Who can see it is not asked beside it").not.toContain("Who can see it");
+    dialog.nodes.filter(node => node.type === "button").at(-1)!.props.onClick!();
+    await vi.waitFor(() => expect(fixture.create).toHaveBeenCalledOnce());
+    expect(fixture.create.mock.calls[0]![4], "the server's own default decides: private").toBeUndefined();
+    expect(fixture.create.mock.calls[0]![5]).toBe("ada@acme.test");
   });
 
   it("anywhere but a team's Cloud, leaves the new bot selected as it always was", async () => {
@@ -227,8 +256,8 @@ describe("bot draft dialog", () => {
 
   it("uses the same section editor for default templates", () => {
     const result = render(true);
-    expect(result.html).toContain("Mặc định cho bot mới");
-    expect(result.html).toContain("Lưu mặc định");
-    expect(result.html).not.toContain(">Tạo bot<");
+    expect(result.html).toContain("Defaults for new bots");
+    expect(result.html).toContain("Save defaults");
+    expect(result.html).not.toContain(">Create bot<");
   });
 });

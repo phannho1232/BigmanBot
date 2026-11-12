@@ -4,7 +4,7 @@ const spawnSync = vi.hoisted(() => vi.fn((file: string) => ({ status: 0, stdout:
 vi.mock("node:child_process", async (original) => ({ ...await original<typeof import("node:child_process")>(), spawnSync }));
 
 import { CHROME_FOR_TESTING_VERSION, chromeForTestingExecutable, chromeForTestingPin } from "./install.ts";
-import { chromeHost, chromePolicyManaged, installedGoogleChrome, isHeadlessShell, registryData, resolveChromePlan, type ChromeHost } from "./resolve.ts";
+import { chromeHost, chromePolicyManaged, fingerprintChromiumExecutable, installedGoogleChrome, isFingerprintChromium, isHeadlessShell, registryData, resolveChromePlan, type ChromeHost } from "./resolve.ts";
 
 const MAC_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
@@ -34,6 +34,13 @@ describe("which Chrome the bots' browser runs", () => {
     const found = host("darwin", [MAC_CHROME, `${elsewhere}/Contents/MacOS/Google Chrome`], { appForBundleId: (id) => id === "com.google.Chrome" ? elsewhere : null });
     expect(installedGoogleChrome(found)).toBe(`${elsewhere}/Contents/MacOS/Google Chrome`);
     expect(installedGoogleChrome(host("darwin", ["/home/ada/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]))).toBe("/home/ada/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
+  });
+
+  it("prefers fingerprint-chromium unpacked under <dataDir>/browser/fingerprint-chromium when present", () => {
+    const winFp = fingerprintChromiumExecutable("C:\\data", "win32")!;
+    expect(isFingerprintChromium(winFp)).toBe(true);
+    const windows = host("win32", [winFp], { dataDir: "C:\\data" });
+    expect(resolveChromePlan(windows, managed)).toEqual({ kind: "chrome", chrome: { path: winFp, source: "downloaded" }, fallback: null });
   });
 
   it("skips a Google Chrome an organization manages, machine-wide or for this user, for Chrome for Testing", () => {
@@ -100,6 +107,9 @@ describe("which Chrome the bots' browser runs", () => {
     expect(resolveChromePlan(withPath(["/home/ada/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome"]), managed)).toEqual(found);
     expect(resolveChromePlan(withPath(["/home/ada/.cache/ms-playwright/chromium-1200/chrome-linux/chrome"]), managed)).toEqual(found);
     expect(resolveChromePlan(withPath(["/pw/chromium-1200/chrome-linux64/chrome"], { PLAYWRIGHT_BROWSERS_PATH: "/pw" }), managed)).toEqual(found);
+    // agent-browser runs with the augmented PATH, so a browser only there counts too.
+    const augmented = { ...host("linux", ["/opt/extra/chromium"], { env: { PATH: "/usr/bin" } }), enginePath: () => "/opt/extra:/usr/bin" };
+    expect(resolveChromePlan(augmented, managed)).toEqual(found);
     // A cache entry without its browser executable is incomplete: the server still downloads.
     expect(resolveChromePlan(withPath(["/home/ada/.cache/puppeteer/chrome/linux-153.0.8010.47/README"]), managed)).toMatchObject({ kind: "download" });
     expect(resolveChromePlan(withPath(["/home/ada/.cache/ms-playwright/chromium-1200/INSTALLATION_COMPLETE"]), managed)).toMatchObject({ kind: "download" });

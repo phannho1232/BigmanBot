@@ -308,55 +308,56 @@ export function useLocalFileSave(filePath: string, name?: string, message?: Mess
           if (!(await openLinkedFolder(filePath)) && !controller.signal.aborted) setFolder(listing); // Security: only a path this message's route just authorized reaches the desktop bridge.
           return;
         }
-        await response.body?.cancel();
-        if (!mounted.current || controller.signal.aborted) return;
-        const saved = canonicalDownloadFilename({
-          contentDisposition: response.headers.get("content-disposition"),
-          fallback: name || attachmentBasename(filePath),
-          source: filePath,
-          mime: response.headers.get("content-type"),
-        });
-        const downloadUrl = messageFileUrl(filePath, message, true);
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = saved;
-        link.style.display = "none";
-        document.body.append(link);
-        try {
-          link.click();
-        } finally {
-          link.remove();
-        }
-        if (!mounted.current || controller.signal.aborted) return;
-        setSavedTo(saved);
+        void response.body?.cancel().catch(() => undefined);
       } else {
         const response = await requestMessageFile(filePath, message, controller.signal, { entry });
         const blob = await response.blob();
         if (!mounted.current || controller.signal.aborted) return;
         const url = URL.createObjectURL(blob);
-        const saved = canonicalDownloadFilename({
+        const savedEntry = canonicalDownloadFilename({
           contentDisposition: response.headers.get("content-disposition"),
           fallback: name || entry || attachmentBasename(filePath),
           source: filePath,
           mime: blob.type || response.headers.get("content-type"),
         });
         try {
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = saved;
-          link.style.display = "none";
-          document.body.append(link);
+          const entryLink = document.createElement("a");
+          entryLink.href = url;
+          entryLink.download = savedEntry;
+          entryLink.style.display = "none";
+          document.body.append(entryLink);
           try {
-            link.click();
+            entryLink.click();
           } finally {
-            link.remove();
+            entryLink.remove();
           }
         } finally {
           setTimeout(() => URL.revokeObjectURL(url), 0);
         }
         if (!mounted.current || controller.signal.aborted) return;
-        setSavedTo(saved);
+        setSavedTo(savedEntry);
+        setState("saved");
+        if (resetTimer.current) clearTimeout(resetTimer.current);
+        resetTimer.current = setTimeout(() => {
+          if (mounted.current) setState("idle");
+        }, 4000);
+        return;
       }
+      if (!mounted.current || controller.signal.aborted) return;
+      const saved = name || entry || attachmentBasename(filePath);
+      const downloadUrl = messageFileUrl(filePath, message, true);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = saved;
+      link.style.display = "none";
+      document.body.append(link);
+      try {
+        link.click();
+      } finally {
+        link.remove();
+      }
+      if (!mounted.current || controller.signal.aborted) return;
+      setSavedTo(saved);
       setState("saved");
       if (resetTimer.current) clearTimeout(resetTimer.current);
       resetTimer.current = setTimeout(() => {

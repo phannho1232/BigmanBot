@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { removeTempDir } from "../testing/cleanup.ts";
 import { LocalBackend } from "./backends.ts";
-import type { ChromeProcess } from "./chrome/launch.ts";
+import type { ChromeProcess, LaunchOptions } from "./chrome/launch.ts";
 import { ProcessRegistry } from "./chrome/processes.ts";
 import { browserRoot, profileDir } from "./chrome/profile.ts";
 import { FAKE_IDENTITY, FakeChrome } from "./testing/fake-chrome.ts";
@@ -14,18 +14,21 @@ const folders: string[] = [];
 afterAll(async () => { for (const folder of folders) await removeTempDir(folder); });
 
 /** A LocalBackend on a fake Chrome per start, each cancelling its first navigation as Chrome for Testing on Windows can. */
-function backend(platform: NodeJS.Platform) {
+function backend(platform: NodeJS.Platform, binaryPath = "/fake/chrome") {
   const dataDir = mkdtempSync(join(tmpdir(), "omb-backends-test-"));
   folders.push(dataDir);
   const chromes: FakeChrome[] = [];
+  const launches: LaunchOptions[] = [];
   const local = new LocalBackend({
     dataDir,
     host: "desktop",
     platform,
-    binary: async () => ({ path: "/fake/chrome", identity: { ...FAKE_IDENTITY } }),
+    binary: async () => ({ path: binaryPath, identity: { ...FAKE_IDENTITY } }),
     screen: async () => ({ width: 1920, height: 1080, deviceScaleFactor: 1 }),
+    timezone: () => "Asia/Ho_Chi_Minh",
     egressPort: async () => null,
-    launch: async () => {
+    launch: async (options) => {
+      launches.push(options);
       const chrome = new FakeChrome({ navigationErrors: ["net::ERR_ABORTED"] });
       chromes.push(chrome);
       const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) => chrome.onClose(() => resolve({ code: 0, signal: null })));
@@ -36,8 +39,8 @@ function backend(platform: NodeJS.Platform) {
       return launched;
     },
   });
-  const open = () => local.open({ key: "bot:warm", mode: "headless", fresh: false, viewport: { width: 1280, height: 800 }, downloadDir: join(dataDir, "downloads") });
-  return { open, chromes };
+  const open = (key = "bot:warm") => local.open({ key, mode: "headless", fresh: false, viewport: { width: 1280, height: 800 }, downloadDir: join(dataDir, "downloads") });
+  return { open, chromes, launches };
 }
 
 describe("a fresh profile's first navigation on Windows", () => {
@@ -66,6 +69,20 @@ describe("a fresh profile's first navigation on Windows", () => {
     expect(mac.chromes[0]!.sent.some((sent) => sent.method === "Target.createTarget" || sent.method === "Page.navigate")).toBe(false);
     await expect(opened.browser.pages()[0]!.navigate("http://example.test/first")).rejects.toThrow(/ERR_ABORTED/);
     await opened.close();
+  });
+
+  it("assigns a persistent, per-profile C++ fingerprint seed when running fingerprint-chromium", async () => {
+    const fp = backend("linux", "/data/browser/fingerprint-chromium/chrome");
+    const alice1 = await fp.open("bot:alice");
+    await alice1.close();
+    const alice2 = await fp.open("bot:alice");
+    await alice2.close();
+    const bob = await fp.open("bot:bob");
+    await bob.close();
+    expect(typeof fp.launches[0]!.fingerprintSeed).toBe("number");
+    expect(fp.launches[0]!.fingerprintSeed).toBe(fp.launches[1]!.fingerprintSeed);
+    expect(fp.launches[0]!.fingerprintSeed).not.toBe(fp.launches[2]!.fingerprintSeed);
+    expect(fp.launches[0]!.fingerprintTimezone).toBe("Asia/Ho_Chi_Minh");
   });
 });
 

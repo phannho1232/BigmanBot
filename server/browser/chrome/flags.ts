@@ -69,9 +69,21 @@ export interface ChromeFlagsInput {
   startUrl?: string | null;
   /** A window only: where it opens, e.g. parked off-screen. */
   windowPosition?: { x: number; y: number } | null;
+  /** Per-profile C++ hardware fingerprint seed when running adryfish/fingerprint-chromium. */
+  fingerprintSeed?: number | null;
+  /** IANA time zone passed via `--timezone` to fingerprint-chromium, which applies it on Windows too. */
+  fingerprintTimezone?: string | null;
 }
 
 const LOCALE = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
+const TIMEZONE = /^:?[A-Za-z0-9_+\-./]{1,64}$/u;
+
+/** adryfish/fingerprint-chromium's `--fingerprint-platform` values. */
+export function fingerprintPlatform(platform: NodeJS.Platform = process.platform): "windows" | "macos" | "linux" {
+  if (platform === "win32") return "windows";
+  if (platform === "darwin") return "macos";
+  return "linux";
+}
 
 /** Headless takes the display in device pixels: --screen-info={3024x1964 devicePixelRatio=2 colorDepth=30} is a 1512x982 Retina screen. */
 export function screenInfo(screen: ScreenSpec): string {
@@ -104,6 +116,13 @@ export function chromeArgs(input: ChromeFlagsInput): string[] {
   if (headless) args.push(`--screen-info=${screenInfo(input.screen ?? SERVER_SCREEN)}`);
   else if (input.windowPosition) args.push(`--window-position=${Math.round(input.windowPosition.x)},${Math.round(input.windowPosition.y)}`);
   if (input.locale && LOCALE.test(input.locale)) args.push(`--lang=${input.locale}`);
+  if (input.fingerprintSeed !== undefined && input.fingerprintSeed !== null) {
+    if (!Number.isInteger(input.fingerprintSeed) || input.fingerprintSeed < 1) throw new Error("The fingerprint seed must be a positive integer.");
+    args.push(`--fingerprint=${input.fingerprintSeed}`, `--fingerprint-platform=${fingerprintPlatform(platform)}`);
+    if (input.fingerprintTimezone && TIMEZONE.test(input.fingerprintTimezone)) {
+      args.push(`--timezone=${input.fingerprintTimezone}`);
+    }
+  }
   if (input.egressPort !== undefined && input.egressPort !== null) {
     if (!Number.isInteger(input.egressPort) || input.egressPort < 1 || input.egressPort > 65_535) throw new Error("The browser only goes through OpenMausBot's own local gate.");
     args.push(...gateChromeFlags(input.egressPort, platform));

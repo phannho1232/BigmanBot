@@ -455,8 +455,9 @@ const __APP_VERSION__: string;
       credentialStore?: { unreadable(): Promise<boolean>; reset(): Promise<"reset" | "cancelled" | "quitting" | "failed" | "readable"> };
       /** Save a provider credential through Electron's OS-backed store. */
       setCredential?(
-        name: "composioApiKey" | "xaiApiKey" | "boxToken" | "opencodeGoApiKey" | "ttsKey" | "fishAudioKey" | "geminiTtsKey" | "jevApiKey" | "openrouterDeciderKey" | "workersAiToken" | "openaiImageApiKey" | "customImageApiKey" | "openaiLiveKey" | "tregApiKey" | "postizApiKey" | "geminiImageApiKey",
+        name: "openaiApiKey" | "anthropicApiKey" | "openrouterApiKey" | "mistralApiKey" | "cerebrasApiKey" | "groqApiKey" | "greenferenceApiKey" | "modelgoApiKey" | "metaApiKey" | "deepseekApiKey" | "openaiCompatApiKey" | "composioApiKey" | "xaiApiKey" | "boxToken" | "opencodeGoApiKey" | "ttsKey" | "fishAudioKey" | "geminiTtsKey" | "jevApiKey" | "openrouterDeciderKey" | "workersAiToken" | "openaiImageApiKey" | "customImageApiKey" | "openaiLiveKey" | "tregApiKey" | "postizApiKey" | "geminiImageApiKey",
         value: string,
+        options?: { everyClaudeBot?: false },
       ): Promise<ConfigStatus>;
       /** In-app auto-update (packaged app only; dormant in dev). Updates
        * download by themselves. On this computer's page and the person's own
@@ -470,6 +471,11 @@ const __APP_VERSION__: string;
         /** The person saw the line that the app updated itself: it is not shown again. */
         seen?(): Promise<void>;
         onState(cb: (s: UpdaterState) => void): () => void;
+      };
+      /** On a server's page from the Server menu: asks for this app's own update, from the person's click. The page
+       * learns only what was done; the app asks in its own dialog before it restarts. Absent in older desktop builds. */
+      appUpdate?: {
+        request(): Promise<AppUpdateAnswer>;
       };
     };
   }
@@ -487,6 +493,9 @@ export interface LinuxLocalControlStatus {
   compositor?: "gnome-mutter" | "hyprland";
   warnings?: Array<{ label: string; status: string; message: string; detail?: string }>;
 }
+
+/** What asking for this app's update from a server's page did (electron/updater.mjs `updateForServerPage`). */
+export type AppUpdateAnswer = "installing" | "later" | "downloading" | "current" | "failed" | "unavailable";
 
 export interface UpdaterState {
   status:
@@ -539,6 +548,9 @@ export interface CompanionAccountState {
   /** The HTTPS address was given back after 30 days with no paired phone
    * seen. Opening the phone page calls prepare(), which brings it back. */
   paused?: boolean;
+  /** The secure address was ended for old phone apps: a phone that has not used the encrypted connection must be
+   * updated and paired again. */
+  tunnelRetired?: boolean;
 }
 
 export type AndroidUsbDevice = {

@@ -520,7 +520,7 @@ describe("private document intake", () => {
     const fetch = vi.spyOn(globalThis, "fetch");
     try {
       await expect(fileAttachmentFromFile(sized("large.opus", "audio/opus", FILE_MAX_BYTES + 1))).rejects.toMatchObject({
-        status: 413, problem: { kind: "too-large", name: "large.opus", limitMb: 100 },
+        status: 413, problem: { kind: "too-large", name: "large.opus", limitMb: 1024 },
       });
       expect(fetch).not.toHaveBeenCalled();
     } finally {
