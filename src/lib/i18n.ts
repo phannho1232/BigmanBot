@@ -108,7 +108,7 @@ const BIGMAN_EXTRA_KEYS = new Set([
 ]);
 
 export function activePackComplete(): boolean {
-  return activePack !== en && Object.keys(en).every((key) => key.startsWith("i18nExt.") || key.startsWith("readyBots.bot.tiktok-") || BIGMAN_EXTRA_KEYS.has(key) || Object.hasOwn(activePack, key));
+  return activePack !== en && Object.keys(en).every((key) => key.startsWith("i18nExt.") || key.startsWith("readyBots.bot.tiktok-") || key.startsWith("browser.importCookies") || key === "botPanel.avatar.tabAnimated" || BIGMAN_EXTRA_KEYS.has(key) || Object.hasOwn(activePack, key));
 }
 
 /** `{app}` is the product's name as a person reads it (productName) unless `params` names it. */

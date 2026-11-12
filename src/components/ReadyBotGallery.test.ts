@@ -41,23 +41,23 @@ describe("ready-made bots gallery", () => {
   it("shows every ready-made bot with its own Add button", () => {
     render();
     expect(cards()).toEqual(READY_BOTS.map((bot) => bot.id));
-    const labels = [...host.querySelectorAll("button[aria-label^='Thêm ']")].map((add) => add.getAttribute("aria-label"));
+    const labels = [...host.querySelectorAll("button[aria-label^='Add ']")].map((add) => add.getAttribute("aria-label"));
     expect(new Set(labels).size).toBe(READY_BOTS.length);
-    expect(host.textContent).toContain("Thử hỏi: “Thêm cây trầu bà lá xẻ: phòng khách, ánh sáng tán xạ”");
-    expect(host.textContent).toContain("Kèm tác vụ định kỳ (đang tạm dừng)");
+    expect(host.textContent).toContain("Try: “Add my monstera: living room, bright indirect light”");
+    expect(host.textContent).toContain("Includes a paused routine");
   });
 
   it("narrows to a category and back to all", () => {
     render();
-    flushSync(() => button("Thiết kế").click());
+    flushSync(() => button("Design").click());
     expect(cards()).toEqual(["design-critic"]);
-    expect(button("Thiết kế").getAttribute("aria-pressed")).toBe("true");
-    flushSync(() => button("Tất cả").click());
+    expect(button("Design").getAttribute("aria-pressed")).toBe("true");
+    flushSync(() => button("All").click());
     expect(cards()).toHaveLength(READY_BOTS.length);
   });
 
   it("follows the Templates search and hides itself when nothing matches", () => {
-    render("cây cảnh");
+    render("plant");
     expect(cards()).toEqual(["plant-care"]);
     render("no bot is called this");
     expect(host.querySelector("section")).toBeNull();
@@ -65,7 +65,7 @@ describe("ready-made bots gallery", () => {
 
   it("opens New bot filled in with the chosen bot, and tells Templates to step aside", () => {
     render();
-    flushSync(() => button("Thêm Fern, Nhật ký chăm sóc cây").click());
+    flushSync(() => button("Add Fern, Plant care log").click());
     expect(opened.props?.readyBotId).toBe("plant-care");
     expect(onDialog).toHaveBeenLastCalledWith(true);
     opened.props!.onCreated!({ id: "new-bot" });
@@ -76,14 +76,14 @@ describe("ready-made bots gallery", () => {
   it("on a paired device, which cannot read the host's defaults, makes the bot at once", () => {
     vi.stubGlobal("ogb", { remoteClient: { active: true } });
     render();
-    flushSync(() => button("Thêm Fern, Nhật ký chăm sóc cây").click());
+    flushSync(() => button("Add Fern, Plant care log").click());
     expect(opened.props).toBeNull();
     expect(opened.dispatch).toHaveBeenCalledWith({ type: "newBot", onCreated: onAdded });
   });
 
   it("gives Templates its keys back when New bot is closed without creating", () => {
     render();
-    flushSync(() => button("Thêm Echo, Chuốt Văn phong Tự nhiên").click());
+    flushSync(() => button("Add Echo, Humanizer").click());
     flushSync(() => opened.props!.onClose!());
     expect(onDialog).toHaveBeenLastCalledWith(false);
     expect(onAdded).not.toHaveBeenCalled();

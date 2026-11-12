@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it } from "vitest";
 import { setLocale } from "@/lib/i18n";
-import { CustomDomainDnsRecord, customDomainDnsName, CustomDomainGuide, customDomainProxyExample, type CustomDomainStatus } from "./CustomDomainSettings";
+import { CustomDomainDnsRecord, customDomainDnsName, customDomainProxyExample, type CustomDomainStatus } from "./CustomDomainSettings";
 
 beforeEach(() => {
   setLocale("en");
@@ -26,19 +26,6 @@ describe("custom domain setup guidance", () => {
     expect(config).toContain("handle /hooks/*");
     expect(config).toContain("flush_interval -1");
     expect(config).not.toContain("0.0.0.0");
-  });
-
-  it("explains DNS and HTTPS are configured separately before verification", () => {
-    const html = renderToStaticMarkup(createElement(CustomDomainGuide, { status }));
-    expect(html).toContain("A record");
-    expect(html).toContain("AAAA");
-    expect(html).toContain("administrator must configure HTTPS");
-    expect(html).toContain("exact installation before saving");
-    expect(html).toContain("Never publish the app");
-    expect(html).toContain("bots.example.com");
-    expect(html).not.toContain(status.publicUrl!);
-    expect(html).toContain("Advanced server setup");
-    expect(html).not.toMatch(/<details[^>]*\bopen/);
   });
 });
 

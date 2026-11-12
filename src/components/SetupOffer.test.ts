@@ -66,7 +66,7 @@ beforeEach(() => {
   fixture.reactor = "user";
 });
 afterEach(() => {
-  setLocale("vi");
+  setLocale("en");
 });
 
 describe("the setup card under a new bot's greeting", () => {
@@ -87,7 +87,7 @@ describe("the setup card under a new bot's greeting", () => {
     setLocale("vi");
     expect(localizeSeededGreeting("Hi, I'm Cocoa. What would you like me to do?")).toBe("Xin chào, mình là Cocoa. Bạn muốn mình giúp việc gì nào?");
     const seededEn = { ...greeting, setupChoices: ["Research and digging into topics", "Keeping an eye on things for me", "Email, calendar and messages", "Bookings, shopping and errands", "Data, spreadsheets and reports"] } as Message;
-    expect(renderOffer(seededEn).choices.map((node) => label(node).split("|")[1])).toEqual([
+    expect(renderOffer(seededEn).choices.map((node) => label(node).split("|")[0])).toEqual([
       "Nghiên cứu và tìm hiểu chuyên sâu các chủ đề",
       "Theo dõi và giám sát công việc cho tôi",
       "Email, lịch làm việc và tin nhắn",
