@@ -22,6 +22,7 @@ import { cn } from "@/lib/cn";
 import { localizeComputerProblem } from "@/lib/computer-messages";
 import { computerInventoryRequest, jsonPostRequest, type ComputerApiRequest } from "@/lib/computer-requests";
 import { useStore } from "@/state/store";
+import { placeOffered } from "@/lib/place";
 import { VpsComputersCard } from "./VpsComputersCard"; import { KeysLink } from "./keys/KeysLink";
 
 type Action = "pull" | "run" | "start" | "stop" | "remove" | "recreate";
@@ -757,7 +758,9 @@ export function LocalVmIdleTimeoutSetting({
 }
 
 export function LocalComputerSection() {
-  const cloudHome = useStore().state.config?.cloudHome === true;
+  const config = useStore().state.config;
+  const cloudHome = config?.cloudHome === true;
+  const cloudOffered = placeOffered("cloud", config);
   const [status, setStatus] = useState<Status | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<Action | null>(null);
@@ -903,6 +906,7 @@ export function LocalComputerSection() {
   }, [inventoryRefreshKey, refreshInventory, status?.mode]);
 
   useEffect(() => {
+    if (!cloudOffered) return;
     const controller = new AbortController();
     setCloudLoading(true);
     void refreshCloudInventory(controller.signal)
@@ -915,7 +919,7 @@ export function LocalComputerSection() {
         if (!controller.signal.aborted) setCloudLoading(false);
       });
     return () => controller.abort();
-  }, [cloudRefreshKey, refreshCloudInventory]);
+  }, [cloudOffered, cloudRefreshKey, refreshCloudInventory]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1184,7 +1188,7 @@ export function LocalComputerSection() {
   return (
     <>
       <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{announcement}</p>
-      <CloudComputersCard
+      {cloudOffered && <CloudComputersCard
         instances={cloudInventory}
         configured={cloudConfigured}
         loading={cloudLoading}
@@ -1194,7 +1198,7 @@ export function LocalComputerSection() {
         onRefresh={() => setCloudRefreshKey((key) => key + 1)}
         onSleep={(instance) => void actOnCloudComputer("sleep", instance)}
         onDelete={(instance) => void actOnCloudComputer("delete", instance)}
-      />
+      />}
 
       <VpsComputersCard
         instances={vpsInventory}

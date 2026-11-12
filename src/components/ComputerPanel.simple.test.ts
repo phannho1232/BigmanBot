@@ -373,12 +373,12 @@ function browserSwitch(rendered: ReturnType<typeof render>) {
 }
 
 describe("Where the bot works", () => {
-  it("offers six places in a 3-column grid with plain names", () => {
+  it("offers five places in a 3-column grid with plain names", () => {
     const rendered = render(makeBot());
     const card = rendered.nodes.find((node) => node.props["data-testid"] === "where-works")!;
     expect(rendered.html).toContain("Where Scout works");
     expect(nodes(card.props.children).find((node) => node.props.role === "group")!.props.className).toContain("grid-cols-3");
-    expect(grid(rendered).map((node) => text(node.props.children))).toEqual(["Auto", "Cloud desktop", "Private desktop", "This Mac", "Browser", "Off"]);
+    expect(grid(rendered).map((node) => text(node.props.children))).toEqual(["Auto", "Private desktop", "This Mac", "Browser", "Off"]);
     expect(placeLine(rendered)).toBe("Uses the built-in browser, a private desktop on this computer, or this computer's screen, whichever the task needs.");
   });
 
@@ -392,7 +392,7 @@ describe("Where the bot works", () => {
   it("leaves This Mac out on another server's page, where this computer can never be a bot's place", () => {
     fixture.localComputer = { available: false, support: "unsupported", enabled: false, status: "unavailable", reasonCode: "remote-server" };
     const rendered = render(makeBot());
-    expect(grid(rendered).map((node) => text(node.props.children))).toEqual(["Auto", "Cloud desktop", "Private desktop", "Browser", "Off"]);
+    expect(grid(rendered).map((node) => text(node.props.children))).toEqual(["Auto", "Private desktop", "Browser", "Off"]);
     expect(placeLine(rendered)).toBe("Uses the built-in browser, or a running private desktop when a task needs one.");
   });
 
@@ -411,10 +411,10 @@ describe("Where the bot works", () => {
   it("J11: the Advanced cards and the Simple grid name the same problem in the same words", () => {
     fixture.instances = [{ ...engine(), displayName: "Plain", capabilities: { computerMcp: false, browserMcp: true } } as InstanceInfo];
     const simple = render(makeBot());
-    const tile = grid(simple).find((node) => text(node.props.children).startsWith("Cloud desktop"))!;
+    const tile = grid(simple).find((node) => text(node.props.children).startsWith("Private desktop"))!;
     expect(tile.props.disabled).toBe(true);
-    expect(text(tile.props.children)).toBe("Cloud desktopNot with this model");
-    expect(tile.props.title).toBe("M can't use a desktop. Choose a model that can, such as Claude or ChatGPT.");
+    expect(text(tile.props.children)).toBe("Private desktopNot with this model");
+    expect(tile.props.title).toBe("M can't use a private desktop. Choose a model that can, such as Claude or ChatGPT.");
 
     fixture.advanced = true;
     fixture.values = [];
@@ -422,7 +422,7 @@ describe("Where the bot works", () => {
     const advanced = render(makeBot());
     const card = destinations(advanced)[1]!;
     expect(card.props.disabled).toBe(true);
-    expect(text(card.props.children)).toBe(`Cloud desktop${tile.props.title}`);
+    expect(text(card.props.children)).toBe(`Private desktop${tile.props.title}`);
     expect(card.props.title).toBe(tile.props.title);
   });
 
@@ -481,7 +481,6 @@ describe("Where the bot works", () => {
   it("dispatches exactly what the Advanced picker dispatches for each place", () => {
     const expected = [
       { computer: null },
-      { computer: "cloud" },
       { computer: "vm" },
       { computer: "local" },
       { computer: "browser", browser: true },

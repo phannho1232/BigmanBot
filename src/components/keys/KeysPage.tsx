@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import { useStore, type ConfigStatus } from "@/state/store";
 import { cn } from "@/lib/cn";
+import { placeOffered } from "@/lib/place";
 import { scrollParent, scrollWithin } from "@/lib/scroll-within";
 import { t } from "@/lib/i18n";
 import { BoatOfferPanel } from "../BoatOffer";
@@ -123,9 +124,10 @@ function landOn(page: HTMLElement | null, request: KeyFocusRequest, section: Key
 
 export function KeysPage() {
   const { state } = useStore();
+  const catalog = KEY_CATALOG.filter((entry) => entry.id !== "box" || placeOffered("cloud", state.config));
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<ReadonlySet<KeySectionId>>(() => new Set(
-    KEY_SECTIONS.filter((section) => section.id === "ai" || KEY_CATALOG.some((entry) => entry.section === section.id && connected(entry, state.config)))
+    KEY_SECTIONS.filter((section) => section.id === "ai" || catalog.some((entry) => entry.section === section.id && connected(entry, state.config)))
       .map((section) => section.id),
   ));
   const pageRef = useRef<HTMLDivElement>(null);
@@ -134,7 +136,7 @@ export function KeysPage() {
 
   useEffect(() => {
     if (!focus) return;
-    const section = KEY_CATALOG.find((entry) => entry.id === focus.row)?.section ?? "ai";
+    const section = catalog.find((entry) => entry.id === focus.row)?.section ?? "ai";
     setQuery("");
     setOpen((current) => current.has(section) ? current : new Set([...current, section]));
     let frame = 0;
@@ -145,11 +147,11 @@ export function KeysPage() {
     };
     frame = window.requestAnimationFrame(attempt);
     return () => window.cancelAnimationFrame(frame);
-  }, [focus]);
+  }, [catalog, focus]);
 
   // With Azure chosen, Live calls do not use the OpenAI key that row points at.
   const azureLive = state.config?.live?.provider === "azure";
-  const rows = KEY_CATALOG.filter((entry) => keyMatches(entry, q) && !(azureLive && entry.id === "liveCalls"));
+  const rows = catalog.filter((entry) => keyMatches(entry, q) && !(azureLive && entry.id === "liveCalls"));
   const sections = KEY_SECTIONS.flatMap((section) => {
     const own = rows.filter((entry) => entry.section === section.id);
     return own.length > 0 ? [{ id: section.id, rows: own }] : [];

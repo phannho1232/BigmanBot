@@ -7,6 +7,7 @@ import { APP_REPOSITORY } from "@/lib/app-links";
 import { track } from "@/lib/analytics";
 import { boatOfferRuns } from "@/lib/boat-offer";
 import { brandStatus } from "@/lib/brand";
+import { placeOffered } from "@/lib/place";
 import { buyOfferAllowed, cloudNoticeKind, cloudPlanView, cloudTrialNotice, cloudTrialView, offerTrialDays } from "@/lib/cloud-plan";
 import { jobRoutine, useCloudIntent } from "@/lib/cloud-intent";
 import { CLOUD_INTENT_GIVEN, cloudSetupStage } from "@/lib/cloud-setup";
@@ -150,7 +151,7 @@ export function AppNotices({ quiet = false, viewer = null, now = Date.now }: { q
   const promptSeen = useSimpleModePromptSeen(), newLookDue = useNewLookDue();
   const simpleDue = SIMPLE_ONLY ? newLookDue : !promptSeen;
   const simpleBlocked = useOtherDialogOpen(simpleDue) || Boolean(state.liveCall && state.liveCall.status !== "ended");
-  const boatHere = boatOfferRuns(now()) && brandStatus().source !== "file";
+  const boatHere = placeOffered("cloud", state.config) && boatOfferRuns(now()) && brandStatus().source !== "file";
 
   const trial = plan?.trial;
   const key = trial ? trialKey(trial) : null;

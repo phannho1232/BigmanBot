@@ -1121,7 +1121,7 @@ export function ComputerPanel({
     const unavailableTitle = managedBy ?? (issue ? view.line : mode === "browser" ? t("computer.browserOnlyTitle") : undefined);
     return { mode, labelKey, descriptionKey, Icon, simpleLabel: worksOnSimpleLabel(mode ?? undefined, capabilities.host.platform), selected, managedBy, disabled, unavailableTitle, view, issue };
   });
-  const worksOnView = placeOptions.find(({ selected }) => selected)?.view ?? autoView;
+  const worksOnView = placeOptions.find(({ selected }) => selected)?.view ?? (profileBot.computer === "cloud" ? cloudView : autoView);
   const runPlaceAction = (id: PlaceActionId) => {
     if (id === "start" || id === "wake") return startCloudComputer();
     if (id === "try-again") return setRetry((n) => n + 1);
