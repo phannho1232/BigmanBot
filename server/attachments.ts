@@ -72,8 +72,17 @@ const IMAGE_MIMES: Record<string, string> = {
 /** No binaries, HTML, SVG or scripts; archives are kept as sent, never unpacked. The claimed mime picks the extension; an attacker's filename never does. */
 const FILE_MIMES: Readonly<Record<string, string>> = {
   "video/mp4": ".mp4",
+  "video/x-m4v": ".m4v",
   "video/webm": ".webm",
   "video/quicktime": ".mov",
+  "video/x-matroska": ".mkv",
+  "video/x-msvideo": ".avi",
+  "video/x-ms-wmv": ".wmv",
+  "video/x-flv": ".flv",
+  "video/mpeg": ".mpg",
+  "video/3gpp": ".3gp",
+  "application/x-subrip": ".srt",
+  "text/vtt": ".vtt",
   "audio/opus": ".opus",
   "audio/ogg": ".ogg",
   "audio/mpeg": ".mp3",
@@ -86,6 +95,8 @@ const FILE_MIMES: Readonly<Record<string, string>> = {
   "audio/flac": ".flac",
   "audio/x-flac": ".flac",
   "audio/webm": ".webm",
+  "audio/x-ms-wma": ".wma",
+  "audio/amr": ".amr",
   "text/plain": ".txt",
   "text/markdown": ".md",
   "text/csv": ".csv",
@@ -350,9 +361,16 @@ async function withUploadLock<T>(uploadId: string | undefined, operation: () => 
   }
 }
 
+const SAFE_TEXT_EXTENSIONS = new Set([
+  ".txt", ".srt", ".vtt", ".ass", ".ssa", ".sub", ".lrc",
+  ".xml", ".yaml", ".yml", ".toml", ".ini", ".env", ".log",
+  ".sql", ".jsonl", ".ndjson", ".py", ".js", ".ts", ".tsx",
+  ".jsx", ".css", ".sh", ".bat", ".ps1",
+]);
+
 /** saveFile/saveImage only ever write `${uuid}${extension}` with one of these extensions. */
 const KNOWN_ATTACHMENT_EXTENSIONS = Array.from(
-  new Set([...Object.values(IMAGE_MIMES), ...Object.values(FILE_MIMES)]),
+  new Set([...Object.values(IMAGE_MIMES), ...Object.values(FILE_MIMES), ...SAFE_TEXT_EXTENSIONS]),
 );
 
 function statSizeIfFile(path: string): number | null {
@@ -409,8 +427,8 @@ export function extensionForFileMime(mime: string | undefined): string | null {
 
 /** Separators and encoded separators are rejected, not massaged, so traversal attempts stay visible as bad requests. */
 export function sanitizeSharedFileName(name: string, mime: string): string {
-  const extension = extensionForFileMime(mime);
-  if (!extension) throw statusError(400, "content-type must be a supported document or audio type");
+  const baseExtension = extensionForFileMime(mime);
+  if (!baseExtension) throw statusError(400, "content-type must be a supported document or audio type");
 
   const normalized = name.normalize("NFKC").trim();
   if (!normalized) throw statusError(400, "name is required");
@@ -420,6 +438,8 @@ export function sanitizeSharedFileName(name: string, mime: string): string {
   }
 
   const dot = normalized.lastIndexOf(".");
+  const rawExt = dot > 0 ? normalized.slice(dot).toLowerCase() : "";
+  const extension = baseExtension === ".txt" && SAFE_TEXT_EXTENSIONS.has(rawExt) ? rawExt : baseExtension;
   const withoutExtension = dot > 0 ? normalized.slice(0, dot) : normalized;
   const safeCharacters = Array.from(withoutExtension, (character) => {
     const code = character.charCodeAt(0);
@@ -447,7 +467,7 @@ export async function saveFile(
     throw statusError(400, "content-type must be a supported document or audio type");
   }
   const name = sanitizeSharedFileName(originalName, normalized);
-  const extension = extensionForFileMime(normalized)!;
+  const extension = extname(name).toLowerCase() || extensionForFileMime(normalized)!;
   const uploadId = validateAttachmentUploadId(options.uploadId);
   const expectedBytes = options.expectedBytes;
   if (expectedBytes !== undefined && (!Number.isSafeInteger(expectedBytes) || expectedBytes < 0)) {

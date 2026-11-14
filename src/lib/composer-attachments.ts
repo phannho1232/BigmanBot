@@ -176,19 +176,64 @@ const DOCUMENT_MIMES: Readonly<Record<string, string>> = {
   ods: "application/vnd.oasis.opendocument.spreadsheet",
   odp: "application/vnd.oasis.opendocument.presentation",
   xmind: "application/vnd.xmind.workbook",
+  xlsm: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  srt: "text/plain",
+  vtt: "text/plain",
+  ass: "text/plain",
+  ssa: "text/plain",
+  sub: "text/plain",
+  lrc: "text/plain",
+  xml: "text/plain",
+  yaml: "text/plain",
+  yml: "text/plain",
+  toml: "text/plain",
+  ini: "text/plain",
+  env: "text/plain",
+  log: "text/plain",
+  sql: "text/plain",
+  jsonl: "text/plain",
+  ndjson: "text/plain",
+  py: "text/plain",
+  js: "text/plain",
+  ts: "text/plain",
+  tsx: "text/plain",
+  jsx: "text/plain",
+  css: "text/plain",
+  sh: "text/plain",
+  bat: "text/plain",
+  ps1: "text/plain",
 };
 
 const ACCEPTED_DOCUMENT_MIMES = new Set(Object.values(DOCUMENT_MIMES));
 
+const VIDEO_MIMES_BY_EXTENSION: Readonly<Record<string, string>> = {
+  mp4: "video/mp4",
+  m4v: "video/x-m4v",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  mkv: "video/x-matroska",
+  avi: "video/x-msvideo",
+  wmv: "video/x-ms-wmv",
+  flv: "video/x-flv",
+  mpg: "video/mpeg",
+  mpeg: "video/mpeg",
+  "3gp": "video/3gpp",
+};
+
+const ACCEPTED_VIDEO_MIMES = new Set(Object.values(VIDEO_MIMES_BY_EXTENSION));
+
 const AUDIO_MIMES_BY_EXTENSION: Readonly<Record<string, string>> = {
   opus: "audio/opus",
   ogg: "audio/ogg",
+  oga: "audio/ogg",
   mp3: "audio/mpeg",
   m4a: "audio/mp4",
   aac: "audio/aac",
   wav: "audio/wav",
   flac: "audio/flac",
   webm: "audio/webm",
+  wma: "audio/x-ms-wma",
+  amr: "audio/amr",
 };
 /** Sent as plain files and never unpacked; typed by name alone, since browsers declare archives inconsistently. */
 const ARCHIVE_MIMES_BY_EXTENSION: Readonly<Record<string, string>> = {
@@ -372,8 +417,10 @@ export async function imageAttachmentFromFile(
 export async function fileAttachmentFromFile(file: File): Promise<FileAttachment | null> {
   const declared = file.type.split(";", 1)[0]!.trim().toLowerCase();
   const extension = file.name.split(".").at(-1)?.toLowerCase() ?? "";
-  const mime = documentMime(file) ??
+  const mime = (ACCEPTED_VIDEO_MIMES.has(declared) ? declared : undefined) ??
+    documentMime(file) ??
     (ACCEPTED_AUDIO_MIMES.has(declared) ? declared : AUDIO_MIMES_BY_EXTENSION[extension]) ??
+    VIDEO_MIMES_BY_EXTENSION[extension] ??
     ARCHIVE_MIMES_BY_EXTENSION[extension];
   if (!mime) return null;
   if (file.size > FILE_MAX_BYTES) throw new AttachError(file.name, FILE_MAX_BYTES);

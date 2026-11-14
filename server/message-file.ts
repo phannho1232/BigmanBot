@@ -335,7 +335,32 @@ function containedBy(root: string, candidate: string): boolean {
 export function mimeFor(path: string): string {
   switch (extname(path).toLowerCase()) {
     case ".md": return "text/markdown; charset=utf-8";
-    case ".txt": return "text/plain; charset=utf-8";
+    case ".txt":
+    case ".srt":
+    case ".vtt":
+    case ".ass":
+    case ".ssa":
+    case ".sub":
+    case ".lrc":
+    case ".xml":
+    case ".yaml":
+    case ".yml":
+    case ".toml":
+    case ".ini":
+    case ".env":
+    case ".log":
+    case ".sql":
+    case ".jsonl":
+    case ".ndjson":
+    case ".py":
+    case ".js":
+    case ".ts":
+    case ".tsx":
+    case ".jsx":
+    case ".css":
+    case ".sh":
+    case ".bat":
+    case ".ps1": return "text/plain; charset=utf-8";
     case ".csv": return "text/csv; charset=utf-8";
     case ".tsv": return "text/tab-separated-values; charset=utf-8";
     case ".json": return "application/json";
