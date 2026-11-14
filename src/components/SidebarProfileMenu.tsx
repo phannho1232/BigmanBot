@@ -4,6 +4,7 @@ import {
   Archive,
   ArrowDownToLine,
   ArrowLeftRight,
+  Building2,
   Check,
   CreditCard,
   Cloud,
@@ -307,11 +308,12 @@ export function phoneDevicesItem(state: PhonePlaceState, place: string, onSelect
   };
 }
 
-export function toolMenuItems({ activeView, automationsNeedYou, onAutomations, onTeamMap, onFiles, onPublishedApps, archived }: {
+export function toolMenuItems({ activeView, automationsNeedYou, onAutomations, onTeamMap, onVirtualOffice, onFiles, onPublishedApps, archived }: {
   activeView: string;
   automationsNeedYou: boolean;
   onAutomations: () => void;
   onTeamMap: () => void;
+  onVirtualOffice?: () => void;
   /** set once My Cloud's files are ready to open */
   onFiles?: () => void;
   onPublishedApps?: () => void;
@@ -320,6 +322,7 @@ export function toolMenuItems({ activeView, automationsNeedYou, onAutomations, o
   return [
     { key: "automations", label: t("sidebar.nav.automations"), icon: <Zap size={16} />, active: activeView === "routines", attention: automationsNeedYou, onSelect: onAutomations },
     { key: "team-map", label: t("sidebar.nav.teamMap"), icon: <UsersRound size={16} />, active: activeView === "team-map", onSelect: onTeamMap },
+    ...(onVirtualOffice ? [{ key: "virtual-office", label: t("sidebar.nav.virtualOffice"), icon: <Building2 size={16} />, active: activeView === "virtual-office", onSelect: onVirtualOffice }] : []),
     ...(onFiles ? [{ key: "files", label: t("sidebar.nav.files"), icon: <FolderOpen size={16} />, active: activeView === "files", onSelect: onFiles }] : []),
     ...(onPublishedApps ? [{ key: "published-apps", label: t("sidebar.nav.publishedApps"), icon: <Rocket size={16} />, active: activeView === "published-apps", onSelect: onPublishedApps }] : []),
     ...(archived?.count ? [{ key: "archived", label: t("sidebar.archived.title"), icon: <Archive size={16} />, value: String(archived.count), onSelect: archived.open }] : []),
@@ -590,6 +593,7 @@ export function SidebarProfileMenu({ iconOnly = false, rail = false, circle = fa
         automationsNeedYou: account?.automationsNeedYou ?? automationsNeedYou,
         onAutomations: () => dispatch({ type: "showRoutines", view: "list" }),
         onTeamMap: () => dispatch({ type: "showTeamMap" }),
+        onVirtualOffice: () => dispatch({ type: "showVirtualOffice" }),
         onFiles: filesReady ? () => dispatch({ type: "showFiles" }) : undefined,
         onPublishedApps: () => dispatch({ type: "showPublishedApps" }),
         archived: account?.archived,

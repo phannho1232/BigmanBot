@@ -137,14 +137,20 @@ describe("sidebar footer places", () => {
     expect(render("comfortable").html).not.toContain('data-testid="routines-attention"');
   });
 
-  it("shows Team map as its own row in Advanced mode, with no Tools menu", () => {
+  it("shows Team map and 3D office as their own rows in Advanced mode, with no Tools menu", () => {
     fixture.advanced = true;
     const { nodes: tree, html } = render("comfortable");
     expect(html).toContain(">Team map</span>");
+    expect(html).toContain(">3D office</span>");
     expect(html).not.toContain("aria-haspopup");
     const row = tree.find((node) => node.props.id === "team-map")!;
     (row.props.onClick as () => void)();
     expect(fixture.dispatch).toHaveBeenCalledWith({ type: "showTeamMap" });
+    const officeRow = tree.find((node) => node.props.id === "virtual-office")!;
+    (officeRow.props.onClick as () => void)();
+    expect(fixture.dispatch).toHaveBeenCalledWith({ type: "showVirtualOffice" });
+    fixture.state.activeView = "virtual-office";
+    expect(render("comfortable").html).toMatch(/data-sidebar-nav="virtual-office"[^>]*aria-current="page"/);
   });
 
   it("draws icons with tooltips in the avatars-only density", () => {
@@ -281,9 +287,9 @@ describe("toolbar tools layout", () => {
     expect(render("comfortable", { toolsLayout: "toolbar" }).html).not.toContain('data-testid="routines-attention"');
   });
 
-  it("toolbar applies to Advanced mode's three places; Simple mode keeps them in the bottom bar instead", () => {
+  it("toolbar applies to Advanced mode's four places; Simple mode keeps them in the bottom bar instead", () => {
     fixture.advanced = true;
-    expect(render("comfortable", { toolsLayout: "toolbar" }).html.match(/data-sidebar-nav="/g)).toHaveLength(3);
+    expect(render("comfortable", { toolsLayout: "toolbar" }).html.match(/data-sidebar-nav="/g)).toHaveLength(4);
     fixture.advanced = false;
     expect(render("comfortable", { toolsLayout: "toolbar" }).html).toBe("");
   });

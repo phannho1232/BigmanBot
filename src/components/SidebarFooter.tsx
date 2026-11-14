@@ -1,7 +1,9 @@
+import { Building2 } from "lucide-react";
 import { useRef } from "react";
 
 import { appVersion } from "@/lib/app-links";
 import { cn } from "@/lib/cn";
+import { t } from "@/lib/i18n";
 import type { SidebarDensity } from "@/lib/sidebar-preferences";
 import { useStore } from "@/state/store";
 
@@ -13,7 +15,28 @@ import { SidebarConnectApps } from "./SidebarConnectApps";
 import { SidebarBottomButtons, SidebarFooterNav } from "./SidebarFooterNav";
 import { phoneSettingsAction, SidebarPhoneButton } from "./SidebarPhoneButton";
 import { SidebarProfileMenu, useSimpleAccount, type ArchivedBots } from "./SidebarProfileMenu";
+import { SIMPLE_TOP_BUTTON } from "./SidebarSimpleTop";
 import { UpdateIndicator } from "./UpdateIndicator";
+
+export function SidebarVirtualOfficeButton() {
+  const { state, dispatch } = useStore();
+  const active = state.activeView === "virtual-office" && !state.pluginsOpen;
+  const label = t("sidebar.nav.virtualOffice");
+  return (
+    <button
+      type="button"
+      data-tour="nav-virtual-office"
+      data-sidebar-nav="virtual-office"
+      aria-pressed={active}
+      aria-label={label}
+      title={label}
+      onClick={() => dispatch({ type: "showVirtualOffice" })}
+      className={cn(SIMPLE_TOP_BUTTON, active && "bg-accent/15 text-accent")}
+    >
+      <Building2 size={18} strokeWidth={1.5} aria-hidden="true" />
+    </button>
+  );
+}
 
 export function useSimplePlace(): WorkspacePlace {
   const { state, dispatch } = useStore();
@@ -43,6 +66,7 @@ function SimpleSidebarFooter({ owner, archived }: { owner: string | null; archiv
       <div className="flex items-center gap-2 not-first:mt-2">
         <SidebarProfileMenu simple={account} />
         <SidebarConnectApps />
+        <SidebarVirtualOfficeButton />
         <UpdateIndicator className="size-9" />
         <span className="ms-auto select-none font-mono text-[10px] text-ink-tertiary/70" title={`Bigman Bot v${appVersion()}`}>
           v{appVersion()}

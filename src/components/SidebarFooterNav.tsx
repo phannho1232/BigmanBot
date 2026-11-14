@@ -1,4 +1,4 @@
-import { AppWindow, FolderOpen, Globe, Puzzle, Rocket, UsersRound, Zap } from "lucide-react";
+import { AppWindow, Building2, FolderOpen, Globe, Puzzle, Rocket, UsersRound, Zap } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 
 import { useAppTriggers } from "@/lib/app-triggers";
@@ -162,15 +162,25 @@ export function SidebarFooterNav({
       {automationsRow}
       {appsRow}
       {(advanced || iconsOnly) && (
-        <NavRow
-          id="team-map"
-          label={t("sidebar.nav.teamMap")}
-          tourId="team-tools"
-          iconsOnly={iconsOnly || toolbar}
-          active={state.activeView === "team-map"}
-          icon={(active) => <UsersRound size={iconSize} className={tone(active)} />}
-          onClick={() => dispatch({ type: "showTeamMap" })}
-        />
+        <>
+          <NavRow
+            id="team-map"
+            label={t("sidebar.nav.teamMap")}
+            tourId="team-tools"
+            iconsOnly={iconsOnly || toolbar}
+            active={state.activeView === "team-map"}
+            icon={(active) => <UsersRound size={iconSize} className={tone(active)} />}
+            onClick={() => dispatch({ type: "showTeamMap" })}
+          />
+          <NavRow
+            id="virtual-office"
+            label={t("sidebar.nav.virtualOffice")}
+            iconsOnly={iconsOnly || toolbar}
+            active={state.activeView === "virtual-office"}
+            icon={(active) => <Building2 size={iconSize} className={tone(active)} />}
+            onClick={() => dispatch({ type: "showVirtualOffice" })}
+          />
+        </>
       )}
       {filesRow}
       <NavRow
