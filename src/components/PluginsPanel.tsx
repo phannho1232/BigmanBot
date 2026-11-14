@@ -77,6 +77,7 @@ export function botsWithLimitedServiceTools(bots: Bot[], instances: InstanceInfo
 /** Whether a hosted app's card shows: it matches the search, and the filter is All, or Connected and it isn't known to be
  * disconnected (unknown while its servers load). */
 export function hostedShown(app: HostedApp, search: string, filter: AppsFilter, connected: HostedConnections | null): boolean {
+  if (activeLocale() === "vi" && connected?.[app.id] !== true) return false;
   const matches = !search || `${app.label} ${app.keywords} ${t(app.description)}`.toLowerCase().includes(search.toLowerCase().trim());
   return matches && (filter === "all" || (filter === "connected" && connected?.[app.id] !== false));
 }
@@ -149,6 +150,7 @@ export function PluginsPanel() {
   const [xConnected, setXConnected] = useState<boolean | null>(null);
   const [postizConnected, setPostizConnected] = useState<boolean | null>(null);
   const [emailConnected, setEmailConnected] = useState<boolean | null>(null);
+  const [mcpServers, setMcpServers] = useState<McpServerListing[]>([]);
   const [vnBrowserReady, setVnBrowserReady] = useState(false);
   const [signedInDomains, setSignedInDomains] = useState<string[]>([]);
   const [vnPayments, setVnPayments] = useState<{
@@ -173,7 +175,6 @@ export function PluginsPanel() {
   const [vietQrAccountNo, setVietQrAccountNo] = useState("");
   const [vietQrAccountName, setVietQrAccountName] = useState("");
   const [sePayToken, setSePayToken] = useState("");
-  const [mcpServers, setMcpServers] = useState<McpServerListing[]>([]);
 
   const disconnectingRef = useRef<{ slug: string; label: string; account: ConnectorAccount } | null>(null);
   const polls = useRef(new Map<string, () => void>());
