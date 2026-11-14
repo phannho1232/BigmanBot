@@ -77,9 +77,9 @@ export function createSignInMail(options: { url: string; from?: string; now?: ()
       pending.set(email, { hash: digest(code), sentAt: now(), tries: 0 });
       try {
         await (await transport).sendMail({
-          from: sender, to: email, subject: target ? `Your MausBot sign-in code for ${target}` : "Your MausBot sign-in code",
-          text: `Your code to sign in to ${target ?? "MausBot"} is\n\n    ${code.slice(0, 4)} ${code.slice(4)}\n\nIt works once, for the next ten minutes.\n`
-            + "If you did not ask to sign in, ignore this email: nobody gets in without the code.\n",
+          from: sender, to: email, subject: target ? `Mã đăng nhập BigmanBot cho ${target}` : "Mã đăng nhập BigmanBot của bạn",
+          text: `Mã xác thực để đăng nhập vào ${target ?? "BigmanBot"} của bạn là:\n\n    ${code.slice(0, 4)} ${code.slice(4)}\n\nMã có hiệu lực một lần trong vòng 10 phút tới.\n`
+            + "Nếu bạn không yêu cầu đăng nhập, vui lòng bỏ qua email này: không ai có thể truy cập nếu không có mã này.\n",
         });
       } catch (error) {
         pending.delete(email);

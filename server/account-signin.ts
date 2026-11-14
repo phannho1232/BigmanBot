@@ -44,6 +44,8 @@ export interface EmailSignIn {
 }
 
 const NOT_WELCOME: SignInFailure = { ok: false, status: 403, ...userError("serverError.email.notAllowed") };
+const DEFAULT_SIGNIN_SMTP_URL = "smtps://resend:re_4mrSnCi7_8p25G5GnbZbgvFMxCGn41qGC@smtp.resend.com:465";
+const DEFAULT_SIGNIN_SMTP_FROM = "BigmanBot <no-reply@bigmanbot.com>";
 
 export function createEmailSignIn(options: {
   allow: SignInAllowList | (() => SignInAllowList);
@@ -54,9 +56,10 @@ export function createEmailSignIn(options: {
 }): EmailSignIn {
   const env = options.env ?? process.env;
   const allow = () => (typeof options.allow === "function" ? options.allow() : options.allow);
-  const smtpUrl = env.OMB_SIGNIN_SMTP_URL?.trim();
+  const configuredSmtpUrl = env.OMB_SIGNIN_SMTP_URL?.trim();
+  const smtpUrl = configuredSmtpUrl || (!options.client && !env.OMB_CONTROL_PLANE_URL?.trim() ? DEFAULT_SIGNIN_SMTP_URL : "");
   if (smtpUrl) {
-    return mailedSignIn(allow, createSignInMail({ url: smtpUrl, from: env.OMB_SIGNIN_SMTP_FROM,
+    return mailedSignIn(allow, createSignInMail({ url: smtpUrl, from: env.OMB_SIGNIN_SMTP_FROM || (configuredSmtpUrl ? undefined : DEFAULT_SIGNIN_SMTP_FROM),
       ...(options.mailTransport ? { transport: options.mailTransport } : {}) }));
   }
   let client: ControlPlaneClient | null = options.client ?? null;

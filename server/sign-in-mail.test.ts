@@ -26,7 +26,7 @@ describe("sign-in codes through the server's own mail server", () => {
     const box = mailbox();
     const mail = createSignInMail({ url: URL_, transport: box.transport });
     expect(await mail.send("her@example.test")).toBe("sent");
-    expect(box.sent[0]).toMatchObject({ from: "signin@example.test", to: "her@example.test", subject: "Your MausBot sign-in code" });
+    expect(box.sent[0]).toMatchObject({ from: "signin@example.test", to: "her@example.test", subject: "Mã đăng nhập BigmanBot của bạn" });
     const code = box.code();
     expect(code).toMatch(/^\d{8}$/);
     expect(mail.check("other@example.test", code)).toBe("wrong");
@@ -38,8 +38,8 @@ describe("sign-in codes through the server's own mail server", () => {
   it("names the server the code signs in to in the subject", async () => {
     const box = mailbox();
     await createSignInMail({ url: URL_, transport: box.transport }).send("her@example.test", "maus.example.com");
-    expect(box.sent[0]).toMatchObject({ subject: "Your MausBot sign-in code for maus.example.com" });
-    expect(box.sent[0]?.text).toContain("to sign in to maus.example.com is");
+    expect(box.sent[0]).toMatchObject({ subject: "Mã đăng nhập BigmanBot cho maus.example.com" });
+    expect(box.sent[0]?.text).toContain("để đăng nhập vào maus.example.com của bạn là");
   });
 
   it("ends a code after ten minutes or five wrong tries, and sends at most one every 30 seconds", async () => {
