@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, BookOpen, Box, Loader2, Monitor, Plus, Save, Users, UsersRound, X } from "lucide-react";
+import { ArrowRight, BookOpen, Box, Building2, Loader2, Monitor, Plus, Save, Users, UsersRound, X } from "lucide-react";
 
 import { api, formatTime, openBot, openThread, useStore, type Bot } from "@/state/store";
 import {
@@ -25,6 +25,7 @@ import { useMapComputers, useShowComputers } from "@/lib/map-computers";
 import { MapComposer } from "./MapComposer";
 import { useOwnerOrAdmin } from "@/lib/use-owner-or-admin";
 import { openBotSettings } from "./bot-panel/panel-link";
+import { VirtualOfficePage } from "./lazy-screens";
 import type { TeamComputer } from "../../shared/team-computer";
 
 export function EdgeRow({ edge, bots }: { edge: TeamMapEdge; bots: Bot[] }) {
@@ -361,6 +362,16 @@ export function TeamMapPage() {
           <p className="mt-1 text-[12px] text-ink-secondary">{t("canvas.description")}</p>
         </div>
         {!remoteClient && <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onMouseEnter={() => void VirtualOfficePage.preload().catch(() => {})}
+            onFocus={() => void VirtualOfficePage.preload().catch(() => {})}
+            onClick={() => dispatch({ type: "showVirtualOffice" })}
+            className="flex items-center gap-1.5 rounded-lg border border-hairline/60 bg-panel px-3 py-2 text-[12px] font-medium text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+          >
+            <Building2 size={14} />
+            <span>{t("sidebar.nav.virtualOffice")}</span>
+          </button>
           <button onClick={() => setShowComputers(!showComputers)} aria-pressed={showComputers} title={t("canvas.showComputersHint")}
             className={cn("flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] font-medium transition-colors", showComputers ? "border-accent/40 bg-accent/10 text-ink" : "border-hairline/60 bg-panel text-ink-secondary hover:bg-control hover:text-ink")}>
             <span aria-hidden className={cn("relative h-4 w-7 shrink-0 rounded-full transition-colors", showComputers ? "bg-accent" : "bg-control")}>

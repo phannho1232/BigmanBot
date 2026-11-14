@@ -135,6 +135,7 @@ export function GroupBars({ groupBy, groups }: { groupBy: UsageGroupBy; groups: 
       if (!existing) {
         byName.set(resolved, { ...group, label: resolved });
       } else {
+        existing.barTokens = barTokens(existing) + barTokens(group);
         existing.turns += group.turns;
         existing.input += group.input;
         existing.output += group.output;

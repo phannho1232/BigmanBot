@@ -414,10 +414,13 @@ describe("Simple mode's account menu", () => {
 
   it("has Published apps among the tools, after Files and before Archived bots, lit while its page is open", () => {
     const openApps = vi.fn();
-    const items = toolMenuItems({ activeView: "published-apps", automationsNeedYou: false, onAutomations: noop, onTeamMap: noop, onFiles: noop, onPublishedApps: openApps, archived: { count: 1, open: noop } });
-    expect(items.map((item) => [item.key, item.label, item.active])).toEqual([["automations", "Automations", false], ["team-map", "Team map", false], ["files", "Files", false],
+    const openOffice = vi.fn();
+    const items = toolMenuItems({ activeView: "published-apps", automationsNeedYou: false, onAutomations: noop, onTeamMap: noop, onVirtualOffice: openOffice, onFiles: noop, onPublishedApps: openApps, archived: { count: 1, open: noop } });
+    expect(items.map((item) => [item.key, item.label, item.active])).toEqual([["automations", "Automations", false], ["team-map", "Team map", false], ["virtual-office", "3D office", false], ["files", "Files", false],
       ["published-apps", "Published apps", true], ["archived", "Archived bots", undefined]]);
-    items[3]!.onSelect();
+    items[2]!.onSelect();
+    expect(openOffice).toHaveBeenCalledOnce();
+    items[4]!.onSelect();
     expect(openApps).toHaveBeenCalledOnce();
   });
 

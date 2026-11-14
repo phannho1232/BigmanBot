@@ -16,9 +16,10 @@ const HARD_CAP = 2000;
 const LISTED_FROM = 1000;
 
 const LINES: Record<string, number> = {
-  "server/index.ts": 15448,
+  "server/index.ts": 15464,
   "src/state/store.tsx": 3293,
-  "electron/main.mjs": 3160,
+  "electron/main.mjs": 3324,
+  "electron/computer-sharing.mjs": 1001,
   "server/store.ts": 2289,
   "src/components/Sidebar.tsx": 1687,
   "server/drivers/claude.ts": 2087,
@@ -31,10 +32,12 @@ const LINES: Record<string, number> = {
   "src/components/ChatView.tsx": 1282,
   "server/routine-requests.ts": 1474,
   "src/components/GroupView.tsx": 1215,
-  "src/components/LocalComputerSection.tsx": 1437,
+  "src/components/LocalComputerSection.tsx": 1440,
+  "src/components/PluginsPanel.tsx": 1328,
   "src/components/CursorAvatar.tsx": 1324,
   "server/skills.ts": 1379,
-  "server/composio.ts": 1038,
+  "server/browser/viewers/core.ts": 1108,
+  "server/composio.ts": 1043,
   "server/vps-computer.ts": 1287,
   "scripts/mcp-server.ts": 1411,
   "server/boat.ts": 1253,
@@ -44,7 +47,7 @@ const LINES: Record<string, number> = {
   "src/components/ModelPicker.tsx": 1039,
   "src/components/PhoneSetupFlow.tsx": 1089,
   "server/cli.ts": 1053,
-  "src/components/AttachmentPreview.tsx": 1034,
+  "src/components/AttachmentPreview.tsx": 1061,
   "server/meetings/meetbot.ts": 1047,
 };
 

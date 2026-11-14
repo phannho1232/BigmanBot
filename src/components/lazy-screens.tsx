@@ -88,6 +88,7 @@ export const PhoneAppDialog = lazyScreen("PhoneAppDialog", async () => (await im
 export const ShareTeamDialog = lazyScreen("ShareTeamDialog", async () => (await import("./ShareTeamDialog")).ShareTeamDialog);
 export const GrokMoveDialog = lazyScreen("GrokMoveDialog", async () => (await import("./GrokMoveDialog")).GrokMoveDialog);
 export const TeamLibraryPanel = lazyScreen("TeamLibraryPanel", async () => (await import("./TeamLibraryPanel")).TeamLibraryPanel);
+export const VirtualOfficePage = lazyScreen("VirtualOfficePage", async () => (await import("./VirtualOfficePage")).VirtualOfficePage);
 
 // Most opened first: a Cloud page fetches these in this order.
 const SCREENS = [
