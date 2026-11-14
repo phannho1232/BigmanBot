@@ -16,6 +16,7 @@ import type { Coordinator } from "../coordinator.ts";
 import type { WorkspaceAccess } from "../enterprise.ts";
 import type { GroupUsageReader } from "../group-thread-usage.ts";
 import { readMessage, searchMessagesAsync } from "../message-db.ts";
+import { MessageMediaLinks } from "../message-media-links.ts";
 import {
   listMessageFolder, MESSAGE_FILE_DOWNLOAD_MAX_BYTES, MESSAGE_FILE_MAX_BYTES, messageAttachmentName, messageFileDisposition, messageFileDownloadName, messageFolderEntryName,
   messageImageTargetAt, messageReferencesFile, openMessageFile, openMessageFolderEntry, referencedFileName,
@@ -72,6 +73,9 @@ export interface ThreadRouteDeps {
   keptAttachments?(): ReadonlySet<string> | null;
 }
 
+/** The types the chat's video player accepts; anything else is never streamed inline. */
+const STREAMABLE_VIDEO_MIMES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/x-m4v"]);
+
 export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
   const {
     store, userName: userNameFor, sessions, groupUsageReader, lendingEnabled,
@@ -79,6 +83,7 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
     pageSize, messagePage, messageWindow, publicBotQueuedMessages, publicGroupState, wireBot,
     botComputerControlSnapshot, messageFileRootsForThread, viewerFor, visibleTo,
   } = deps;
+  const mediaLinks = new MessageMediaLinks();
   // tasks stays explicit: clients expect [] where wireBot() would omit the key.
   const shownBot = (bot: BotRecord, visible: VisibleSet, limit: number | undefined) => {
     const wired = wireBot(bot);
@@ -184,10 +189,10 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
     const streamsMessageImage = Boolean(
       m && method === "GET" && url.searchParams.get("preview") === "1",
     );
-    const isMessageFileGet = Boolean(
-      m && method === "GET" && (url.searchParams.get("preview") === "1" || url.searchParams.has("path")),
-    );
-    if (m && (method === "POST" || isMessageFileGet)) {
+    // A <video> element can only GET, so a POST first trades its body for a link id.
+    const mediaId = m && method === "GET" && !streamsMessageImage ? url.searchParams.get("media") : null;
+    const isPathGet = Boolean(m && method === "GET" && !streamsMessageImage && !mediaId && url.searchParams.has("path"));
+    if (m && (method === "POST" || streamsMessageImage || mediaId || isPathGet)) {
       if (method === "POST" && !String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
         return json(res, 415, { error: "content-type must be application/json" });
       }
@@ -202,16 +207,22 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
         return json(res, 403, { error: "that message does not share this file" });
       }
       const messageText = message.text ?? "";
+      // Only this viewer's link for this message; every check below runs again on what it stands for.
+      const mediaGrant = mediaId ? mediaLinks.use(mediaId, threadId, message.id, auth) : null;
+      if (mediaId && !mediaGrant) return json(res, 404, { error: "that video link has expired", code: "media_link_expired" });
       const body = method === "POST" ? await readBody(req) : null;
+      const asksMediaLink = body?.media === true;
       const rawReference = streamsMessageImage ? url.searchParams.get("ref") : null;
       if (streamsMessageImage && (!rawReference || !/^\d+$/.test(rawReference))) {
         return json(res, 400, { error: "ref must identify a rendered image" });
       }
-      const href = method === "POST"
-        ? (typeof body.path === "string" ? body.path : "")
-        : streamsMessageImage
-          ? messageImageTargetAt(messageText, Number(rawReference))
-          : (url.searchParams.get("path") ?? "");
+      const href = mediaGrant
+        ? mediaGrant.path
+        : method === "POST"
+          ? (typeof body.path === "string" ? body.path : "")
+          : streamsMessageImage
+            ? messageImageTargetAt(messageText, Number(rawReference))
+            : (url.searchParams.get("path") ?? "");
       if (!href) return json(res, 400, { error: "path is required" });
 
       let roots: string[];
@@ -242,9 +253,11 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
         roots = [...new Set([...messageFileRootsForThread(senderId, threadId), ...fromRun])];
       }
 
-      const folderEntry = method === "POST" && body.entry !== undefined
-        ? messageFolderEntryName(body.entry)
-        : undefined;
+      const folderEntry = mediaGrant
+        ? mediaGrant.entry
+        : method === "POST" && body.entry !== undefined
+          ? messageFolderEntryName(body.entry)
+          : undefined;
       if (folderEntry === null) return json(res, 400, { error: "entry must be one file name" });
       // An inline image is read whole by the browser; a saved file is streamed below, so it may be larger.
       const maxBytes = streamsMessageImage ? MESSAGE_FILE_MAX_BYTES : MESSAGE_FILE_DOWNLOAD_MAX_BYTES;
@@ -276,56 +289,53 @@ export function createThreadRoutes(deps: ThreadRouteDeps): RouteHandler {
         await file.handle.close();
         return json(res, 415, { error: "only images can be previewed here" });
       }
-      const rawRange = Array.isArray(req.headers.range) ? req.headers.range[0] : req.headers.range;
+      if ((asksMediaLink || mediaGrant) && !STREAMABLE_VIDEO_MIMES.has(file.mime)) {
+        await file.handle.close();
+        return json(res, 415, { error: "only videos can be played here" });
+      }
+      if (asksMediaLink) {
+        await file.handle.close();
+        const id = mediaLinks.issue({ threadId, messageId: message.id, path: href, ...(folderEntry ? { entry: folderEntry } : {}) }, auth);
+        res.setHeader("x-openmausbot-media", "1");
+        res.setHeader("cache-control", "private, no-store");
+        return json(res, 200, { url: `/api/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(message.id)}/file?media=${id}`, mime: file.mime, bytes: file.bytes });
+      }
       const isDownload = url.searchParams.get("download") === "1";
-      const range = parseAudioRange(rawRange, file.bytes);
-      const headers = {
+      const inline = streamsMessageImage || Boolean(mediaGrant) || (isPathGet && !isDownload);
+      const rawRange = Array.isArray(req.headers.range) ? req.headers.range[0] : req.headers.range;
+      const range = (mediaGrant || isPathGet) ? parseAudioRange(rawRange, file.bytes) : { kind: "none" as const };
+      if (range.kind === "unsatisfiable") {
+        await file.handle.close();
+        res.writeHead(416, { "content-range": `bytes */${file.bytes}`, "cache-control": "private, no-store", "x-content-type-options": "nosniff" });
+        return res.end();
+      }
+      const [start, end] = range.kind === "range" ? [range.start, range.end] : [0, file.bytes - 1];
+      res.writeHead(range.kind === "range" ? 206 : 200, {
         "content-type": file.mime,
-        "accept-ranges": "bytes",
-        ...(streamsMessageImage
+        "content-length": String(end - start + 1),
+        ...(range.kind === "range" ? { "content-range": `bytes ${start}-${end}/${file.bytes}` } : {}),
+        ...((mediaGrant || isPathGet) ? { "accept-ranges": "bytes" } : {}),
+        ...(inline
           ? { "content-disposition": "inline" }
-          : isDownload
-            ? { "content-disposition": messageFileDisposition(messageFileDownloadName(downloadName, file.name)) }
-            : { "content-disposition": "inline" }),
+          : { "content-disposition": messageFileDisposition(messageFileDownloadName(downloadName, file.name)) }),
         "cache-control": "private, no-store",
         "cdn-cache-control": "no-store",
         "cloudflare-cdn-cache-control": "no-store",
         pragma: "no-cache",
         vary: "Authorization",
         "x-content-type-options": "nosniff",
-        ...(streamsMessageImage
+        ...(inline
           ? {
               "cross-origin-resource-policy": "same-origin",
               "referrer-policy": "no-referrer",
             }
           : {}),
-      };
-      if (rawRange && range.kind === "unsatisfiable") {
-        await file.handle.close();
-        res.writeHead(416, { ...headers, "content-range": `bytes */${file.bytes}` });
-        return res.end();
-      }
-      if (rawRange && range.kind === "range") {
-        res.writeHead(206, {
-          ...headers,
-          "content-length": String(range.end - range.start + 1),
-          "content-range": `bytes ${range.start}-${range.end}/${file.bytes}`,
-        });
-        const stream = file.handle.createReadStream({ start: range.start, end: range.end, autoClose: true });
-        stream.on("error", () => res.destroy());
-        res.on("close", () => stream.destroy());
-        stream.pipe(res);
-        return;
-      }
-      res.writeHead(200, {
-        ...headers,
-        "content-length": String(file.bytes),
       });
       if (file.bytes === 0) {
         await file.handle.close();
         return res.end();
       }
-      const stream = file.handle.createReadStream({ start: 0, end: file.bytes - 1, autoClose: true });
+      const stream = file.handle.createReadStream({ start, end, autoClose: true });
       stream.on("error", () => res.destroy());
       res.on("close", () => stream.destroy());
       stream.pipe(res);

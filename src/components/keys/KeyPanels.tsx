@@ -171,6 +171,7 @@ export function VpsConnection() {
         {t("keys.vps.descLink")}
         {t("keys.vps.descAfter")}
       </p>
+      <p className="text-[12px] leading-4 text-ink-secondary">{t("keys.vps.anyMachine")}</p>
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
