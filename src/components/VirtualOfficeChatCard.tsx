@@ -6,7 +6,6 @@ import {
   Focus,
   Loader2,
   MessageCircle,
-  Monitor,
   Plus,
   Settings,
   Square,
@@ -54,7 +53,6 @@ export interface VirtualOfficeChatCardProps {
   botDisplayNames: Record<string, string>;
   instance: InstanceInfo | undefined;
   modelLabel: string;
-  remoteClient: boolean;
   focusInputNonce: number;
   onFocusDesk: (botId: string) => void;
   onClose: () => void;
@@ -77,7 +75,6 @@ export function VirtualOfficeChatCard({
   botDisplayNames,
   instance,
   modelLabel,
-  remoteClient,
   focusInputNonce,
   onFocusDesk,
   onClose,
@@ -301,17 +298,6 @@ export function VirtualOfficeChatCard({
             >
               <Focus size={14} />
             </button>
-            {!remoteClient && (
-              <button
-                type="button"
-                onClick={() => dispatch({ type: "toggleComputer", open: true, botId: bot.id })}
-                title={t("office3d.watchScreen")}
-                aria-label={t("office3d.watchScreen")}
-                className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
-              >
-                <Monitor size={14} />
-              </button>
-            )}
             <button
               type="button"
               onClick={() => openBotSettings(dispatch, "identity", { botId: bot.id })}
@@ -388,24 +374,6 @@ export function VirtualOfficeChatCard({
               ))}
             </select>
           </div>
-        )}
-
-        {desk.screenFrameUrl && !remoteClient && (
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "toggleComputer", open: true, botId: bot.id })}
-            className="group relative mt-2 block w-full overflow-hidden rounded-xl border border-hairline/60 bg-black"
-          >
-            <img
-              src={desk.screenFrameUrl}
-              alt={t("office3d.watchScreen")}
-              className="h-24 w-full object-contain transition group-hover:opacity-90"
-            />
-            <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-medium text-white">
-              <Monitor size={10} />
-              {t("office3d.watchScreen")}
-            </span>
-          </button>
         )}
       </header>
 

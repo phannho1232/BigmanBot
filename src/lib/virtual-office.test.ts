@@ -179,4 +179,19 @@ describe("virtual office spatial plan", () => {
     expect(resolveBotWorkAction(busyBot, "screen")).toBe("screen");
     expect(resolveBotWorkAction(busyBot, "write", true)).toBe("talking");
   });
+
+  it("scales large 66-bot departments into balanced grids instead of narrow corridors", () => {
+    const bots: OfficeBotInput[] = Array.from({ length: 66 }, (_, index) => ({
+      id: `bot-${index + 1}`,
+      name: `Bot ${index + 1}`,
+      section: index < 54 ? "" : "Ops",
+      chiefOfStaff: index === 0 || index === 54,
+      color: "blue",
+    }));
+    const sections = buildTeamMapSections(bots, ["Ops"]);
+    const plan = buildOfficePlan(sections);
+    expect(plan.desks).toHaveLength(66);
+    const ratio = Math.max(plan.floor.width, plan.floor.depth) / Math.min(plan.floor.width, plan.floor.depth);
+    expect(ratio).toBeLessThan(2.1);
+  });
 });

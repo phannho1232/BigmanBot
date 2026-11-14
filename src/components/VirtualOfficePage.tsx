@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Building2, Plus } from "lucide-react";
 
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useCaptionChrome } from "./DesktopCapabilities";
 import {
   BotSettingsDialog,
-  ComputerPanel,
   PublishedAppsPage,
   SettingsModal,
   TeamMapPage,
@@ -21,7 +20,6 @@ import { VirtualOfficeKpiDrawer, VirtualOfficeRosterSidebar } from "./VirtualOff
 import { computerStepLine } from "@/lib/computer-step";
 import { activityPreview, botEngine } from "@/lib/failed-turn";
 import { t } from "@/lib/i18n";
-import { useMapComputers, useShowComputers } from "@/lib/map-computers";
 import {
   EMPTY_TEAM_MAP_SNAPSHOT,
   buildTeamMapEdges,
@@ -95,6 +93,7 @@ export function VirtualOfficePage() {
   const remoteClient = typeof window !== "undefined" && window.ogb?.remoteClient?.active === true;
 
   const [snapshot, setSnapshot] = useState<TeamMapSnapshot>(EMPTY_TEAM_MAP_SNAPSHOT);
+  const lastSnapshotJsonRef = useRef("");
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
   const [chatFocusNonce, setChatFocusNonce] = useState(0);
   const [activePair, setActivePair] = useState<{ visitorBotId: string; hostBotId: string } | null>(null);
@@ -112,7 +111,6 @@ export function VirtualOfficePage() {
   const [moveNotice, setMoveNotice] = useState<string | null>(null);
   const [kpiOpen, setKpiOpen] = useState(false);
   const [lightingMode, setLightingMode] = useState<OfficeLightingMode>("auto");
-  const [autoOrbit, setAutoOrbit] = useState(false);
   const [demoActive, setDemoActive] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [resetNonce, setResetNonce] = useState(0);
@@ -130,19 +128,21 @@ export function VirtualOfficePage() {
   }, [bots, state.sections, state.groups]);
 
   const edges = useMemo(() => buildTeamMapEdges(bots, snapshot), [bots, snapshot]);
-  const anyComputer = bots.some((bot) => bot.computer !== "off");
-  const { show: showScreens, loaded: screensChoiceLoaded, choose: setShowScreens } = useShowComputers(anyComputer);
-  const mapComputers = useMapComputers(!remoteClient && screensChoiceLoaded && showScreens);
 
   const refreshMapSnapshot = useCallback(async (background = false) => {
     try {
-      setSnapshot(await api("/api/team-map", background ? { background } : undefined));
+      const next = await api<TeamMapSnapshot>("/api/team-map", background ? { background } : undefined);
+      const serialized = JSON.stringify(next);
+      if (serialized !== lastSnapshotJsonRef.current) {
+        lastSnapshotJsonRef.current = serialized;
+        setSnapshot(next);
+      }
     } catch {
     }
   }, []);
 
   useEffect(() => {
-    for (const screen of [TeamMapPage, BotSettingsDialog, ComputerPanel, SettingsModal, TriggersPage, PublishedAppsPage]) {
+    for (const screen of [TeamMapPage, BotSettingsDialog, SettingsModal, TriggersPage, PublishedAppsPage]) {
       void screen.preload().catch(() => {});
     }
   }, []);
@@ -151,18 +151,9 @@ export function VirtualOfficePage() {
     void refreshMapSnapshot();
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void refreshMapSnapshot(true);
-    }, 2_000);
+    }, 8_000);
     return () => window.clearInterval(timer);
   }, [refreshMapSnapshot]);
-
-  const anyBusyOrDemo = demoActive || bots.some((bot) => bot.busy || bot.activity === "working") || state.groups.some((group) => group.working || group.busyBotId);
-  useEffect(() => {
-    const intervalMs = anyBusyOrDemo ? 900 : 2_500;
-    const timer = window.setInterval(() => {
-      setClockNow(Date.now());
-    }, intervalMs);
-    return () => window.clearInterval(timer);
-  }, [anyBusyOrDemo]);
 
   const botDisplayNames = useMemo(
     () => Object.fromEntries(bots.map((bot) => [bot.id, teamBotName(bot, people)])),
@@ -179,6 +170,27 @@ export function VirtualOfficePage() {
       }),
     [bots, edges, state.groups, clockNow],
   );
+
+  const anyBusy = useMemo(
+    () =>
+      bots.some((bot) => bot.busy || bot.activity === "working")
+      || state.groups.some((group) => group.working || Boolean(group.busyBotId)),
+    [bots, state.groups],
+  );
+  const needsFastClock =
+    demoActive
+    || roundtableOpen
+    || activePair !== null
+    || realConversations.length > 0
+    || anyBusy;
+
+  useEffect(() => {
+    const intervalMs = needsFastClock ? 1_200 : 15_000;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") setClockNow(Date.now());
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [needsFastClock]);
 
   const demoOverlay = useMemo(() => {
     if (!demoActive || bots.length === 0) {
@@ -282,18 +294,15 @@ export function VirtualOfficePage() {
     return Object.fromEntries(entries);
   }, [bots, state.instances, demoOverlay.activities]);
 
+  const workKindTick = anyBusy ? clockNow : 0;
   const workKinds = useMemo(() => {
+    void workKindTick;
     const entries = bots.map((bot) => [
       bot.id,
       resolveLiveWorkKind(bot) ?? demoOverlay.workKinds[bot.id],
     ]);
     return Object.fromEntries(entries);
-  }, [bots, clockNow, demoOverlay.workKinds]);
-
-  const frameUrls = useMemo(
-    () => (showScreens ? Object.fromEntries(Object.entries(mapComputers.frames).map(([id, frame]) => [id, frame.url])) : {}),
-    [showScreens, mapComputers.frames],
-  );
+  }, [bots, workKindTick, demoOverlay.workKinds]);
 
   const validRoundtableAttendeeIds = useMemo(
     () => roundtableAttendeeIds.filter((id) => bots.some((bot) => bot.id === id)),
@@ -396,8 +405,6 @@ export function VirtualOfficePage() {
     () =>
       buildOfficePlan(effectiveSections, {
         edges,
-        computers: showScreens && !remoteClient ? mapComputers.computers : [],
-        frameUrls,
         activities,
         workKinds,
         conversations: combinedConversations,
@@ -406,10 +413,6 @@ export function VirtualOfficePage() {
     [
       effectiveSections,
       edges,
-      showScreens,
-      remoteClient,
-      mapComputers.computers,
-      frameUrls,
       activities,
       workKinds,
       combinedConversations,
@@ -417,6 +420,7 @@ export function VirtualOfficePage() {
     ],
   );
 
+  const kpiBucketNow = Math.floor(clockNow / 30_000) * 30_000;
   const kpi = useMemo(
     () =>
       buildOfficeKpiSummary({
@@ -428,7 +432,7 @@ export function VirtualOfficePage() {
         routineRuns: state.routineRuns,
         budgets: state.config?.budgets,
         demoActive,
-        now: clockNow,
+        now: kpiBucketNow,
       }),
     [
       bots,
@@ -439,7 +443,7 @@ export function VirtualOfficePage() {
       state.routineRuns,
       state.config?.budgets,
       demoActive,
-      clockNow,
+      kpiBucketNow,
     ],
   );
 
@@ -676,11 +680,8 @@ export function VirtualOfficePage() {
         roundtableAttendeeCount={validRoundtableAttendeeIds.length}
         kpiOpen={kpiOpen}
         demoActive={demoActive}
-        remoteClient={remoteClient}
-        showScreens={showScreens}
         lightingMode={lightingMode}
         lightingLabel={lightingLabel}
-        autoOrbit={autoOrbit}
         onToggleRoundtable={() => {
           if (roundtableOpen) setRoundtableOpen(false);
           else openRoundtable();
@@ -697,9 +698,7 @@ export function VirtualOfficePage() {
           })
         }
         onToggleDemo={() => setDemoActive((value) => !value)}
-        onToggleShowScreens={() => setShowScreens(!showScreens)}
         onCycleLighting={cycleLighting}
-        onToggleAutoOrbit={() => setAutoOrbit((value) => !value)}
         onResetCamera={() => {
           setSelectedBotId(null);
           setResetNonce((value) => value + 1);
@@ -714,7 +713,6 @@ export function VirtualOfficePage() {
           botDisplayNames={botDisplayNames}
           selectedBotId={selectedBotId}
           lightingMode={lightingMode}
-          autoOrbit={autoOrbit}
           resetNonce={resetNonce}
           kpiFocusNonce={kpiFocusNonce}
           meetingFocusNonce={meetingFocusNonce}
@@ -733,7 +731,6 @@ export function VirtualOfficePage() {
             setRoundtableOpen(false);
             setKpiOpen(true);
           }}
-          onWatchBotScreen={!remoteClient ? (bot) => dispatch({ type: "toggleComputer", open: true, botId: bot.id }) : undefined}
         />
 
         {moveNotice && (
@@ -833,7 +830,6 @@ export function VirtualOfficePage() {
             botDisplayNames={botDisplayNames}
             instance={selectedInstance}
             modelLabel={selectedModelLabel}
-            remoteClient={remoteClient}
             focusInputNonce={chatFocusNonce}
             onFocusDesk={focusBotDesk}
             onClose={() => setSelectedBotId(null)}

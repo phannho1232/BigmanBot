@@ -586,4 +586,19 @@ describe("VirtualOfficePage", () => {
     await act(async () => adjournBtn!.click());
     expect(host.querySelector("[data-office-roundtable-card]")).toBeNull();
   });
+
+  it("hides live desktop screen controls in browser/VPS mode when no desktop stream exists", async () => {
+    const giaHan = makeBot({ id: "gia-han", name: "Gia Hân", section: "Marketing", computer: undefined });
+    await mount({ bots: [giaHan], sections: ["Marketing"] });
+
+    expect(host.textContent).not.toContain("Màn hình trực tiếp");
+
+    const rosterBtn = [...host.querySelectorAll<HTMLButtonElement>("aside button")].find((btn) =>
+      btn.textContent?.includes("Gia Hân"),
+    );
+    await act(async () => rosterBtn!.click());
+    const card = host.querySelector('[data-office-inspector="gia-han"]');
+    expect(card).toBeTruthy();
+    expect(card!.querySelector('[aria-label="Xem màn hình"]')).toBeNull();
+  });
 });

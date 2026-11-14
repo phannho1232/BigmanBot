@@ -1,5 +1,20 @@
 import { useState, type MutableRefObject } from "react";
-import { Building2, Crown, Handshake, MessageCircle, MessagesSquare, Monitor, Sparkles, Users } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Building2,
+  Compass,
+  Crown,
+  Handshake,
+  MessageCircle,
+  MessagesSquare,
+  Minus,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Sparkles,
+  Users,
+} from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -31,7 +46,6 @@ export function VirtualOfficeFallback<T extends OfficeBotInput>({
   onMoveBotToSection,
   onPairBots,
   onOpenBotChat,
-  onWatchBotScreen,
 }: {
   plan: OfficePlan<T>;
   botDisplayNames: Readonly<Record<string, string>>;
@@ -42,7 +56,6 @@ export function VirtualOfficeFallback<T extends OfficeBotInput>({
   onMoveBotToSection?: (botId: string, targetSectionKey: string, targetSectionName: string) => void;
   onPairBots?: (sourceBotId: string, targetBotId: string) => void;
   onOpenBotChat: (bot: T) => void;
-  onWatchBotScreen?: (bot: T) => void;
 }) {
   const [fallbackDragBotId, setFallbackDragBotId] = useState<string | null>(null);
   const [fallbackHoverId, setFallbackHoverId] = useState<string | null>(null);
@@ -201,16 +214,6 @@ export function VirtualOfficeFallback<T extends OfficeBotInput>({
                   <MessageCircle size={13} />
                   {t("canvas.openChat")}
                 </button>
-                {onWatchBotScreen && (
-                  <button
-                    type="button"
-                    onClick={() => onWatchBotScreen(desk.bot)}
-                    className="flex items-center gap-1.5 rounded-lg border border-hairline/60 bg-panel px-2.5 py-1.5 text-[12px] text-ink-secondary hover:bg-control hover:text-ink"
-                  >
-                    <Monitor size={13} />
-                    {t("office3d.watchScreen")}
-                  </button>
-                )}
               </div>
             </div>
           );
@@ -232,6 +235,8 @@ export function VirtualOfficeOverlayHud<T extends OfficeBotInput>({
   meetingBadgeRef,
   onSelectBot,
   onSelectMeetingTable,
+  onCameraStep,
+  onResetCamera,
 }: {
   plan: OfficePlan<T>;
   botDisplayNames: Readonly<Record<string, string>>;
@@ -244,7 +249,10 @@ export function VirtualOfficeOverlayHud<T extends OfficeBotInput>({
   meetingBadgeRef: MutableRefObject<HTMLButtonElement | null>;
   onSelectBot: (botId: string | null) => void;
   onSelectMeetingTable?: () => void;
+  onCameraStep?: (deltaAzimuth: number, deltaPolar: number, zoomFactor?: number) => void;
+  onResetCamera?: () => void;
 }) {
+  const denseOffice = plan.desks.length > 18;
   const dragSourceName = dragHud
     ? (botDisplayNames[dragHud.sourceBotId]
       ?? plan.desks.find((item) => item.bot.id === dragHud.sourceBotId)?.bot.name
@@ -318,12 +326,23 @@ export function VirtualOfficeOverlayHud<T extends OfficeBotInput>({
       )}
 
       {plan.desks.map((desk) => {
-        const name = botDisplayNames[desk.bot.id] ?? desk.bot.name;
         const selected = selectedBotId === desk.bot.id;
         const isPairTarget = dragHud?.target?.kind === "pair" && dragHud.target.targetBotId === desk.bot.id;
         const isDragSource = dragHud?.sourceBotId === desk.bot.id;
-        const liveBubble = defaultBubbleForAction(desk, botDisplayNames);
         const isTalking = desk.workAction === "talking";
+        if (
+          denseOffice
+          && !selected
+          && !isTalking
+          && !isPairTarget
+          && !isDragSource
+          && (desk.posture === "idle" || desk.posture === "offline")
+          && desk.role !== "chief"
+        ) {
+          return null;
+        }
+        const name = botDisplayNames[desk.bot.id] ?? desk.bot.name;
+        const liveBubble = defaultBubbleForAction(desk, botDisplayNames);
 
         return (
           <div
@@ -377,7 +396,10 @@ export function VirtualOfficeOverlayHud<T extends OfficeBotInput>({
                 }
               }}
               className={cn(
-                "pointer-events-auto flex cursor-grab items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium shadow-sm backdrop-blur-xs transition-all active:cursor-grabbing",
+                "flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium shadow-sm backdrop-blur-xs transition-all",
+                !denseOffice || selected || isTalking || isPairTarget || isDragSource || desk.posture === "waiting"
+                  ? "pointer-events-auto cursor-grab active:cursor-grabbing"
+                  : "pointer-events-none",
                 isPairTarget
                   ? "scale-105 border-success bg-success text-white ring-2 ring-success/40"
                   : selected || isDragSource
@@ -404,9 +426,6 @@ export function VirtualOfficeOverlayHud<T extends OfficeBotInput>({
               <span className="max-w-[120px] truncate">{name}</span>
               {desk.role === "chief" && (
                 <Crown size={11} className={cn("shrink-0", selected || isPairTarget || isDragSource ? "text-white" : "text-warning")} />
-              )}
-              {desk.screenFrameUrl && (
-                <Monitor size={10} className={cn("shrink-0", selected || isPairTarget || isDragSource ? "text-white" : "text-accent")} />
               )}
             </button>
           </div>
@@ -474,6 +493,93 @@ export function VirtualOfficeOverlayHud<T extends OfficeBotInput>({
                       : t("office3d.drag.idleSubPairOnly")}
             </div>
           </div>
+        </div>
+      )}
+
+      {onCameraStep && (
+        <div
+          data-office-camera-controls
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+          className="pointer-events-auto absolute bottom-4 left-4 z-25 flex items-center gap-0.5 rounded-xl border border-hairline/60 bg-panel/92 p-1 shadow-lg backdrop-blur-md lg:bottom-12"
+        >
+          <button
+            type="button"
+            data-office-cam="rotate-left"
+            onClick={() => onCameraStep(-Math.PI / 5, 0, 1)}
+            title={t("office3d.cam.rotateLeft")}
+            aria-label={t("office3d.cam.rotateLeft")}
+            className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+          >
+            <RotateCcw size={14} />
+          </button>
+          <button
+            type="button"
+            data-office-cam="rotate-right"
+            onClick={() => onCameraStep(Math.PI / 5, 0, 1)}
+            title={t("office3d.cam.rotateRight")}
+            aria-label={t("office3d.cam.rotateRight")}
+            className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+          >
+            <RotateCw size={14} />
+          </button>
+          <span aria-hidden className="mx-0.5 h-4 w-px bg-hairline/60" />
+          <button
+            type="button"
+            data-office-cam="tilt-up"
+            onClick={() => onCameraStep(0, -0.22, 1)}
+            title={t("office3d.cam.tiltUp")}
+            aria-label={t("office3d.cam.tiltUp")}
+            className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+          >
+            <ArrowUp size={14} />
+          </button>
+          <button
+            type="button"
+            data-office-cam="tilt-down"
+            onClick={() => onCameraStep(0, 0.22, 1)}
+            title={t("office3d.cam.tiltDown")}
+            aria-label={t("office3d.cam.tiltDown")}
+            className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+          >
+            <ArrowDown size={14} />
+          </button>
+          <span aria-hidden className="mx-0.5 h-4 w-px bg-hairline/60" />
+          <button
+            type="button"
+            data-office-cam="zoom-in"
+            onClick={() => onCameraStep(0, 0, 0.78)}
+            title={t("office3d.cam.zoomIn")}
+            aria-label={t("office3d.cam.zoomIn")}
+            className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+          >
+            <Plus size={14} />
+          </button>
+          <button
+            type="button"
+            data-office-cam="zoom-out"
+            onClick={() => onCameraStep(0, 0, 1.28)}
+            title={t("office3d.cam.zoomOut")}
+            aria-label={t("office3d.cam.zoomOut")}
+            className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+          >
+            <Minus size={14} />
+          </button>
+          {onResetCamera && (
+            <>
+              <span aria-hidden className="mx-0.5 h-4 w-px bg-hairline/60" />
+              <button
+                type="button"
+                data-office-cam="reset"
+                onClick={onResetCamera}
+                title={t("office3d.cam.reset")}
+                aria-label={t("office3d.cam.reset")}
+                className="rounded-lg p-1.5 text-ink-secondary transition-colors hover:bg-control hover:text-ink"
+              >
+                <Compass size={14} />
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

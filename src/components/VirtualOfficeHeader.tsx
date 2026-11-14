@@ -6,7 +6,6 @@ import {
   MessagesSquare,
   Moon,
   Play,
-  RotateCw,
   Sun,
   SunMoon,
   Users,
@@ -30,17 +29,12 @@ export function VirtualOfficeHeader({
   roundtableAttendeeCount,
   kpiOpen,
   demoActive,
-  remoteClient,
-  showScreens,
   lightingMode,
   lightingLabel,
-  autoOrbit,
   onToggleRoundtable,
   onToggleKpi,
   onToggleDemo,
-  onToggleShowScreens,
   onCycleLighting,
-  onToggleAutoOrbit,
   onResetCamera,
   onOpenTeamMap,
 }: {
@@ -54,17 +48,12 @@ export function VirtualOfficeHeader({
   roundtableAttendeeCount: number;
   kpiOpen: boolean;
   demoActive: boolean;
-  remoteClient: boolean;
-  showScreens: boolean;
   lightingMode: OfficeLightingMode;
   lightingLabel: string;
-  autoOrbit: boolean;
   onToggleRoundtable: () => void;
   onToggleKpi: () => void;
   onToggleDemo: () => void;
-  onToggleShowScreens: () => void;
   onCycleLighting: () => void;
-  onToggleAutoOrbit: () => void;
   onResetCamera: () => void;
   onOpenTeamMap: () => void;
 }) {
@@ -158,7 +147,7 @@ export function VirtualOfficeHeader({
           </button>
         )}
 
-        {botCount > 0 && (
+        {botCount > 0 && (botCount <= 16 || demoActive) && (
           <button
             type="button"
             data-office-demo-toggle
@@ -177,26 +166,6 @@ export function VirtualOfficeHeader({
           </button>
         )}
 
-        {!remoteClient && (
-          <button
-            type="button"
-            onClick={onToggleShowScreens}
-            aria-pressed={showScreens}
-            title={t("office3d.liveScreensHint")}
-            className={cn(
-              "flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] font-medium transition-colors",
-              showScreens
-                ? "border-accent/40 bg-accent/10 text-ink"
-                : "border-hairline/60 bg-panel text-ink-secondary hover:bg-control hover:text-ink",
-            )}
-          >
-            <span aria-hidden className={cn("relative h-4 w-7 shrink-0 rounded-full transition-colors", showScreens ? "bg-accent" : "bg-control")}>
-              <span className={cn("absolute top-0.5 size-3 rounded-full bg-white shadow-sm transition-[left]", showScreens ? "left-3.5" : "left-0.5")} />
-            </span>
-            {t("office3d.liveScreens")}
-          </button>
-        )}
-
         <button
           type="button"
           onClick={onCycleLighting}
@@ -206,23 +175,6 @@ export function VirtualOfficeHeader({
         >
           {lightingMode === "day" ? <Sun size={14} /> : lightingMode === "night" ? <Moon size={14} /> : <SunMoon size={14} />}
           <span className="max-sm:hidden">{lightingLabel}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onToggleAutoOrbit}
-          aria-pressed={autoOrbit}
-          title={t("office3d.autoOrbit")}
-          aria-label={t("office3d.autoOrbit")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12px] font-medium transition-colors",
-            autoOrbit
-              ? "border-accent/40 bg-accent/10 text-ink"
-              : "border-hairline/60 bg-panel text-ink-secondary hover:bg-control hover:text-ink",
-          )}
-        >
-          <RotateCw size={14} className={cn(autoOrbit && "animate-spin [animation-duration:6s]")} />
-          <span className="max-lg:hidden">{t("office3d.autoOrbit")}</span>
         </button>
 
         <button

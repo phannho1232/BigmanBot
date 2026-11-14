@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
@@ -19,7 +19,6 @@ import {
   type OfficePlan,
 } from "@/lib/virtual-office";
 import {
-  drawImageCover,
   drawKpiWallBoard,
   type KpiWallRig,
 } from "@/lib/virtual-office-canvas";
@@ -53,7 +52,6 @@ export interface VirtualOfficeSceneProps<T extends OfficeBotInput> {
   botDisplayNames: Readonly<Record<string, string>>;
   selectedBotId: string | null;
   lightingMode: OfficeLightingMode;
-  autoOrbit: boolean;
   resetNonce: number;
   kpiFocusNonce: number;
   meetingFocusNonce?: number;
@@ -67,7 +65,6 @@ export interface VirtualOfficeSceneProps<T extends OfficeBotInput> {
   onSelectMeetingTable?: () => void;
   onDropBotOnMeetingTable?: (botId: string) => void;
   onSelectKpiWall?: () => void;
-  onWatchBotScreen?: (bot: T) => void;
 }
 
 export function VirtualOfficeScene<T extends OfficeBotInput>({
@@ -76,7 +73,6 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
   botDisplayNames,
   selectedBotId,
   lightingMode,
-  autoOrbit,
   resetNonce,
   kpiFocusNonce,
   meetingFocusNonce = 0,
@@ -90,7 +86,6 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
   onSelectMeetingTable,
   onDropBotOnMeetingTable,
   onSelectKpiWall,
-  onWatchBotScreen,
 }: VirtualOfficeSceneProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
@@ -114,6 +109,8 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
   const pickablesRef = useRef<THREE.Object3D[]>([]);
   const zoneRugsRef = useRef<THREE.Object3D[]>([]);
   const cameraGoalRef = useRef<OfficeCameraPose | null>(null);
+  const prevLayoutWasEmptyRef = useRef(plan.desks.length === 0);
+  const lastKpiSignatureRef = useRef("");
   const appliedResetNonceRef = useRef(0);
   const appliedKpiFocusNonceRef = useRef(0);
   const appliedMeetingFocusNonceRef = useRef(0);
@@ -158,21 +155,67 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
 
   const isNight = lightingMode === "night" || (lightingMode === "auto" && systemDark);
 
+  const stepCameraOrbit = useCallback((deltaAzimuth: number, deltaPolar: number, zoomFactor = 1) => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+    const base = cameraGoalRef.current ?? {
+      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+    };
+    const offset = new THREE.Vector3(
+      base.position.x - base.target.x,
+      base.position.y - base.target.y,
+      base.position.z - base.target.z,
+    );
+    const spherical = new THREE.Spherical().setFromVector3(offset);
+    spherical.theta += deltaAzimuth;
+    spherical.phi = Math.max(
+      controls.minPolarAngle + 0.03,
+      Math.min(controls.maxPolarAngle - 0.02, spherical.phi + deltaPolar),
+    );
+    spherical.radius = Math.max(
+      controls.minDistance,
+      Math.min(controls.maxDistance, spherical.radius * zoomFactor),
+    );
+    offset.setFromSpherical(spherical);
+    cameraGoalRef.current = {
+      target: { ...base.target },
+      position: {
+        x: base.target.x + offset.x,
+        y: base.target.y + offset.y,
+        z: base.target.z + offset.z,
+      },
+    };
+  }, []);
+
   useEffect(() => {
     const host = canvasHostRef.current;
     const container = containerRef.current;
     if (!host || !container) return;
 
+    const denseInitial = planRef.current.desks.length > 16;
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+      renderer = new THREE.WebGLRenderer({
+        antialias: !denseInitial,
+        alpha: false,
+        powerPreference: "high-performance",
+      });
     } catch {
-      setWebglFailed(true);
-      return;
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+      } catch {
+        setWebglFailed(true);
+        return;
+      }
     }
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(denseInitial ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.domElement.style.display = "block";
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.shadowMap.enabled = !denseInitial;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -199,22 +242,32 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
     const height = Math.max(1, initialBounds.height);
     renderer.setSize(width, height, false);
 
-    const camera = new THREE.PerspectiveCamera(36, width / height, 0.4, 160);
+    const initialSpan = Math.max(planRef.current.floor.width, planRef.current.floor.depth);
+    const camera = new THREE.PerspectiveCamera(36, width / height, 0.4, Math.max(240, initialSpan * 5));
     const initialPose = planRef.current.overviewCamera;
     camera.position.set(initialPose.position.x, initialPose.position.y, initialPose.position.z);
     cameraRef.current = camera;
 
     const controls = new OrbitControls(camera, container);
     controls.target.set(initialPose.target.x, initialPose.target.y, initialPose.target.z);
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.ROTATE,
+    };
+    controls.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN,
+    };
     controls.enableDamping = true;
     controls.dampingFactor = 0.085;
-    controls.rotateSpeed = 0.78;
-    controls.zoomSpeed = 0.85;
-    controls.panSpeed = 0.85;
+    controls.rotateSpeed = 0.82;
+    controls.zoomSpeed = 0.88;
+    controls.panSpeed = 0.88;
     controls.maxPolarAngle = Math.PI * 0.47;
     controls.minPolarAngle = 0.12;
     controls.minDistance = 2.6;
-    controls.maxDistance = 60;
+    controls.maxDistance = Math.max(90, initialSpan * 2.4);
     controls.screenSpacePanning = false;
     controls.update();
     controlsRef.current = controls;
@@ -350,6 +403,13 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
     };
 
     const onPointerDownCapture = (event: PointerEvent) => {
+      if ((event.target as HTMLElement | null)?.closest("[data-office-camera-controls]")) {
+        pointerDownAt = null;
+        return;
+      }
+      if (activeDrag) {
+        finishActiveDrag(false, event.clientX, event.clientY);
+      }
       if (event.button !== 0 || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
       const domHandle = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-office-drag-bot]");
       const domBotId = domHandle?.dataset.officeDragBot;
@@ -419,15 +479,27 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
       }
     };
 
+    const onWindowBlur = () => {
+      if (activeDrag) {
+        finishActiveDrag(false, activeDrag.lastClientX, activeDrag.lastClientY);
+      }
+      controls.enabled = true;
+    };
+
+    let lastHoverCheck = 0;
     const onPointerMove = (event: PointerEvent) => {
       if (activeDrag || event.buttons !== 0) return;
+      const nowMs = performance.now();
+      if (nowMs - lastHoverCheck < 80) return;
+      lastHoverCheck = nowMs;
       const hovered = resolveSceneHit(event.clientX, event.clientY);
-      if (hovered?.kind === "bot" && hovered.draggable) {
-        container.style.cursor = "grab";
-      } else if (hovered) {
-        container.style.cursor = "pointer";
-      } else {
-        container.style.cursor = "default";
+      const nextCursor = hovered?.kind === "bot" && hovered.draggable
+        ? "grab"
+        : hovered
+          ? "pointer"
+          : "default";
+      if (container.style.cursor !== nextCursor) {
+        container.style.cursor = nextCursor;
       }
     };
 
@@ -487,6 +559,7 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
     window.addEventListener("pointerup", onWindowPointerUp);
     window.addEventListener("pointercancel", onWindowPointerCancel);
     window.addEventListener("keydown", onWindowKeyDown);
+    window.addEventListener("blur", onWindowBlur);
 
     const resizeObserver = new ResizeObserver(() => {
       const rect = container.getBoundingClientRect();
@@ -500,6 +573,26 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
     const projected = new THREE.Vector3();
     const goalPositionVec = new THREE.Vector3();
     const goalTargetVec = new THREE.Vector3();
+    const pinCache = new WeakMap<HTMLElement, { x: number; y: number; visible: boolean }>();
+    const syncPinPosition = (el: HTMLElement, visible: boolean, px: number, py: number, suffix: string) => {
+      const prev = pinCache.get(el);
+      if (!visible) {
+        if (!prev || prev.visible) {
+          el.style.opacity = "0";
+          el.style.visibility = "hidden";
+          pinCache.set(el, { x: -9999, y: -9999, visible: false });
+        }
+        return;
+      }
+      if (prev && prev.visible && Math.abs(prev.x - px) < 0.4 && Math.abs(prev.y - py) < 0.4) {
+        return;
+      }
+      el.style.visibility = "visible";
+      el.style.opacity = "1";
+      el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) ${suffix}`;
+      pinCache.set(el, { x: px, y: py, visible: true });
+    };
+
     let rafId = 0;
     let lastScreenRedraw = 0;
     const startClock = performance.now();
@@ -507,6 +600,10 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
 
     const animate = (now: number) => {
       rafId = window.requestAnimationFrame(animate);
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        prevNow = now;
+        return;
+      }
       const dt = Math.min(0.05, Math.max(0.001, (now - prevNow) * 0.001));
       prevNow = now;
       const elapsed = (now - startClock) * 0.001;
@@ -531,7 +628,7 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
         controls.update(dt);
       }
 
-      const redrawScreens = now - lastScreenRedraw > 200;
+      const redrawScreens = now - lastScreenRedraw > 650;
       if (redrawScreens) lastScreenRedraw = now;
 
       const currentPlan = planRef.current;
@@ -561,20 +658,23 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
       const canvasW = renderer.domElement.clientWidth;
       const canvasH = renderer.domElement.clientHeight;
       if (canvasW > 0 && canvasH > 0) {
-        for (const rig of rigsRef.current) {
-          const el = overlayRefs.current.get(rig.botId);
-          if (!el) continue;
-          projected.set(rig.currentX, rig.currentY + 1.18, rig.currentZ).project(camera);
-          if (projected.z > 1 || projected.z < -1) {
-            el.style.opacity = "0";
-            el.style.visibility = "hidden";
-            continue;
+        if (overlayRefs.current.size > 0) {
+          for (const rig of rigsRef.current) {
+            const el = overlayRefs.current.get(rig.botId);
+            if (!el) continue;
+            projected.set(rig.currentX, rig.currentY + 1.18, rig.currentZ).project(camera);
+            if (projected.z > 1 || projected.z < -1) {
+              syncPinPosition(el, false, 0, 0, "translate(-50%, -100%)");
+              continue;
+            }
+            syncPinPosition(
+              el,
+              true,
+              (projected.x * 0.5 + 0.5) * canvasW,
+              (-projected.y * 0.5 + 0.5) * canvasH,
+              "translate(-50%, -100%)",
+            );
           }
-          const px = (projected.x * 0.5 + 0.5) * canvasW;
-          const py = (-projected.y * 0.5 + 0.5) * canvasH;
-          el.style.visibility = "visible";
-          el.style.opacity = "1";
-          el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) translate(-50%, -100%)`;
         }
 
         for (const zone of currentPlan.zones) {
@@ -582,27 +682,31 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
           if (!el) continue;
           projected.set(zone.x - zone.width / 2 + 0.45, 0.18, zone.z + zone.depth / 2 - 0.25).project(camera);
           if (projected.z > 1 || projected.z < -1) {
-            el.style.opacity = "0";
+            syncPinPosition(el, false, 0, 0, "translate(0, -50%)");
             continue;
           }
-          const px = (projected.x * 0.5 + 0.5) * canvasW;
-          const py = (-projected.y * 0.5 + 0.5) * canvasH;
-          el.style.opacity = "1";
-          el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) translate(0, -50%)`;
+          syncPinPosition(
+            el,
+            true,
+            (projected.x * 0.5 + 0.5) * canvasW,
+            (-projected.y * 0.5 + 0.5) * canvasH,
+            "translate(0, -50%)",
+          );
         }
 
         const meetingEl = meetingBadgeRef.current;
         if (meetingEl) {
           projected.set(currentPlan.meetingTable.x, 1.02, currentPlan.meetingTable.z).project(camera);
           if (projected.z > 1 || projected.z < -1) {
-            meetingEl.style.opacity = "0";
-            meetingEl.style.visibility = "hidden";
+            syncPinPosition(meetingEl, false, 0, 0, "translate(-50%, -100%)");
           } else {
-            const px = (projected.x * 0.5 + 0.5) * canvasW;
-            const py = (-projected.y * 0.5 + 0.5) * canvasH;
-            meetingEl.style.visibility = "visible";
-            meetingEl.style.opacity = "1";
-            meetingEl.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) translate(-50%, -100%)`;
+            syncPinPosition(
+              meetingEl,
+              true,
+              (projected.x * 0.5 + 0.5) * canvasW,
+              (-projected.y * 0.5 + 0.5) * canvasH,
+              "translate(-50%, -100%)",
+            );
           }
         }
       }
@@ -627,6 +731,7 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
       window.removeEventListener("pointerup", onWindowPointerUp);
       window.removeEventListener("pointercancel", onWindowPointerCancel);
       window.removeEventListener("keydown", onWindowKeyDown);
+      window.removeEventListener("blur", onWindowBlur);
       externalDropHandlerRef.current = null;
       disposeSceneResources(scene);
       renderer.dispose();
@@ -645,13 +750,6 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
       zoneRugsRef.current = [];
     };
   }, []);
-
-  useEffect(() => {
-    if (controlsRef.current) {
-      controlsRef.current.autoRotate = autoOrbit;
-      controlsRef.current.autoRotateSpeed = 0.85;
-    }
-  }, [autoOrbit]);
 
   useEffect(() => {
     if (resetNonce === 0 || resetNonce === appliedResetNonceRef.current) return;
@@ -696,12 +794,34 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
     const worldGroup = worldGroupRef.current;
     if (!scene || !worldGroup) return;
 
+    const currentPlan = planRef.current;
+    const dense = currentPlan.desks.length > 16;
+    if (rendererRef.current) {
+      rendererRef.current.shadowMap.enabled = !dense;
+      rendererRef.current.setPixelRatio(dense ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+    }
+    const maxSpan = Math.max(currentPlan.floor.width, currentPlan.floor.depth);
+    if (cameraRef.current) {
+      cameraRef.current.far = Math.max(240, maxSpan * 5);
+      cameraRef.current.updateProjectionMatrix();
+    }
+    if (controlsRef.current) {
+      controlsRef.current.maxDistance = Math.max(90, maxSpan * 2.4);
+    }
+
+    if (currentPlan.desks.length === 0) {
+      prevLayoutWasEmptyRef.current = true;
+    } else if (prevLayoutWasEmptyRef.current) {
+      prevLayoutWasEmptyRef.current = false;
+      cameraGoalRef.current = currentPlan.overviewCamera;
+    }
+
     disposeSceneResources(worldGroup);
     worldGroup.clear();
     const built = populateOfficeWorldGroup({
       scene,
       worldGroup,
-      plan: planRef.current,
+      plan: currentPlan,
       kpi: kpiRef.current,
       isNight,
       selectedBotId: selectedIdRef.current,
@@ -710,11 +830,15 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
     pickablesRef.current = built.pickables;
     zoneRugsRef.current = built.zoneRugs;
     kpiWallRef.current = built.kpiWall;
+    lastKpiSignatureRef.current = "";
   }, [plan.layoutKey, isNight]);
 
   useEffect(() => {
     const kpiRig = kpiWallRef.current;
     if (!kpiRig) return;
+    const signature = `${kpi.health}:${kpi.alertCount}:${kpi.utilizationPct}:${kpi.activeBots}:${kpi.totalBots}:${kpi.totalTurns}:${kpi.completedThreads}:${kpi.openThreads}:${kpi.routineSuccessPct}:${kpi.totalTokens}:${kpi.totalCostUsd}`;
+    if (lastKpiSignatureRef.current === signature) return;
+    lastKpiSignatureRef.current = signature;
     drawKpiWallBoard(kpiRig.canvas, kpi);
     kpiRig.texture.needsUpdate = true;
     kpiRig.beaconMat.color.setHex(
@@ -723,32 +847,10 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
   }, [kpi]);
 
   useEffect(() => {
-    const cancelledImages: Array<{ cancelled: boolean }> = [];
-
+    const deskByBotId = new Map(plan.desks.map((item) => [item.bot.id, item]));
     for (const rig of rigsRef.current) {
-      const desk = plan.desks.find((item) => item.bot.id === rig.botId);
-      if (!desk) continue;
-      rig.stepOutPoint = desk.stepOutPoint;
-
-      if (!desk.screenFrameUrl) {
-        rig.hasLiveFrame = false;
-        rig.loadedFrameUrl = undefined;
-        continue;
-      }
-
-      if (rig.loadedFrameUrl === desk.screenFrameUrl) continue;
-      rig.loadedFrameUrl = desk.screenFrameUrl;
-      const token = { cancelled: false };
-      cancelledImages.push(token);
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        if (token.cancelled) return;
-        drawImageCover(rig.screenCanvas, img);
-        rig.screenTexture.needsUpdate = true;
-        rig.hasLiveFrame = true;
-      };
-      img.src = desk.screenFrameUrl;
+      const desk = deskByBotId.get(rig.botId);
+      if (desk) rig.stepOutPoint = desk.stepOutPoint;
     }
 
     if (dynamicGroupRef.current) {
@@ -756,10 +858,6 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
       packetsRef.current = rebuilt.packets;
       convRingsRef.current = rebuilt.convRings;
     }
-
-    return () => {
-      for (const token of cancelledImages) token.cancelled = true;
-    };
   }, [plan]);
 
   if (webglFailed) {
@@ -774,7 +872,6 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
         onMoveBotToSection={onMoveBotToSection}
         onPairBots={onPairBots}
         onOpenBotChat={onOpenBotChat}
-        onWatchBotScreen={onWatchBotScreen}
       />
     );
   }
@@ -818,6 +915,11 @@ export function VirtualOfficeScene<T extends OfficeBotInput>({
         meetingBadgeRef={meetingBadgeRef}
         onSelectBot={onSelectBot}
         onSelectMeetingTable={onSelectMeetingTable}
+        onCameraStep={stepCameraOrbit}
+        onResetCamera={() => {
+          onSelectBot(null);
+          cameraGoalRef.current = planRef.current.overviewCamera;
+        }}
       />
     </div>
   );

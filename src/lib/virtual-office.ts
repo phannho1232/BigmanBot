@@ -499,8 +499,14 @@ function measureZone<T extends OfficeBotInput>(section: TeamMapSection<T>, index
     };
   }
 
-  const memberCols = members.length <= 1 ? 1 : members.length <= 4 ? 2 : 3;
-  const chiefCols = Math.min(Math.max(1, chiefs.length), 2);
+  const memberCols = members.length <= 1
+    ? 1
+    : members.length <= 4
+      ? 2
+      : members.length <= 9
+        ? 3
+        : Math.min(8, Math.ceil(Math.sqrt(members.length * 1.25)));
+  const chiefCols = chiefs.length <= 2 ? Math.max(1, chiefs.length) : Math.min(4, chiefs.length);
   const maxCols = Math.max(chiefs.length > 0 ? chiefCols : 1, members.length > 0 ? memberCols : 1);
   const chiefRows = chiefs.length > 0 ? Math.ceil(chiefs.length / chiefCols) : 0;
   const memberRows = members.length > 0 ? Math.ceil(members.length / memberCols) : 0;
@@ -573,7 +579,7 @@ export function buildOfficePlan<T extends OfficeBotInput>(
     };
   }
 
-  const zoneColumns = specs.length === 1 ? 1 : specs.length <= 4 ? 2 : 3;
+  const zoneColumns = specs.length === 1 ? 1 : specs.length <= 4 ? 2 : specs.length <= 9 ? 3 : 4;
   const rows: Array<LocalZoneSpec<T>[]> = [];
   for (let index = 0; index < specs.length; index += zoneColumns) {
     rows.push(specs.slice(index, index + zoneColumns));

@@ -65,14 +65,21 @@ export function stepOfficeRigsAndConnections<T extends OfficeBotInput>(opts: {
   redrawScreens: boolean;
 }) {
   const { rigs, packets, convRings, plan, selectedBotId, dt, elapsed, redrawScreens } = opts;
-
-  const obstacles = [
-    ...plan.desks.map((d) => ({ x: d.x, z: d.z + 0.1, radius: 1.02, ownerBotId: d.bot.id })),
-    { x: plan.meetingTable.x, z: plan.meetingTable.z, radius: 0.92 },
-  ];
+  const denseMode = rigs.length > 16;
+  const deskByBotId = new Map(plan.desks.map((item) => [item.bot.id, item]));
+  let obstacles: Array<{ x: number; z: number; radius: number; ownerBotId?: string }> | null = null;
+  const getObstacles = () => {
+    if (!obstacles) {
+      obstacles = [
+        ...plan.desks.map((d) => ({ x: d.x, z: d.z + 0.1, radius: 1.02, ownerBotId: d.bot.id })),
+        { x: plan.meetingTable.x, z: plan.meetingTable.z, radius: 0.92 },
+      ];
+    }
+    return obstacles;
+  };
 
   for (const rig of rigs) {
-    const desk = plan.desks.find((item) => item.bot.id === rig.botId);
+    const desk = deskByBotId.get(rig.botId);
     if (!desk) continue;
 
     const tLocal = elapsed + rig.phaseOffset;
@@ -85,6 +92,7 @@ export function stepOfficeRigsAndConnections<T extends OfficeBotInput>(opts: {
 
     const conv = desk.conversation;
     if (conv) {
+      rig.idleSettled = false;
       if (rig.activeConversationId !== conv.conversationId || rig.mode === "seated" || rig.mode === "walking_home") {
         rig.activeConversationId = conv.conversationId;
         rig.route = conv.waypoints.length > 0 ? conv.waypoints.map((pt) => ({ ...pt })) : [{ ...conv.standPoint }];
@@ -99,16 +107,37 @@ export function stepOfficeRigsAndConnections<T extends OfficeBotInput>(opts: {
         }
       }
     } else if (rig.mode === "walking_out" || rig.mode === "conversing") {
+      rig.idleSettled = false;
       rig.activeConversationId = null;
       const returnWaypoints = buildWalkWaypoints(
         { x: rig.currentX, z: rig.currentZ },
         rig.stepOutPoint,
-        obstacles,
+        getObstacles(),
         rig.botId,
       );
       rig.route = [...returnWaypoints, { x: rig.seatWorldX, z: rig.seatWorldZ }];
       rig.routeIndex = 0;
       rig.mode = "walking_home";
+    }
+
+    const screenKey = `${desk.screenState}:${desk.workAction}`;
+    if (
+      denseMode
+      && !selected
+      && rig.mode === "seated"
+      && rig.seatBlend >= 0.995
+      && (desk.workAction === "idle" || desk.workAction === "offline")
+      && rig.idleSettled
+    ) {
+      if (rig.lastScreenKey !== screenKey) {
+        rig.lastScreenKey = screenKey;
+        drawProceduralMonitorScreen(rig.screenCanvas, desk.bodyHex, desk.screenState, desk.workAction, elapsed);
+        rig.screenTexture.needsUpdate = true;
+      }
+      continue;
+    }
+    if (desk.workAction !== "idle" && desk.workAction !== "offline") {
+      rig.idleSettled = false;
     }
 
     const walkSpeed = 2.4;
@@ -367,7 +396,7 @@ export function stepOfficeRigsAndConnections<T extends OfficeBotInput>(opts: {
         rig.statusRingMat.opacity = 0.36 + Math.sin(tLocal * 4) * 0.18;
         rig.lampBulbMat.emissiveIntensity = 1.2 + Math.sin(tLocal * 4.5) * 0.4;
       } else if (action === "offline") {
-        rig.currentRotY = lerpAngle(rig.currentRotY, rig.seatRotationY, dt * 6);
+        rig.currentRotY = denseMode ? rig.seatRotationY : lerpAngle(rig.currentRotY, rig.seatRotationY, dt * 6);
         rig.chairGroup.rotation.y = 0;
         rig.bodyGroup.position.y = 0;
         rig.bodyGroup.rotation.set(0.18, 0, 0);
@@ -377,6 +406,18 @@ export function stepOfficeRigsAndConnections<T extends OfficeBotInput>(opts: {
         rig.eyeMat.color.setHex(0xef4444);
         rig.statusRing.visible = false;
         rig.lampBulbMat.emissiveIntensity = 0.25;
+        if (denseMode && rig.seatBlend >= 0.995) rig.idleSettled = true;
+      } else if (denseMode && !selected) {
+        rig.currentRotY = rig.seatRotationY;
+        rig.chairGroup.rotation.y = 0;
+        rig.bodyGroup.position.y = 0;
+        rig.bodyGroup.rotation.set(0, 0, 0);
+        rig.headGroup.rotation.set(0.03, 0, 0);
+        rig.leftArm.rotation.set(-0.58, 0.05, -0.05);
+        rig.rightArm.rotation.set(-0.58, -0.05, 0.05);
+        rig.eyeMat.color.setHex(0x38bdf8);
+        rig.statusRing.visible = false;
+        if (rig.seatBlend >= 0.995) rig.idleSettled = true;
       } else {
         const idleCycle = (tLocal * 0.065) % 1;
         const sippingCoffee = idleCycle > 0.72 && idleCycle < 0.9;
@@ -421,7 +462,15 @@ export function stepOfficeRigsAndConnections<T extends OfficeBotInput>(opts: {
     rig.leftEye.scale.y = eyeScaleY;
     rig.rightEye.scale.y = eyeScaleY;
 
-    if (redrawScreens && !rig.hasLiveFrame) {
+    const isAnimatedScreen =
+      desk.workAction === "coding"
+      || desk.workAction === "terminal"
+      || desk.workAction === "thinking"
+      || desk.workAction === "replying"
+      || desk.workAction === "screen"
+      || desk.screenState === "starting";
+    if (rig.lastScreenKey !== screenKey || (redrawScreens && isAnimatedScreen)) {
+      rig.lastScreenKey = screenKey;
       drawProceduralMonitorScreen(rig.screenCanvas, desk.bodyHex, desk.screenState, desk.workAction, elapsed);
       rig.screenTexture.needsUpdate = true;
     }
