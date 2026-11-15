@@ -11,6 +11,11 @@ import {
   TriggersPage,
 } from "./lazy-screens";
 import { MapComposer } from "./MapComposer";
+import {
+  useOfficeApprovalQueue,
+  VirtualOfficeApprovalPill,
+  VirtualOfficeApprovalQueueCard,
+} from "./VirtualOfficeApprovalQueue";
 import { VirtualOfficeChatCard } from "./VirtualOfficeChatCard";
 import { VirtualOfficeHeader } from "./VirtualOfficeHeader";
 import { VirtualOfficePairCard } from "./VirtualOfficePairCard";
@@ -18,6 +23,7 @@ import { VirtualOfficeRoundtableCard, type RoundtableSectionOption } from "./Vir
 import { VirtualOfficeScene, type OfficeLightingMode } from "./VirtualOfficeScene";
 import { VirtualOfficeKpiDrawer, VirtualOfficeRosterSidebar } from "./VirtualOfficeSidePanels";
 import { computerStepLine } from "@/lib/computer-step";
+import { cn } from "@/lib/cn";
 import { activityPreview, botEngine } from "@/lib/failed-turn";
 import { t } from "@/lib/i18n";
 import {
@@ -468,36 +474,64 @@ export function VirtualOfficePage() {
 
   const handleTaggedBots = useCallback(() => {}, []);
 
-  const selectBotInOffice = useCallback((botId: string | null) => {
-    setSelectedBotId(botId);
-    if (botId) {
+  const focusCameraOnBotOnly = useCallback((botId: string) => {
+    setFocusRequest((previous) => ({ botId, nonce: (previous?.nonce ?? 0) + 1 }));
+  }, []);
+
+  const handleQueueCleared = useCallback(() => {
+    setMoveNotice(t("office3d.queue.allCleared"));
+  }, []);
+
+  const approvalQueue = useOfficeApprovalQueue({
+    bots,
+    desks: plan.desks,
+    onFocusCameraOnBot: focusCameraOnBotOnly,
+    onAllCleared: handleQueueCleared,
+  });
+
+  const selectBotInOffice = useCallback(
+    (botId: string | null) => {
+      setSelectedBotId(botId);
+      if (botId) {
+        approvalQueue.close();
+        setActivePair(null);
+        setRoundtableOpen(false);
+        setKpiOpen(false);
+      }
+    },
+    [approvalQueue],
+  );
+
+  const focusBotDesk = useCallback(
+    (botId: string) => {
+      approvalQueue.close();
+      setSelectedBotId(botId);
       setActivePair(null);
       setRoundtableOpen(false);
       setKpiOpen(false);
-    }
-  }, []);
+      setFocusRequest((previous) => ({ botId, nonce: (previous?.nonce ?? 0) + 1 }));
+      setChatFocusNonce((value) => value + 1);
+    },
+    [approvalQueue],
+  );
 
-  const focusBotDesk = useCallback((botId: string) => {
-    setSelectedBotId(botId);
-    setActivePair(null);
-    setRoundtableOpen(false);
-    setKpiOpen(false);
-    setFocusRequest((previous) => ({ botId, nonce: (previous?.nonce ?? 0) + 1 }));
-    setChatFocusNonce((value) => value + 1);
-  }, []);
-
-  const handlePairBots = useCallback((sourceBotId: string, targetBotId: string) => {
-    if (!sourceBotId || !targetBotId || sourceBotId === targetBotId) return;
-    setSelectedBotId(null);
-    setRoundtableOpen(false);
-    setKpiOpen(false);
-    setActivePair({ visitorBotId: sourceBotId, hostBotId: targetBotId });
-    setFocusRequest((previous) => ({ botId: targetBotId, nonce: (previous?.nonce ?? 0) + 1 }));
-    setPairFocusNonce((value) => value + 1);
-  }, []);
+  const handlePairBots = useCallback(
+    (sourceBotId: string, targetBotId: string) => {
+      if (!sourceBotId || !targetBotId || sourceBotId === targetBotId) return;
+      approvalQueue.close();
+      setSelectedBotId(null);
+      setRoundtableOpen(false);
+      setKpiOpen(false);
+      setActivePair({ visitorBotId: sourceBotId, hostBotId: targetBotId });
+      setFocusRequest((previous) => ({ botId: targetBotId, nonce: (previous?.nonce ?? 0) + 1 }));
+      setPairFocusNonce((value) => value + 1);
+    },
+    [approvalQueue],
+  );
 
   const openRoundtable = useCallback(() => {
     if (bots.length < 2) return;
+    approvalQueue.close();
     setSelectedBotId(null);
     setActivePair(null);
     setKpiOpen(false);
@@ -510,11 +544,12 @@ export function VirtualOfficePage() {
     });
     setMeetingFocusNonce((value) => value + 1);
     setRoundtableFocusNonce((value) => value + 1);
-  }, [bots]);
+  }, [bots, approvalQueue]);
 
   const handleDropBotOnMeetingTable = useCallback(
     (botId: string) => {
       if (!botId || bots.length < 2) return;
+      approvalQueue.close();
       setSelectedBotId(null);
       setActivePair(null);
       setKpiOpen(false);
@@ -533,7 +568,7 @@ export function VirtualOfficePage() {
       setMeetingFocusNonce((value) => value + 1);
       setRoundtableFocusNonce((value) => value + 1);
     },
-    [bots, roundtableOpen],
+    [bots, roundtableOpen, approvalQueue],
   );
 
   const handleToggleRoundtableAttendee = useCallback((botId: string) => {
@@ -660,12 +695,41 @@ export function VirtualOfficePage() {
         dispatch({ type: "toggleAppSettings", open: true, section: "usage" });
         return;
       }
+      if (alert.kind === "waiting-bot" && alert.botId) {
+        setSelectedBotId(null);
+        setActivePair(null);
+        setRoundtableOpen(false);
+        setKpiOpen(false);
+        if (approvalQueue.openForBot(alert.botId)) return;
+      }
       if (alert.botId) {
         focusBotDesk(alert.botId);
       }
     },
-    [dispatch, focusBotDesk],
+    [dispatch, approvalQueue, focusBotDesk],
   );
+
+  const openDeskChatFromQueue = useCallback(
+    (botId: string, threadId: string) => {
+      const targetBot = bots.find((candidate) => candidate.id === botId);
+      if (targetBot && threadId && threadId !== targetBot.threadId) {
+        void api<{ bot?: Bot }>(`/api/bots/${botId}/tasks/${threadId}?messages=80`, {
+          method: "POST",
+          body: "{}",
+        })
+          .then((res) => {
+            if (res?.bot) dispatch({ type: "taskSwitched", bot: res.bot });
+          })
+          .catch(() => {});
+      }
+      focusBotDesk(botId);
+    },
+    [bots, dispatch, focusBotDesk],
+  );
+
+  const highlightedBotId = approvalQueue.open
+    ? (approvalQueue.activeBotId ?? selectedBotId)
+    : selectedBotId;
 
   return (
     <main data-virtual-office-page className="flex min-w-0 flex-1 flex-col overflow-hidden bg-app text-ink">
@@ -690,6 +754,7 @@ export function VirtualOfficePage() {
           setKpiOpen((value) => {
             const next = !value;
             if (next) {
+              approvalQueue.close();
               setSelectedBotId(null);
               setActivePair(null);
               setRoundtableOpen(false);
@@ -711,7 +776,7 @@ export function VirtualOfficePage() {
           plan={plan}
           kpi={kpi}
           botDisplayNames={botDisplayNames}
-          selectedBotId={selectedBotId}
+          selectedBotId={highlightedBotId}
           lightingMode={lightingMode}
           resetNonce={resetNonce}
           kpiFocusNonce={kpiFocusNonce}
@@ -726,6 +791,7 @@ export function VirtualOfficePage() {
           onSelectMeetingTable={openRoundtable}
           onDropBotOnMeetingTable={handleDropBotOnMeetingTable}
           onSelectKpiWall={() => {
+            approvalQueue.close();
             setSelectedBotId(null);
             setActivePair(null);
             setRoundtableOpen(false);
@@ -733,11 +799,33 @@ export function VirtualOfficePage() {
           }}
         />
 
+        {approvalQueue.items.length > 0 && (
+          <VirtualOfficeApprovalPill
+            items={approvalQueue.items}
+            botDisplayNames={botDisplayNames}
+            open={approvalQueue.open}
+            onToggle={() => {
+              if (approvalQueue.open) {
+                approvalQueue.close();
+              } else {
+                setSelectedBotId(null);
+                setActivePair(null);
+                setRoundtableOpen(false);
+                setKpiOpen(false);
+                approvalQueue.openForBot();
+              }
+            }}
+          />
+        )}
+
         {moveNotice && (
           <div
             role="status"
             data-office-move-notice
-            className="pointer-events-none absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-accent/45 bg-panel/95 px-4 py-1.5 text-[12px] font-medium text-ink shadow-lg backdrop-blur-xs"
+            className={cn(
+              "pointer-events-none absolute left-1/2 z-30 -translate-x-1/2 rounded-full border border-accent/45 bg-panel/95 px-4 py-1.5 text-[12px] font-medium text-ink shadow-lg backdrop-blur-xs",
+              approvalQueue.items.length > 0 ? "top-14" : "top-4",
+            )}
           >
             {moveNotice}
           </div>
@@ -768,13 +856,29 @@ export function VirtualOfficePage() {
         <VirtualOfficeRosterSidebar
           desks={plan.desks}
           botDisplayNames={botDisplayNames}
-          selectedBotId={selectedBotId}
+          selectedBotId={highlightedBotId}
           activePair={activePair}
           roundtableOpen={roundtableOpen}
           roundtableAttendeeIds={validRoundtableAttendeeIds}
           onPairBots={handlePairBots}
           onFocusBotDesk={focusBotDesk}
         />
+
+        {approvalQueue.open && (
+          <VirtualOfficeApprovalQueueCard
+            items={approvalQueue.items}
+            activeItemId={approvalQueue.activeItemId}
+            inboxView={approvalQueue.inboxView}
+            botDisplayNames={botDisplayNames}
+            now={clockNow}
+            onSelectItem={approvalQueue.selectItem}
+            onFocusBotDesk={focusCameraOnBotOnly}
+            onOpenDeskChat={openDeskChatFromQueue}
+            onItemResolved={approvalQueue.markResolved}
+            onRestoreItem={approvalQueue.restoreItem}
+            onClose={approvalQueue.close}
+          />
+        )}
 
         {kpiOpen && bots.length > 0 && (
           <VirtualOfficeKpiDrawer
@@ -836,7 +940,7 @@ export function VirtualOfficePage() {
           />
         )}
 
-        {bots.length > 0 && !selectedDesk && !activePairBots && !roundtableOpen && (
+        {bots.length > 0 && !selectedDesk && !activePairBots && !roundtableOpen && !approvalQueue.open && (
           <MapComposer
             bots={bots}
             teams={composerTeams}
@@ -847,6 +951,7 @@ export function VirtualOfficePage() {
               } else if (sentBotIds.length === 2 && sentBotIds[0] && sentBotIds[1]) {
                 handlePairBots(sentBotIds[0], sentBotIds[1]);
               } else if (sentBotIds.length >= 3) {
+                approvalQueue.close();
                 setSelectedBotId(null);
                 setActivePair(null);
                 setKpiOpen(false);

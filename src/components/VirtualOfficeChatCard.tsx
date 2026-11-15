@@ -21,6 +21,7 @@ import { MentionTextarea } from "./MentionTextarea";
 import { useMenuMotion } from "./MenuMotion";
 import { PendingApprovalActions, PendingApprovalPanel, pendingApprovals } from "./PendingApproval";
 import { InstanceProviderMark, ProviderMark } from "./ProviderIcons";
+import { Select } from "./Select";
 import { WorkingDots } from "./WorkingIndicator";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -360,19 +361,20 @@ export function VirtualOfficeChatCard({
 
         {activeTasks.length > 1 && (
           <div className="mt-2">
-            <select
+            <Select
+              size="sm"
+              className="w-full"
               aria-label={t("office3d.chat.switchThread")}
               disabled={threadBusy}
               value={bot.threadId}
               onChange={(event) => void switchThreadInPlace(event.target.value)}
-              className="w-full truncate rounded-lg border border-hairline/60 bg-card px-2.5 py-1 text-[11px] text-ink focus:border-accent focus:outline-none"
             >
               {activeTasks.map((task) => (
                 <option key={task.threadId} value={task.threadId}>
                   {task.title || t("task.untitledConversation")}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
       </header>

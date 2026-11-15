@@ -600,5 +600,153 @@ describe("VirtualOfficePage", () => {
     const card = host.querySelector('[data-office-inspector="gia-han"]');
     expect(card).toBeTruthy();
     expect(card!.querySelector('[aria-label="Xem màn hình"]')).toBeNull();
+    expect(host.querySelector("[data-office-approval-pill]")).toBeNull();
+  });
+
+  it("surfaces a 1-click Quick Approval Queue across waiting bots and auto-advances until cleared", async () => {
+    const commandBot = makeBot({
+      id: "hoang-anh",
+      threadId: "thread-hoang-anh",
+      name: "Hoàng Anh",
+      section: "Kỹ thuật",
+      busy: true,
+      activity: "working",
+      messages: [
+        {
+          id: "msg-bash-1",
+          role: "bot",
+          kind: "options",
+          at: 1_000,
+          card: {
+            requestId: "elicitation:elicit-1",
+            title: "Run deploy check",
+            subtitle: "pnpm test",
+            tool: "Bash",
+            options: ["Allow", "Deny"],
+            commandAllowlist: { command: "pnpm test", cwd: "/repo", providerInstanceId: "inst-1" },
+          },
+        },
+      ],
+    });
+
+    const questionBot = makeBot({
+      id: "gia-han",
+      threadId: "thread-gia-han",
+      name: "Gia Hân",
+      section: "Marketing",
+      activity: "waiting-on-you",
+      messages: [
+        {
+          id: "msg-q-1",
+          role: "bot",
+          kind: "options",
+          at: 2_000,
+          card: {
+            requestId: "elicitation:elicit-1",
+            requestType: "question",
+            title: "Chọn kênh ưu tiên tuần này?",
+            subtitle: "",
+            options: ["TikTok Reels (Recommended)", "Facebook Ads"],
+            questionRequest: {
+              version: 1,
+              questions: [
+                {
+                  question: "Chọn kênh ưu tiên tuần này?",
+                  options: [
+                    { label: "TikTok Reels (Recommended)", description: "Tương tác tự nhiên cao" },
+                    { label: "Facebook Ads", description: "Tệp remarketing sẵn có" },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const replyBot = makeBot({
+      id: "quoc-bao",
+      threadId: "thread-quoc-bao",
+      name: "Quốc Bảo",
+      section: "Vận hành",
+      activity: "waiting-on-you",
+      messages: [
+        {
+          id: "msg-r-1",
+          role: "bot",
+          kind: "text",
+          text: "Báo cáo kho đã xong, anh xác nhận để gửi đối tác nhé?",
+          at: 3_000,
+        },
+      ],
+    });
+
+    await mount({
+      bots: [replyBot, questionBot, commandBot],
+      sections: ["Kỹ thuật", "Marketing", "Vận hành"],
+    });
+
+    const pill = host.querySelector<HTMLButtonElement>("[data-office-approval-pill]");
+    expect(pill).toBeTruthy();
+    expect(pill!.textContent).toContain("Cần duyệt ngay · 3");
+    expect(pill!.textContent).toContain("Hoàng Anh");
+
+    await act(async () => pill!.click());
+
+    const queue = host.querySelector("[data-office-approval-queue]");
+    expect(queue).toBeTruthy();
+    expect(queue!.textContent).toContain("1/3");
+    expect(queue!.textContent).toContain("Hoàng Anh");
+
+    const allowBtn = queue!.querySelector<HTMLButtonElement>('[data-office-queue-action="allow"]');
+    expect(allowBtn).toBeTruthy();
+    await act(async () => allowBtn!.click());
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "decideRequest",
+        threadId: "thread-hoang-anh",
+        requestId: "elicitation:elicit-1",
+        behavior: "allow",
+      }),
+    );
+
+    expect(host.querySelector("[data-office-approval-queue]")?.textContent).toContain("1/2");
+    expect(host.querySelector("[data-office-approval-queue]")?.textContent).toContain("Gia Hân");
+
+    const choiceBtn = host.querySelector<HTMLButtonElement>('[data-office-queue-choice="TikTok Reels"]');
+    expect(choiceBtn).toBeTruthy();
+    await act(async () => choiceBtn!.click());
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "decideRequest",
+        threadId: "thread-gia-han",
+        requestId: "elicitation:elicit-1",
+        behavior: "answer",
+      }),
+    );
+
+    expect(host.querySelector("[data-office-approval-queue]")?.textContent).toContain("1/1");
+    expect(host.querySelector("[data-office-approval-queue]")?.textContent).toContain("Quốc Bảo");
+
+    const quickApproveBtn = host.querySelector<HTMLButtonElement>('[data-office-queue-quick="approve"]');
+    expect(quickApproveBtn).toBeTruthy();
+    await act(async () => quickApproveBtn!.click());
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "send",
+        botId: "quoc-bao",
+        threadId: "thread-quoc-bao",
+        mode: "chat",
+      }),
+    );
+
+    expect(host.querySelector("[data-office-approval-queue]")).toBeNull();
+    expect(host.querySelector("[data-office-approval-pill]")).toBeNull();
+    expect(host.querySelector("[data-office-move-notice]")?.textContent).toContain(
+      "Đã xử lý xong mọi yêu cầu chờ duyệt",
+    );
   });
 });
