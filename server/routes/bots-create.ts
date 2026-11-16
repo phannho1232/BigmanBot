@@ -1,4 +1,4 @@
-import type { WireBot } from "../../shared/wire.ts";
+import type { BotCreateResponse, WireBot } from "../../shared/wire.ts";
 import { cloneProfile } from "../browser/chrome/profile.ts";
 import { browserSessionId, cloneBrowserProfileDirectory } from "../browser-engine.ts";
 import { browserProfilePartitionTarget, DATA_DIR } from "../config.ts";
@@ -286,7 +286,7 @@ export function createBotCreateRoutes(deps: BotCreateRouteDeps): RouteHandler {
           messages: store.messagesFor(bot.threadId),
           activeLeafId: store.activeLeaf(bot.threadId),
         },
-      });
+      } satisfies BotCreateResponse<ReturnType<typeof store.messagesFor>[number]>);
     }
     return PASS;
   };

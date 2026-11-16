@@ -69,7 +69,7 @@ const IMAGE_MIMES: Record<string, string> = {
   "image/webp": ".webp",
 };
 
-/** No binaries, HTML, SVG or scripts; archives are kept as sent, never unpacked. The claimed mime picks the extension; an attacker's filename never does. */
+/** Types kept under their own extension; archives are kept as sent, never unpacked. The claimed mime picks the stored extension; an attacker's filename never does. */
 const FILE_MIMES: Readonly<Record<string, string>> = {
   "video/mp4": ".mp4",
   "video/x-m4v": ".m4v",
@@ -126,6 +126,10 @@ const FILE_MIMES: Readonly<Record<string, string>> = {
   "application/x-bzip2": ".bz2",
   "application/x-xz": ".xz",
 };
+
+/** Every other type (binaries, HTML, SVG, scripts) is stored as an inert `.bin` download, never rendered. */
+const GENERIC_FILE_MIME = "application/octet-stream";
+const GENERIC_FILE_EXTENSION = ".bin";
 
 export function extensionForMime(mime: string | undefined): string | null {
   if (!mime) return null;
@@ -373,7 +377,7 @@ const SAFE_TEXT_EXTENSIONS = new Set([
 
 /** saveFile/saveImage only ever write `${uuid}${extension}` with one of these extensions. */
 const KNOWN_ATTACHMENT_EXTENSIONS = Array.from(
-  new Set([...Object.values(IMAGE_MIMES), ...Object.values(FILE_MIMES), ...SAFE_TEXT_EXTENSIONS]),
+  new Set([...Object.values(IMAGE_MIMES), ...Object.values(FILE_MIMES), ...SAFE_TEXT_EXTENSIONS, GENERIC_FILE_EXTENSION]),
 );
 
 function statSizeIfFile(path: string): number | null {
@@ -428,11 +432,9 @@ export function extensionForFileMime(mime: string | undefined): string | null {
   return value ? FILE_MIMES[value] ?? null : null;
 }
 
-/** Separators and encoded separators are rejected, not massaged, so traversal attempts stay visible as bad requests. */
+/** Separators and encoded separators are rejected, not massaged, so traversal attempts stay visible as bad requests.
+ * A known type takes its extension from the mime; any other keeps its own short one, in the display name only. */
 export function sanitizeSharedFileName(name: string, mime: string): string {
-  const baseExtension = extensionForFileMime(mime);
-  if (!baseExtension) throw statusError(400, "content-type must be a supported document or audio type");
-
   const normalized = name.normalize("NFKC").trim();
   if (!normalized) throw statusError(400, "name is required");
   if (normalized.length > 512) throw statusError(400, "name is too long");
@@ -441,9 +443,12 @@ export function sanitizeSharedFileName(name: string, mime: string): string {
   }
 
   const dot = normalized.lastIndexOf(".");
-  const rawExt = dot > 0 ? normalized.slice(dot).toLowerCase() : "";
-  const extension = baseExtension === ".txt" && SAFE_TEXT_EXTENSIONS.has(rawExt) ? rawExt : baseExtension;
-  const withoutExtension = dot > 0 ? normalized.slice(0, dot) : normalized;
+  const own = dot > 0 ? normalized.slice(dot).toLowerCase() : "";
+  const baseExtension = extensionForFileMime(mime);
+  const extension = baseExtension === ".txt" && SAFE_TEXT_EXTENSIONS.has(own)
+    ? own
+    : baseExtension ?? (/^\.[a-z0-9]{1,10}$/.test(own) ? own : "");
+  const withoutExtension = dot > 0 && extension ? normalized.slice(0, dot) : normalized;
   const safeCharacters = Array.from(withoutExtension, (character) => {
     const code = character.charCodeAt(0);
     return code <= 31 || code === 127 || "<>:\"|?*".includes(character) ? "_" : character;
@@ -465,12 +470,13 @@ export async function saveFile(
   mime: string,
   options: { uploadId?: string; expectedBytes?: number } = {},
 ): Promise<SavedFile> {
-  const normalized = normalizedMime(mime);
-  if (!normalized || !extensionForFileMime(normalized)) {
-    throw statusError(400, "content-type must be a supported document or audio type");
-  }
+  const known = extensionForFileMime(mime);
+  const normalized = known ? normalizedMime(mime)! : GENERIC_FILE_MIME;
   const name = sanitizeSharedFileName(originalName, normalized);
-  const extension = extname(name).toLowerCase() || extensionForFileMime(normalized)!;
+  const nameExt = extname(name).toLowerCase();
+  const extension = known === ".txt" && SAFE_TEXT_EXTENSIONS.has(nameExt)
+    ? nameExt
+    : known ?? GENERIC_FILE_EXTENSION;
   const uploadId = validateAttachmentUploadId(options.uploadId);
   const expectedBytes = options.expectedBytes;
   if (expectedBytes !== undefined && (!Number.isSafeInteger(expectedBytes) || expectedBytes < 0)) {
