@@ -325,6 +325,7 @@ export interface WireBot extends DefaultBotFields, BotAccessFields {
   replyStyle?: ReplyStyle;
   /** This bot's own voice id, so a room of bots doesn't sound like one person. */
   voice?: string;
+  /** This bot's own Live call voice, a GPT-Live or Gemini Live voice id; absent, or not the call provider's, uses the app's. */ liveVoice?: string;
   /** Whether this bot may send voice notes. Absent/true = allowed; false
    * hides the tool and refuses the route even with a voice configured. */
   voiceNotes?: boolean; /** The harness speaks each reply as a voice note; absent follows the installation's `tts.everyReply`. */ voiceNoteEveryReply?: boolean;
@@ -557,7 +558,7 @@ export interface WireMessage extends ServerTextLine, HelperIntroField, SetupCard
   /** A room reply whose speaker the decision model picked (an Auto room),
    * with how sure it was. Absent on every other message; clients that do
    * not know it ignore it. */
-  routedBy?: { provider: "jev" | "workersai" | "openrouter" | "custom"; probability: number };
+  routedBy?: { provider: "jev" | "workersai" | "openrouter" | "custom" | "gemini"; probability: number };
   /** On a conversational bot's user line: the picker label of the quick model its reply ran on. */
   quickModel?: string;
   /** On a "Sent to" hand-off row: the done_when the sender set, redacted, so the chip can show what counts as finished. */
@@ -960,7 +961,7 @@ export type ServerFrame =
   | { kind: "message"; threadId: string; message: WireMessage }
   | { kind: "message.patch"; threadId: string; message: WireMessage }
   | { kind: "thread"; threadId: string; activeLeafId: string }
-  | { kind: "bot"; bot: WireBot }
+  | { kind: "bot"; bot: WireBot; /** Only on a stream opened with `?frames=thread`: `bot.tasks` holds just the changed threads; keep the rest. */ tasksPartial?: true }
   | { kind: "group"; group: WireGroup }
   | { kind: "notify"; notification: NotificationLogEntry }
   | { kind: "notifications.read"; threadId: string; ids: string[] }
