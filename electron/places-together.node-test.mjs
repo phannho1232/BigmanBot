@@ -402,11 +402,11 @@ test("only this computer's page and My Cloud's own page are answered", async () 
 
 test("main wires it to the one rule for this app's own pages, and the preload offers it to those pages only through main", () => {
   const main = readFileSync(join(HERE, "main.mjs"), "utf8");
-  assert.match(main, /installPlacesTogether\(\{ ipcMain, asking: cloudPageAsking, /);
+  assert.match(main, /installPlacesTogether\(\{ ipcMain, asking: togetherPageAsking, /);
   assert.match(main, /desktopNotifications\.arrived\(\); placesTogether\.arrived\(\);/);
   assert.match(main, /try \{ placesTogether\.scopeChanged\(\); \} catch \{\}/, "an account change or sign-out drops the lists at once");
   assert.match(main, /placesTogether\.navigated\(homeOfUrl\(url\)\)/);
-  assert.match(main, /powerChecked: async \(\) => \{ const account = cloudAccount; if \(!account\) return false; await account\.refresh\(\); return Date\.now\(\) - \(account\.state\(\)\.verifiedAt \?\? 0\) < 5_000; \}/);
+  assert.match(main, /powerChecked: async \(\) => \{ if \(!myCloud\(\)\) return Boolean\(togetherCloud\(\)\); const account = cloudAccount; if \(!account\) return false; await account\.refresh\(\); return Date\.now\(\) - \(account\.state\(\)\.verifiedAt \?\? 0\) < 5_000; \}/);
   assert.match(main, /focused: \(\) => powerMonitor\.getSystemIdleState\(60\) !== "locked" && Boolean\(mainWindow && !mainWindow\.isDestroyed\(\) && mainWindow\.isFocused\(\)\)/);
   assert.equal(main.match(/places-together:/g).length, 1, "main sends only that the list changed, never the list");
   const preload = readFileSync(join(HERE, "preload.cjs"), "utf8");

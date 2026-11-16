@@ -82,6 +82,7 @@ export function AccountPage() {
         <SettingsRows><UpdatesConsentRow /></SettingsRows>
       </SettingsGroup>
     )}
+    {!ctx.plan && <PlacesTogetherSwitch />}
   </>;
 }
 
