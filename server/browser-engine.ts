@@ -16,6 +16,7 @@ import { SIGN_IN_PROMPT } from "./system-prompt.ts";
 import { fingerprintPlatform } from "./browser/chrome/flags.ts";
 import { fingerprintSeed } from "./browser/chrome/profile.ts";
 import { isFingerprintChromium } from "./browser/chrome/resolve.ts";
+import { devShmIsSmall } from "./browser/chrome/shm.ts";
 import { gateChromeSettings } from "./browser/egress/gate.ts";
 import {
   AGENT_BROWSER_VERSION,
@@ -144,15 +145,17 @@ async function closeOnce(binaryPath: string, env: NodeJS.ProcessEnv, session: st
   const closeEnv = daemonControlEnv(env);
   if (!closeEnv) return false;
   const deadline = Date.now() + timeoutMs;
-  // `close` to a stopped session starts a daemon only to stop it again and leaves its .config file behind.
-  const running = await runningBrowserSessions(binaryPath, closeEnv, deadline);
-  if (!running) return false;
-  if (!running.includes(session)) return true;
   const pidFile = browserDaemonFile(env, ".pid");
   const daemonPid = () => { try { return readFileSync(pidFile, "utf8").trim(); } catch { return null; } };
+  // `close` to a stopped session starts a daemon only to stop it again and leaves its .config file behind.
+  const running = await runningBrowserSessions(binaryPath, closeEnv, deadline);
+  if (running && !running.includes(session)) return true;
   const closing = daemonPid();
   // Read first: once the daemon exits, its Chrome is re-parented and can no longer be found under it.
   const tree = closing === null ? null : await browserProcessTree(binaryPath, Number(closing), session).catch(() => null);
+  // The list could not be read: on a box out of processes, every agent-browser command fails to start, so the daemon
+  // the pid file names (checked to be this session's own, from /proc where there is one) is stopped directly.
+  if (!running) return tree ? stopBrowserProcesses(tree) : false;
   if ((await runBrowserCommand(binaryPath, closeEnv, ["close"], deadline)).ok) {
     // Native close answers before the daemon exits, and Chrome's helper processes can outlive the answer.
     while (Date.now() < deadline) {
@@ -598,6 +601,8 @@ export function agentBrowserIntegration(input: {
   /** The Chrome OMB prepared for the engine to start (server/browser/chrome/launcher.ts); unused when attaching. */
   launcher?: Record<string, string>;
   dataDir?: string;
+  /** /dev/shm is too small for Chrome's shared memory; read from the host when absent. */
+  smallShm?: boolean;
 }): { command: string; args: string[]; env: Record<string, string> } {
   const sourceEnv = input.env ?? process.env;
   const env: Record<string, string> = {
@@ -646,6 +651,8 @@ export function agentBrowserIntegration(input: {
     if (env.AGENT_BROWSER_PROFILE || fpArgs.length > 0) {
       launch.AGENT_BROWSER_ARGS = [launch.AGENT_BROWSER_ARGS, ...(env.AGENT_BROWSER_PROFILE ? [PROFILE_CACHE_ARG] : []), ...fpArgs].filter(Boolean).join("\n");
     }
+    // agent-browser 0.37 adds this itself only where it recognises Docker, and a container platform leaves no such mark.
+    if (input.smallShm ?? devShmIsSmall(platform)) launch.AGENT_BROWSER_ARGS = [launch.AGENT_BROWSER_ARGS, "--disable-dev-shm-usage"].filter(Boolean).join("\n");
     Object.assign(env, input.launcher, agentBrowserEgressEnv(launch, input.egressPort ?? 0, platform));
   }
   return { command: input.binaryPath, args: ["mcp", "--tools", "core", "--no-webmcp"], env };
