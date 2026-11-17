@@ -609,7 +609,7 @@ export function CloudPreference({ bot, patch }: { bot: Bot; patch: ReturnType<ty
         </div>
       )}
       <CloudBackendPicker
-        value={bot.cloudBackend ?? "box"}
+        value={bot.cloudBackend ?? (state.config?.vps?.configured && !state.config?.box?.configured ? "vps" : "box")}
         onChange={(backend) => patch({ cloudBackend: backend })}
       />
       {/* A saved bot only: a new bot starts on the default server, and new-bot defaults never name one. */}

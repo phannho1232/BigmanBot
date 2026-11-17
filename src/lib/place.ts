@@ -8,7 +8,6 @@ export const PLACES: readonly Place[] = ["cloud", "vm", "local", "browser"];
 export type EffectivePlace = Place | "auto" | "off";
 
 export function placeOffered(place: Place, config: { cloudHome?: boolean } | null | undefined): boolean {
-  if (place === "cloud") return false;
   return !config?.cloudHome || cloudHomeOffersPlace(place);
 }
 

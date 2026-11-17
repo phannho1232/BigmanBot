@@ -12,11 +12,11 @@ describe("where a conversation works", () => {
     expect(effectivePlace({ computer: undefined }, undefined)).toBe("auto");
   });
 
-  it("hides the third-party cloud desktop place, and offers no this computer or Local VM on an OMB Cloud home", () => {
+  it("offers every place on a desktop or self-hosted server, and no this computer or Local VM on an OMB Cloud home", () => {
     for (const config of [null, undefined, {}, { cloudHome: false }]) {
-      expect(PLACES.filter((place) => placeOffered(place, config))).toEqual(["vm", "local", "browser"]);
+      expect(PLACES.filter((place) => placeOffered(place, config))).toEqual(["cloud", "vm", "local", "browser"]);
     }
-    expect(PLACES.filter((place) => placeOffered(place, { cloudHome: true }))).toEqual(["browser"]);
+    expect(PLACES.filter((place) => placeOffered(place, { cloudHome: true }))).toEqual(["cloud", "browser"]);
   });
 
   it("names places with one label key each", () => {

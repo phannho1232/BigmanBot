@@ -96,7 +96,7 @@ describe("the menu's first row", () => {
     expect(menu[0]).toEqual({ checked: true, text: "Auto Picks the right place for each task" });
     expect(html).not.toContain("Follow this bot");
     expect(html).toContain('aria-label="Where this conversation works: Auto"');
-    expect(menu).toHaveLength(4);
+    expect(menu).toHaveLength(5);
     expect(menu.filter((row) => row.text.startsWith("Auto"))).toHaveLength(1);
   });
 
@@ -148,14 +148,14 @@ describe("another server's page", () => {
     fixture.menuOpen = true;
     const html = renderToStaticMarkup(createElement(PlaceChip, { bot: { ...bot, computer: undefined }, live: false, onPin: () => {} }));
     const rows = html.split('role="menuitemradio"').slice(1);
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     expect(rows.some((row) => row.includes("This computer"))).toBe(false);
 
     let submenu: { label: unknown }[] = [];
     function Probe() { submenu = usePlaceMenuItem({ bot, onPin: () => {} }).submenu ?? []; return null; }
     renderToStaticMarkup(createElement(Probe));
     expect(labels(submenu)).not.toContain("This computer");
-    expect(submenu).toHaveLength(3);
+    expect(submenu).toHaveLength(4);
   });
 
   it("still lists This computer on a desktop", () => {
@@ -176,25 +176,25 @@ describe("the places a conversation can be pinned to", () => {
   afterEach(() => { fixture.config = null; });
 
   it("reaches this computer and a Local VM on a desktop or self-hosted server", () => {
-    expect(availability()).toMatchObject({ cloud: false, vm: true, local: true });
+    expect(availability()).toMatchObject({ cloud: true, vm: true, local: true });
   });
 
   it("never reaches them on an OMB Cloud home", () => {
     fixture.config = { cloudHome: true };
-    expect(availability()).toMatchObject({ cloud: false, vm: false, local: false });
+    expect(availability()).toMatchObject({ cloud: true, vm: false, local: false });
   });
 });
 
 describe("J11: the chip names a place's problem in the panel's words", () => {
   afterEach(() => { fixture.menuOpen = false; fixture.computerMcp = true; });
 
-  it("greys out the private desktop for a model that can't use one, with the same few words and line", () => {
+  it("greys out the cloud desktop for a model that can't use one, with the same few words and line", () => {
     fixture.computerMcp = false;
     fixture.menuOpen = true;
     const html = renderToStaticMarkup(createElement(PlaceChip, { bot, live: false, onPin: () => {} }));
-    const row = html.split('role="menuitemradio"').slice(1).find((entry) => entry.includes("Private desktop"))!;
+    const row = html.split('role="menuitemradio"').slice(1).find((entry) => entry.includes("Cloud desktop"))!;
     expect(row).toContain('disabled=""');
     expect(row).toContain("Not with this model");
-    expect(row).toContain("title=\"grok-4.6 can&#x27;t use a private desktop. Choose a model that can, such as Claude or ChatGPT.\"");
+    expect(row).toContain("title=\"grok-4.6 can&#x27;t use a desktop. Choose a model that can, such as Claude or ChatGPT.\"");
   });
 });

@@ -3,7 +3,6 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronRight, Search } from "lucide-react";
 import { useStore, type ConfigStatus } from "@/state/store";
 import { cn } from "@/lib/cn";
-import { placeOffered } from "@/lib/place";
 import { scrollParent, scrollWithin } from "@/lib/scroll-within";
 import { t } from "@/lib/i18n";
 import { BoatOfferPanel } from "../BoatOffer";
@@ -129,7 +128,7 @@ function landOn(page: HTMLElement | null, request: KeyFocusRequest, section: Key
  * (AI providers are AI's own Providers list), unless a search or a link asks for a key in one. */
 export function KeysPage({ bare = false, exclude = [] }: { bare?: boolean; exclude?: KeySectionId[] } = {}) {
   const { state } = useStore();
-  const catalog = KEY_CATALOG.filter((entry) => entry.id !== "box" || placeOffered("cloud", state.config));
+  const catalog = KEY_CATALOG.filter((entry) => entry.id !== "box");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<ReadonlySet<KeySectionId>>(() => new Set(
     KEY_SECTIONS.filter((section) => section.id === "ai" || catalog.some((entry) => entry.section === section.id && connected(entry, state.config)))

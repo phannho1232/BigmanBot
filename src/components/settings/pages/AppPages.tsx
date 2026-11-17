@@ -63,11 +63,10 @@ export function AppPage() {
         </SettingsRows>
       </SettingsGroup>
     )}
-    {/* Your computers is Advanced: in Simple the rail switches places, and the page stays one window tall. */}
-    {ctx.desktop && ctx.advanced && (window.ogb?.environments
+    {ctx.desktop && (window.ogb?.environments
       ? <ConnectedWorkspacesSettings label={t("settings.app.computers")} description={t("settings.app.computersLine")} />
       : !ctx.client && <PlacesFromHere />)}
-    {ctx.desktop && ctx.advanced && <RemoteComputerSection hideWhenUnavailable legacyOnly />}
+    {ctx.desktop && <RemoteComputerSection hideWhenUnavailable legacyOnly />}
     <SettingsGroup label={t("sidebar.menu.helpShort")} block="help">
       <SettingsRows>
         <SettingsLinkRow title={t("sidebar.menu.help")} external onClick={() => void openExternalLink(HELP_CENTER_URL)} />

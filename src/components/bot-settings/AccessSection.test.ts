@@ -226,12 +226,13 @@ describe("AccessSection Works on", () => {
     expect(html).not.toContain("Open the Screen panel");
     expect(html).not.toContain("Auto cloud preference");
     expect(html).toContain("Works on");
-    expect(html).not.toContain("Cloud desktop");
+    expect(html).toContain("Cloud desktop");
     expect(html).toMatch(/aria-pressed="true"[^>]*>.*?Auto/);
 
     fixture.config = { box: { configured: true } } as Partial<ConfigStatus>;
-    const chosen = draft(makeBot({ computer: "vm" }));
-    expect(chosen.html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>(?:(?!<\/button>).)*?Private desktop/);
+    const chosen = draft(makeBot({ computer: "cloud" }));
+    expect(chosen.html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>(?:(?!<\/button>).)*?Cloud desktop/);
+    expect(chosen.html).toContain("Cloud backend");
 
     const picker = nodes(chosen.tree).find((node) => (node.type as { name?: string }).name === "DraftWorksOn")!;
     let rendered: ReactNode = null;
@@ -264,10 +265,11 @@ describe("AccessSection Works on", () => {
     const grid = nodes(rendered).find((node) => (node.type as { name?: string }).name === "WorksOnGrid")!;
     const options = grid.props.options as Array<{ mode: string | null; disabled: boolean; note?: string }>;
     const of = (mode: string) => options.find((option) => option.mode === mode)!;
-    expect(of("vm")).toMatchObject({ disabled: false, note: undefined });
+    expect(of("cloud")).toMatchObject({ disabled: false, note: "What New bot can use doesn't include a desktop." });
     expect(of("local").disabled).toBe(false);
     expect(of("local").note).toBeTruthy();
     const html = renderToStaticMarkup(grid).replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
+    expect(html).toContain(of("cloud").note);
     expect(html).toContain(of("local").note);
   });
 
