@@ -79,11 +79,16 @@ const recordSchema = z.object({
 type TemplateRecord = z.output<typeof recordSchema>;
 
 const SKIP_WORDS: Record<string, string> = {
-  picture_too_large: "a picture over 64 KB", picture_invalid: "a picture that couldn't be read", files_not_shared: "files attached to a routine",
-  lead_not_in_group_chat: "a group chat goal whose lead isn't in the chat", skill_changed: "a skill that changed while it was being shared",
-  skill_conflict: "a skill two bots have in different versions", bot_skill_limit: "skills past a bot's limit", team_skill_limit: "skills past the department's limit",
+  picture_too_large: "ảnh vượt quá 64 KB", picture_invalid: "ảnh không thể đọc được", files_not_shared: "tệp đính kèm trong quy trình định kỳ",
+  lead_not_in_group_chat: "mục tiêu nhóm chat có trưởng nhóm không nằm trong phòng", skill_changed: "kỹ năng bị thay đổi trong lúc chia sẻ",
+  skill_conflict: "kỹ năng có nội dung khác nhau giữa hai bot", bot_skill_limit: "số kỹ năng vượt quá giới hạn của một bot", team_skill_limit: "số kỹ năng vượt quá giới hạn của phòng ban",
 };
-const skipWords = (skip: TeamExportSkip) => `${SKIP_WORDS[skip.reason] ?? "an item that can't be shared"} (${skip.part})`;
+/** The line a template gets when its bot or department has no words of its own; a card leaves it out. */
+const plainTagline = (scope: TemplateScope) => `${scope === "bot" ? "Bot" : "Phòng ban"} được chia sẻ từ Bigman Bot.`;
+const plainSummary = (scope: TemplateScope) => scope === "bot"
+  ? "Được chia sẻ từ Bigman Bot. Bot sẽ được thêm thành bản sao mới cùng kỹ năng và quy trình định kỳ; các quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm."
+  : "Được chia sẻ từ Bigman Bot. Các bot, kỹ năng, nhóm chat và quy trình định kỳ sẽ được thêm thành bản sao mới; các quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm.";
+const skipWords = (skip: TeamExportSkip) => `${SKIP_WORDS[skip.reason] ?? "mục không thể chia sẻ"} (${skip.part})`;
 
 const slugOf = (name: string) => name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "template";
 const firstLine = (text: string | undefined, max: number) => {
@@ -198,7 +203,7 @@ function templateDocument(document: PackageDocument, bots: readonly BotRecord[],
       if (slugs.has(slug) || apps.length >= 30) continue;
       slugs.add(slug);
       const users = bots.filter((each) => uses(each).includes(name)).map((each) => each.name);
-      apps.push({ slug, label: (name.charAt(0).toUpperCase() + name.slice(1)).slice(0, 100), reason: `Used by ${users.join(", ")}`.slice(0, 240), optional: true });
+      apps.push({ slug, label: (name.charAt(0).toUpperCase() + name.slice(1)).slice(0, 100), reason: `Được dùng bởi ${users.join(", ")}`.slice(0, 240), optional: true });
     }
   }
   pkg.requirements = { ...pkg.requirements, apps };
@@ -247,7 +252,7 @@ export function createShareHost(deps: ShareHostDeps) {
       id: record.id,
       scope: record.scope,
       name: pkg?.name ?? record.slug,
-      tagline: pkg?.tagline ?? "",
+      tagline: pkg && pkg.tagline !== plainTagline(record.scope) ? pkg.tagline : "",
       avatars: record.avatars,
       counts: {
         bots: pkg?.agents.length ?? record.avatars.length,
@@ -301,9 +306,9 @@ export function createShareHost(deps: ShareHostDeps) {
       exported = createTeamPackageExport({
         team: target.scope === "bot" ? "" : target.section,
         name: lead ? lead.name : target.scope === "department" ? target.section : undefined,
-        tagline: lead ? firstLine(lead.title || lead.description, 160) || undefined : firstLine(brief, 160) || undefined,
-        summary: lead ? (lead.description?.trim().slice(0, 2_000) || undefined) : brief?.slice(0, 2_000) || undefined,
-        authorName: "MausBot user",
+        tagline: (lead && firstLine(lead.title || lead.description, 160)) || plainTagline(target.scope),
+        summary: lead?.description?.trim().slice(0, 2_000) || plainSummary(target.scope),
+        authorName: "Người dùng Bigman Bot",
         bots,
         groups: target.scope === "bot" ? [] : deps.groups(),
         routines: target.scope === "bot" ? routines.filter((routine) => routine.botId === target.bot.id && routine.target !== "room-goal") : routines,

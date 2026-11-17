@@ -34,7 +34,7 @@ describe("template folders", () => {
     const manifest = String(files["team.md"]);
     expect(manifest).toMatch(/^---\nbotmrr: 2\n/);
     expect(manifest).not.toContain("base64");
-    for (const heading of ["Activation", "Mission", "Outcomes", "Connections", "Team", "Chief of Staff", "Completion rule"]) expect(manifest).toContain(`## ${heading}`);
+    for (const heading of ["Cách kích hoạt", "Nhiệm vụ", "Kết quả đạt được", "Kết nối cần thiết", "Đội ngũ Bot", "Chánh văn phòng", "Quy tắc bảo mật"]) expect(manifest).toContain(`## ${heading}`);
     const back = readShareFolder(files);
     expect(back.kind).toBe("package");
     if (back.kind !== "package") return;

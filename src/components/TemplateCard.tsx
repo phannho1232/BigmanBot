@@ -2,9 +2,9 @@
 // (the Details sheet, also Import's preview), and the card's actions.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpRight, Check, ChevronDown, Copy, FolderDown, Github, Loader2, MoreHorizontal, RefreshCw, Trash2, Upload } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Copy, FolderDown, Loader2, MoreHorizontal, RefreshCw, Trash2, Upload } from "lucide-react";
 
-import { COMMUNITY_UPLOAD_URL, TEMPLATE_UPDATE_MESSAGE, type TemplateAvatar, type TemplateCard, type TemplateDetails } from "../../shared/share-card";
+import { TEMPLATE_UPDATE_MESSAGE, type TemplateAvatar, type TemplateCard, type TemplateDetails } from "../../shared/share-card";
 import { botBodyId } from "../../shared/bot-body";
 import { MAUS_COLOR_NAMES, type MausColor } from "../../shared/wire";
 import { openExternalLink } from "@/lib/app-links";
@@ -138,12 +138,9 @@ export function TemplateButtons({ actions, primary, view, extra }: {
   );
   return (
     <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-      {card.fallback ? <>
-        {saveButton}
-        <button type="button" data-template-upload onClick={() => openLink(COMMUNITY_UPLOAD_URL)} className={cn(ASK_CHIP, ASK_CHIP_IDLE)}>
-          <Github size={14} aria-hidden="true" />{t("template.uploadOnGithub")}
-        </button>
-      </> : card.status === "published" && card.link ? <>
+      {card.fallback ? (
+        saveButton
+      ) : card.status === "published" && card.link ? <>
         <CopyLinkButton link={card.link} />
         {view.url && <button type="button" onClick={() => openLink(view.url!)} className={cn(ASK_CHIP, ASK_CHIP_IDLE)}>
           <ArrowUpRight size={14} aria-hidden="true" />{view.label}
@@ -159,11 +156,10 @@ export function TemplateButtons({ actions, primary, view, extra }: {
   );
 }
 
-/** One line under the buttons: why Publish isn't offered, the publish error, the last action's error, or where the folder went. */
+/** One line under the buttons: the publish error, the last action's error, or where the folder went. */
 export function TemplateNotes({ actions }: { actions: TemplateActions }) {
   const { card, error, saved } = actions;
   return <>
-    {card.fallback && <p className="mt-1.5 text-[12px] text-ink-secondary">{t(card.fallback === "sign_in" ? "template.signInToPublish" : "template.publishUnavailable")}</p>}
     {card.status === "failed" && card.error && <p role="alert" dir="auto" className="mt-1.5 text-[12px] text-danger">{card.error}</p>}
     {error && <p role="alert" dir="auto" className="mt-1.5 text-[12px] text-danger">{error}</p>}
     {saved && <p role="status" dir="auto" className="mt-1.5 truncate text-[12px] text-ink-secondary" title={saved}>{t("template.savedTo", { path: saved })}</p>}

@@ -67,5 +67,5 @@ export const COMMUNITY_REPOSITORY_URL = "https://github.com/milind-soni/openmaus
 export const COMMUNITY_UPLOAD_URL = `${COMMUNITY_REPOSITORY_URL}/upload/main/teams`;
 
 /** The chat message the bot's Share button sends, and the one Update sends. */
-export const TEMPLATE_SHARE_MESSAGE = "Create a public template of yourself that I can share with somebody else";
-export const TEMPLATE_UPDATE_MESSAGE = "Update your shared template.";
+export const TEMPLATE_SHARE_MESSAGE = "Hãy tạo một bản mẫu chia sẻ của bạn để tôi có thể gửi cho người khác";
+export const TEMPLATE_UPDATE_MESSAGE = "Hãy cập nhật lại bản mẫu chia sẻ của bạn.";
