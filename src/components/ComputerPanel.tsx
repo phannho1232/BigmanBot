@@ -171,7 +171,7 @@ export function ComputerPanel({
   const [teamComputer, setTeamComputer] = useState<{
     id: string; name: string; botId: string; section: string;
   } | null>(null);
-  const cloudBackend = bot.cloudBackend ?? (state.config?.vps?.configured && !state.config?.box?.configured ? "vps" : "box");
+  const cloudBackend = bot.cloudBackend ?? "box";
   const computerSelectionPersisted = Boolean(
     persistedComputerSelection
       && persistedComputerSelection.botId === bot.id
@@ -1142,6 +1142,7 @@ export function ComputerPanel({
       setLocalAutoWarningTarget(bot.id);
     }
     else if (mode === "browser") updateComputerSelection({ computer: mode, browser: true });
+    else if (mode === "cloud") updateComputerSelection({ computer: mode, cloudBackend: "vps" });
     else updateComputerSelection({ computer: mode });
   };
   const unpinToWorksOn = () => {

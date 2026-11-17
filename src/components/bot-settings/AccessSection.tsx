@@ -609,12 +609,12 @@ export function CloudPreference({ bot, patch }: { bot: Bot; patch: ReturnType<ty
         </div>
       )}
       <CloudBackendPicker
-        value={bot.cloudBackend ?? (state.config?.vps?.configured && !state.config?.box?.configured ? "vps" : "box")}
+        value={bot.cloudBackend ?? "vps"}
         onChange={(backend) => patch({ cloudBackend: backend })}
       />
       {/* A saved bot only: a new bot starts on the default server, and new-bot defaults never name one. */}
-      {bot.cloudBackend === "vps" && !draft && <VpsAliasField bot={bot} />}
-      {!bot.computer && bot.cloudBackend === "vps" && (
+      {!draft && <VpsAliasField bot={bot} />}
+      {!bot.computer && (
         <div className="mt-3 flex items-center justify-between gap-4 rounded-lg bg-inset px-3 py-2.5">
           <div className="min-w-0">
             <div className="text-[13px] text-ink">{t("botAccess.cloud.startVps")}</div>

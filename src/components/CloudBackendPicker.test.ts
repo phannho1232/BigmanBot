@@ -16,9 +16,11 @@ const picker = (value: "box" | "vps" = "box") => renderToStaticMarkup(createElem
 describe("CloudBackendPicker", () => {
   afterEach(() => { fixture.config = null; });
 
-  it("offers Boat or a self-hosted VPS on a desktop or self-hosted server", () => {
+  it("shows only Self-hosted VPS on a desktop or self-hosted server", () => {
     fixture.config = { cloudHome: false };
-    expect(picker()).toContain("Self-hosted VPS");
+    const markup = picker();
+    expect(markup).toContain("Self-hosted VPS");
+    expect(markup).not.toContain("Boat");
   });
 
   it("is hidden on My Cloud", () => {
@@ -26,9 +28,9 @@ describe("CloudBackendPicker", () => {
     expect(picker()).toBe("");
   });
 
-  it.each(["box", "vps"] as const)("offers both backends whichever is chosen (%s)", (value) => {
+  it.each(["box", "vps"] as const)("never shows third-party Boat (%s)", (value) => {
     const markup = picker(value);
-    expect(markup).toContain("Boat");
+    expect(markup).not.toContain("Boat");
     expect(markup).toContain("Self-hosted VPS");
     expect(markup).not.toContain("disabled");
     expect(markup).not.toMatch(/ACP model provider/);

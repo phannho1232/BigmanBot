@@ -481,7 +481,7 @@ describe("Where the bot works", () => {
   it("dispatches exactly what the Advanced picker dispatches for each place", () => {
     const expected = [
       { computer: null },
-      { computer: "cloud" },
+      { computer: "cloud", cloudBackend: "vps" },
       { computer: "vm" },
       { computer: "local" },
       { computer: "browser", browser: true },
