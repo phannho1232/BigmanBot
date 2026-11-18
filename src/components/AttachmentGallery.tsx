@@ -10,7 +10,6 @@ import { windowsPathDestinations } from "../../shared/markdown-windows-paths";
 import { localFilePath } from "./ChatMarkdown";
 import {
   AttachedFileChip,
-  messageFileUrl,
   AttachmentPreviewDialog,
   AttachmentThumbnail,
   previewImage,
@@ -187,7 +186,7 @@ async function readMessageVideo(
 ): Promise<Blob | string> {
   const response = await requestMessageFile(file.path, message, signal, { mediaLink: true });
   progress();
-  if (response.headers.get("x-openmausbot-media") === "1") return messageVideoLink(await response.json().catch(() => null), message);
+  if (response.headers.get("x-openmausbot-media") === "1") return messageMediaLink(await response.json().catch(() => null), message, VIDEO_MIMES, t("attach.videoUnavailable"));
   const mime = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
   if (!mime || !VIDEO_MIMES.includes(mime)) {
     await response.body?.cancel();
@@ -222,12 +221,12 @@ async function readMessageVideo(
 }
 
 /** Security: only this message's own file route, never a URL the response could point anywhere else. */
-function messageVideoLink(body: unknown, message: MessageAttachmentContext): string {
+function messageMediaLink(body: unknown, message: MessageAttachmentContext, mimes: readonly string[], unavailable: string): string {
   const { url, mime } = (body ?? {}) as { url?: unknown; mime?: unknown };
   const route = `/api/threads/${encodeURIComponent(message.threadId)}/messages/${encodeURIComponent(message.messageId)}/file?media=`;
   if (typeof url !== "string" || !url.startsWith(route) || !/^[\w-]+$/.test(url.slice(route.length))
-    || typeof mime !== "string" || !VIDEO_MIMES.includes(mime)) {
-    throw new Error(t("attach.videoUnavailable"));
+    || typeof mime !== "string" || !mimes.includes(mime)) {
+    throw new Error(unavailable);
   }
   return url;
 }
@@ -289,7 +288,16 @@ function VideoAttachment({ file, message }: { file: GalleryFile; message: Messag
   return (
     <div className="min-w-0 overflow-hidden rounded-xl border border-hairline/40 bg-inset/40">
       <div className="relative flex aspect-[4/3] items-center justify-center bg-inset">
-        {preview && !error ? (
+        {preview && error ? (
+          <div className="flex size-full flex-col items-center justify-center gap-2 p-3 text-center">
+            <Film size={24} className="text-ink-tertiary" aria-hidden="true" />
+            <p role="alert" className="text-[12px] text-ink-secondary">{error}</p>
+            <a href={preview} download={file.name} aria-label={t("attach.downloadAria", { name: file.name })}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] text-accent-text hover:bg-ink/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+              <Download size={14} aria-hidden="true" />{t("attach.download")}
+            </a>
+          </div>
+        ) : preview ? (
           <video
             ref={videoRef}
             src={preview}
@@ -312,7 +320,7 @@ function VideoAttachment({ file, message }: { file: GalleryFile; message: Messag
           >
             {loading ? <LoaderCircle size={24} className="animate-spin" /> : <Play size={24} />}
             <span className="text-[12px]">{loading ? t("attach.videoLoading") : error && !tooLarge ? t("chat.retry") : t("attach.loadVideo")}</span>
-            {!error && !loading && <span className="text-[11px]">{t("attach.videoHint")}</span>}
+            {!error && !loading && <span className="text-[11px]">{t("attach.videoHintStreams")}</span>}
           </button>
         )}
         {(preview || loading || error) && (
@@ -322,7 +330,7 @@ function VideoAttachment({ file, message }: { file: GalleryFile; message: Messag
         )}
         {!preview && !loading && <Film size={13} className="pointer-events-none absolute left-2 top-2 text-ink-secondary/50" />}
       </div>
-      {error && <p role="alert" className="px-3 py-2 text-[11px] text-danger">{error}</p>}
+      {error && !preview && <p role="alert" className="px-3 py-2 text-[11px] text-danger">{error}</p>}
       <AttachedFileChip file={file} linked={file.linked} message={message} className="max-w-none rounded-none border-0 border-t border-hairline/30 bg-transparent" />
     </div>
   );
@@ -334,7 +342,7 @@ export function loadMessageAudio(
   file: GalleryFile,
   message: MessageAttachmentContext,
   signal: AbortSignal,
-): Promise<Blob> {
+): Promise<Blob | string> {
   return withStallRetry(signal, t("attach.audioUnavailable"), (attempt, progress) => readMessageAudio(file, message, attempt, progress));
 }
 
@@ -343,9 +351,14 @@ async function readMessageAudio(
   message: MessageAttachmentContext,
   signal: AbortSignal,
   progress: () => void,
-): Promise<Blob> {
-  const response = await requestMessageFile(file.path, message, signal);
+): Promise<Blob | string> {
+  // A server that links only videos answers 415; it still sends the bytes to a plain request.
+  const response = await requestMessageFile(file.path, message, signal, { mediaLink: true }).catch((reason: unknown) => {
+    if ((reason as { status?: unknown } | null)?.status !== 415) throw reason;
+    return requestMessageFile(file.path, message, signal);
+  });
   progress();
+  if (response.headers.get("x-openmausbot-media") === "1") return messageMediaLink(await response.json().catch(() => null), message, AUDIO_MIMES, t("attach.audioUnavailable"));
   const mime = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
   if (!mime || !AUDIO_MIMES.includes(mime)) {
     await response.body?.cancel();
@@ -379,13 +392,27 @@ async function readMessageAudio(
 
 function AudioAttachment({ file, message }: { file: GalleryFile; message: MessageAttachmentContext }) {
   const [src, setSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const audioUrl = messageFileUrl(file.path, message);
-  const downloadUrl = messageFileUrl(file.path, message, true);
+  const request = useRef<AbortController | null>(null);
+  useEffect(() => () => request.current?.abort(), []);
+  useEffect(() => () => { if (src?.startsWith("blob:")) URL.revokeObjectURL(src); }, [src]);
 
-  const load = () => {
+  const load = async () => {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
     setError("");
-    setSrc(audioUrl);
+    try {
+      const source = await loadMessageAudio(file, message, controller.signal);
+      if (!controller.signal.aborted) setSrc(typeof source === "string" ? source : URL.createObjectURL(source));
+    } catch (reason) {
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : t("attach.audioUnavailable"));
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+      if (request.current === controller) request.current = null;
+    }
   };
 
   return (
@@ -393,14 +420,14 @@ function AudioAttachment({ file, message }: { file: GalleryFile; message: Messag
       <div className="flex items-center gap-2">
         {src ? <Music size={14} className="shrink-0 text-accent" aria-hidden="true" />
           : (
-            <button type="button" onClick={load} aria-label={t("attach.previewAudio", { name: file.name })}
-              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent transition-colors hover:bg-accent/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
-              <Play size={13} fill="currentColor" />
+            <button type="button" disabled={loading} onClick={() => void load()} aria-label={t("attach.previewAudio", { name: file.name })}
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent transition-colors hover:bg-accent/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:cursor-wait">
+              {loading ? <LoaderCircle size={14} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
             </button>
           )}
         <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-ink" title={file.name}>{file.name}</span>
-        <a href={downloadUrl} download={file.name} aria-label={t("attach.saveAria", { name: file.name })} title={t("attach.saveAria", { name: file.name })}
-          className="shrink-0 rounded-lg p-1 text-ink-secondary hover:bg-raised hover:text-ink"><Download size={14} /></a>
+        {src && <a href={src} download={file.name} aria-label={t("attach.saveAria", { name: file.name })} title={t("attach.saveAria", { name: file.name })}
+          className="shrink-0 rounded-lg p-1 text-ink-secondary hover:bg-raised hover:text-ink"><Download size={14} /></a>}
       </div>
       {src && !error && <audio src={src} controls autoPlay preload="metadata" aria-label={t("attach.previewAudio", { name: file.name })} onError={() => { setSrc(null); setError(t("attach.audioUnavailable")); }} className="h-9 w-full" />}
       {error && <p role="alert" className="text-[11px] text-danger">{error}</p>}

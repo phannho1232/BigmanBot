@@ -17,7 +17,7 @@ const LISTED_FROM = 1000;
 
 const LINES: Record<string, number> = {
   "server/index.ts": 15464,
-  "src/state/store.tsx": 3293,
+  "src/state/store.tsx": 3300,
   "electron/main.mjs": 3328,
   "electron/computer-sharing.mjs": 1001,
   "server/store.ts": 2289,
@@ -26,10 +26,10 @@ const LINES: Record<string, number> = {
   "server/drivers/acp/core.ts": 1658,
   "server/drivers/codex.ts": 1718,
   "server/routines.ts": 1553,
-  "src/components/ComputerPanel.tsx": 1782,
+  "src/components/ComputerPanel.tsx": 1783,
   "src/components/RoutineCalendarPage.tsx": 1622,
   "server/config.ts": 1243,
-  "src/components/ChatView.tsx": 1281,
+  "src/components/ChatView.tsx": 1275,
   "server/routine-requests.ts": 1468,
   "src/components/GroupView.tsx": 1215,
   "src/components/LocalComputerSection.tsx": 1440,
