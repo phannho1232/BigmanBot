@@ -149,7 +149,7 @@ export function TeamFilesPage() {
     if (files.length) void upload(files);
   };
   const crumbs = folder ? folder.split("/") : [];
-  const team = state.config?.team?.name ?? "";
+  const team = state.config?.team?.name || "Bigman Bot";
 
   return (
     <ToolPage label={t("teamFiles.title")}>

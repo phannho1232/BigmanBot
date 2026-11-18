@@ -58,6 +58,7 @@ export function createCloudTeamHost(deps: CloudTeamHostDeps) {
   };
   if (team) deps.engineHomes?.start({ dataDir: deps.dataDir, audienceOf, threads: () => storeThreads(deps.store.bots ?? []) });
   if (team) deps.box?.scopeAudiences(createTeamBoxScope({ audienceOf, bots: () => deps.store.bots ?? [], ...(deps.teamFiles ? { teamFiles: deps.teamFiles } : {}) }));
+  else if (deps.teamFiles) deps.box?.scopeAudiences(({ botId }) => { const files = deps.teamFiles?.(botId ?? null) ?? null; return files ? { teamReadOnly: false, teamFiles: files } : null; });
   /** The layer a turn in this conversation writes into: the bot's own folder off a team or for the team's conversations,
    * a sibling folder for a room's or a member's. The folder exists before the turn starts, so the box can bind it. */
   const layer = (botId: string, threadId: string): string => {

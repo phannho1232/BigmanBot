@@ -396,7 +396,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
         <PublishedAppsPage />
       ) : state.activeView === "announcements" ? (
         <AnnouncementsPage />
-      ) : state.activeView === "team-files" && state.config?.team ? (
+      ) : state.activeView === "team-files" ? (
         <TeamFilesPage />
       ) : state.activeView === "routines" ? (
         <TriggersPage onBack={closeCalendar} onOpenRoom={openCalendarRoom} />

@@ -859,7 +859,7 @@ export function AccessSection({
 
       {!draft && shows("xResearch") && <ResearchCard bot={bot} patch={patch} />}
 
-      {!draft && shows("teamFiles") && state.config?.team && <TeamFilesCard bot={bot} patch={patch} />}
+      {!draft && shows("teamFiles") && <TeamFilesCard bot={bot} patch={patch} />}
 
       {!draft && shows("webhooks") && <BotApiCard bot={bot} />}
 

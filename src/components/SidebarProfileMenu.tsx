@@ -613,7 +613,7 @@ export function SidebarProfileMenu({ iconOnly = false, rail = false, circle = fa
         onVirtualOffice: () => dispatch({ type: "showVirtualOffice" }),
         onFiles: filesReady ? () => dispatch({ type: "showFiles" }) : undefined,
         onPublishedApps: () => dispatch({ type: "showPublishedApps" }),
-        onTeamFiles: state.config?.team ? () => dispatch({ type: "showTeamFiles" }) : undefined,
+        onTeamFiles: () => dispatch({ type: "showTeamFiles" }),
         archived: account?.archived,
       }),
     } } : {}),
