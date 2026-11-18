@@ -63,6 +63,30 @@ export function DefaultResponderSelect({ group, members }: { group: Group; membe
   );
 }
 
+const TURN_CHOICES = [1, 2, 3, 4, 5] as const;
+
+export function TurnsPerMemberSelect({ group }: { group: Group }) {
+  const { dispatch } = useStore();
+  const turns = group.turnsPerMember ?? 1;
+  return (
+    <Select
+      variant="pill"
+      size="sm"
+      className="shrink-0"
+      title={t("room.panel.turns.hint")}
+      aria-label={t("room.panel.turns.title")}
+      value={String(turns)}
+      onChange={(event) => dispatch({ type: "patchGroup", groupId: group.id, patch: { turnsPerMember: Number(event.target.value) } })}
+    >
+      {TURN_CHOICES.map((value) => (
+        <option key={value} value={String(value)}>
+          {t("room.panel.turns.title")}: {value}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
 function memberMauses(group: Group, members: Bot[], placeOf: (entry: RoomQueueEntry) => string | undefined) {
   const contextWarnings = roomContextWarnings(group, members);
   const speakersElsewhere = new Set(roomSpeakerIds(group).filter((id) => id !== group.busyBotId));
@@ -224,7 +248,23 @@ export function RoomHeader({
         <div data-roomhead-identity className="flex min-w-0 items-center gap-2 @max-3xl/roomhead:basis-full" style={headerNoDragStyle}>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate text-[15px] font-semibold text-ink">{group.name}</span>
+              {!remoteClient && !setupPending && !group.dm ? (
+                <button
+                  type="button"
+                  data-room-name
+                  onClick={(event) => openRoomPanel(group.id, event.currentTarget)}
+                  title={t("room.panel.open")}
+                  aria-label={t("room.panel.openAria", { name: group.name })}
+                  aria-haspopup="dialog"
+                  style={headerNoDragStyle}
+                  className="group -mx-2 flex min-w-0 items-center gap-1 rounded-lg px-2 py-0.5 hover:bg-raised/60 focus-visible:bg-raised/60"
+                >
+                  <span className="truncate text-[15px] font-semibold text-ink">{group.name}</span>
+                  <ChevronRight size={14} aria-hidden="true" className="-ml-1 w-0 shrink-0 text-ink-secondary opacity-0 transition-[width,margin,opacity] duration-150 group-hover:ml-0 group-hover:w-3.5 group-hover:opacity-100 group-focus-visible:ml-0 group-focus-visible:w-3.5 group-focus-visible:opacity-100" />
+                </button>
+              ) : (
+                <span className="truncate text-[15px] font-semibold text-ink">{group.name}</span>
+              )}
               {!setupPending && !group.dm && <GroupTaskPicker group={group} />}
             </div>
             {group.description && <p className="truncate text-[12px] leading-4 text-ink-secondary">{group.description}</p>}
@@ -259,6 +299,7 @@ export function RoomHeader({
           <GroupUsageChip usage={group.usage} />
           {!remoteClient && !setupPending && !group.dm && <RoomWorkingFolderChip group={group} onToggle={onToggleFolder} />}
           {!remoteClient && !setupPending && !group.dm && <DefaultResponderSelect group={group} members={members} />}
+          {!remoteClient && !setupPending && !group.dm && <TurnsPerMemberSelect group={group} />}
           {group.dm || remoteClient ? (
             faces
           ) : (
