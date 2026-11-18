@@ -57,21 +57,21 @@ export interface BuiltInAnnouncement {
   until?: number | null;
 }
 
-const everywhere = (facts: HistoryFacts) => !facts.branded && facts.organization === false;
+const neverShown = (): boolean => false;
 
 export const BUILT_IN_ANNOUNCEMENTS: readonly BuiltInAnnouncement[] = [
-  { id: TEAMS_NOTICE, date: "2026-11-17", title: "teamsNew.title", body: "teamsNew.sharedBot", mark: "teams", for: () => false, open: { modal: "teams" } },
-  { id: MODELGO_OFFER_NOTICE, date: "2026-11-11", title: "modelgoOffer.title", body: "modelgoOffer.line", mark: "modelgo", for: facts => facts.sponsors && facts.modelgo && !facts.branded,
+  { id: TEAMS_NOTICE, date: "2026-11-17", title: "teamsNew.title", body: "teamsNew.sharedBot", mark: "teams", for: neverShown, open: { modal: "teams" } },
+  { id: MODELGO_OFFER_NOTICE, date: "2026-11-11", title: "modelgoOffer.title", body: "modelgoOffer.line", mark: "modelgo", for: neverShown,
     open: { buttons: [{ label: "modelgoOffer.getKey", action: { open_url: MODELGO_URL } }] } },
   { id: GROK_MOVE_NOTICE, date: "2026-11-04", title: "settings.import.grokTitle", body: "grokMove.popup.body", mark: "grok",
-    for: facts => everywhere(facts) && !facts.remote && facts.canSave && !facts.team, open: { modal: "grok-move" } },
+    for: neverShown, open: { modal: "grok-move" } },
   { id: WHATS_NEW_NOTICE, date: "2026-10-31", title: "whatsNew.cloud.title", body: "whatsNew.cloud.body", mark: "cloud",
-    for: facts => everywhere(facts) && facts.cloudSale, open: { modal: "whats-new" } },
-  { id: BOAT_OFFER_NOTICE, date: "2026-10-31", title: "boatOffer.title", body: "boatOffer.body", mark: "boat", for: facts => facts.sponsors && !facts.branded,
+    for: neverShown, open: { modal: "whats-new" } },
+  { id: BOAT_OFFER_NOTICE, date: "2026-10-31", title: "boatOffer.title", body: "boatOffer.body", mark: "boat", for: neverShown,
     open: { buttons: [{ label: "boatOffer.get", action: { open_url: BOAT_OFFER.url } }, { label: "boatOffer.claim", action: { email: boatClaimMailto() } }] }, until: BOAT_OFFER.until },
   { id: PRODUCT_HUNT_NOTICE, date: "2026-10-13", title: "productHunt.title", body: "productHunt.body", mark: "product-hunt",
-    for: facts => everywhere(facts) && facts.cloudCards, open: { buttons: [{ label: "productHunt.button", action: { open_url: PRODUCT_HUNT_URL } }] }, until: PRODUCT_HUNT_UNTIL },
-  { id: CLOUD_INTRO, date: "2026-10-09", title: "cloudIntro.title", body: "cloudIntro.body", mark: "cloud", for: facts => everywhere(facts) && facts.cloudSale,
+    for: neverShown, open: { buttons: [{ label: "productHunt.button", action: { open_url: PRODUCT_HUNT_URL } }] }, until: PRODUCT_HUNT_UNTIL },
+  { id: CLOUD_INTRO, date: "2026-10-09", title: "cloudIntro.title", body: "cloudIntro.body", mark: "cloud", for: neverShown,
     open: { buttons: [{ label: "cloudIntro.start", action: { cloud_add: "app_card" } }, { label: "cloudIntro.howTo", action: { cloud_how_to: true } }] } },
 ];
 
