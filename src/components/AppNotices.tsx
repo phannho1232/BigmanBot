@@ -233,8 +233,8 @@ export function AppNotices({ quiet = false, viewer = null, now = Date.now }: { q
   // Teams: everyone once, ahead of every other notice, on every page but a branded build's or an organization's desktop;
   // as the What's new popup, never in the launch a welcome or MausBot's card took, before a first reply, over a first
   // run's own screens or another dialog, during a live call or a move.
-  const teamsSeen = noticeSeen(record, TEAMS_NOTICE) || Boolean(desktopState?.seen.includes(TEAMS_NOTICE));
-  const teamsHere = !branded && organization !== true && !teamsSeen;
+  const teamsSeen = true;
+  const teamsHere = false;
   const teamsBlocked = useOtherDialogOpen(teamsHere, true) || Boolean(state.liveCall && state.liveCall.status !== "ended");
   const teamsNow = !teamsHere || moving || afterWelcome === true ? false
     : organization === null || !viewer || (desktop && !desktopState) || afterWelcome === null || mausBotFirst || moving === null || teamsBlocked ? null : true;

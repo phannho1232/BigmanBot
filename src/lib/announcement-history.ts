@@ -60,7 +60,7 @@ export interface BuiltInAnnouncement {
 const everywhere = (facts: HistoryFacts) => !facts.branded && facts.organization === false;
 
 export const BUILT_IN_ANNOUNCEMENTS: readonly BuiltInAnnouncement[] = [
-  { id: TEAMS_NOTICE, date: "2026-11-17", title: "teamsNew.title", body: "teamsNew.sharedBot", mark: "teams", for: everywhere, open: { modal: "teams" } },
+  { id: TEAMS_NOTICE, date: "2026-11-17", title: "teamsNew.title", body: "teamsNew.sharedBot", mark: "teams", for: () => false, open: { modal: "teams" } },
   { id: MODELGO_OFFER_NOTICE, date: "2026-11-11", title: "modelgoOffer.title", body: "modelgoOffer.line", mark: "modelgo", for: facts => facts.sponsors && facts.modelgo && !facts.branded,
     open: { buttons: [{ label: "modelgoOffer.getKey", action: { open_url: MODELGO_URL } }] } },
   { id: GROK_MOVE_NOTICE, date: "2026-11-04", title: "settings.import.grokTitle", body: "grokMove.popup.body", mark: "grok",
