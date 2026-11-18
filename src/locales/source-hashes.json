@@ -3981,6 +3981,8 @@
       "settings.simple.billing.used": "f839161355091fcd9e33f571e0b11c60217a5009f9973e769c13d7858db162cc",
       "settings.skin.dressUp.title": "502e623ab8d32f2f8f58efcd88911af55a062be2ee53e66567a1db199ef000fb",
       "server.cloudComputer.replaced": "e0ec6e4195dc08c42d74c7b0f3390d7b241ceca8d0280324173337f0909aa4e1",
+      "server.cloudComputer.setAside": "6b43a4dc5f13dea68137828c4781805ca9c9ba85434bb64c7d27a61dcec216ba",
+      "server.cloudComputer.noRoom": "6a327f6d7e483a0b68dd059cccd8f079f5f21d7c58b5f4248a8c9a7ca15094d1",
       "server.cloudComputer.restarted": "3ff09729f86d75da00e00609b26699ac77bf0327daf60a3241a085d7da01cfd9",
       "server.cloudComputer.capped": "22941aabec2e9f8dfa40ef7904908c1547db51a63a0a13fefce3bce421ced601",
       "server.cloudComputer.unreachable": "a2b10f14049f954c571f14a941134a8f19c6d5bd4fe0fc840faba484b5d137a6",
@@ -4030,7 +4032,10 @@
       "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
       "chat.notice.acpNodeTooOld": "1ed4170eee496793135910a81e9dd427c24f9d0522194cdcf2a08d65674c03c6",
       "chat.newChatHint": "f50b2919941dfdd3337f86015f98c770cb22ed01d7060235415abe8c39a06ee0",
-      "chat.newChatHintButton": "db18382a249e0206bc28514931d423b77d55dce180c1eb8e4bf35f861c9a50ec"
+      "chat.newChatHintButton": "db18382a249e0206bc28514931d423b77d55dce180c1eb8e4bf35f861c9a50ec",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "es": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -10437,7 +10442,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "fr": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -14251,7 +14259,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "hi": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -17919,7 +17930,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "ja": {
       "connectedWorkspaces.localTitle": "7d6deafeab011d734c3fdd1bfd6f69544fbb746a004019269bdb48544b01164b",
@@ -25870,7 +25884,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "pt-br": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -35455,6 +35472,7 @@
       "native.dialog.serverFailed.portsTaken": "45dc1bee4a23970e1ed635205209828af7ec7bb5c32d110f50e7a6239eec2fea",
       "native.dialog.serverFailed.slow": "f5e6d47eb0408bbf04f933075a38dbf281069a5de210ea780510f78ba052d3b1",
       "native.dialog.serverFailed.keepsHappening": "8ed70ef827a87a3de09a67c1a2963d1dc493bccededf30072a5b23314f20fbb4",
+      "native.dialog.serverFailed.keepTrying": "e26ffa8a0adaeb8add8bc6b4b9fbbac705bc3512e5eed236d81e671f4ca5975b",
       "native.viewer.title": "45cb028f0244c41926756d3a97e212b33bd07bfb53d94c40a99348ad70b76574",
       "native.viewer.heading": "0ac6ee25fdefa64a0cc81f8337eb44fed56fad783948402f4e0850fc8638f59d",
       "native.viewer.open": "62a2dc1bd5977c0304574b84ea7a998728daf2dee66e56a12d5ed4936d20fee5",
@@ -36018,6 +36036,7 @@
       "native.home.bringUnavailable": "bbab66afe2aedccbb47f32f9af1d3cc8a70d505e088ec37ddd1f41e9fe72b68f",
       "chat.notice.memoryReclaimedBrowser": "e3b5f1e517b404e5b6e35306170b64b05147a49e2acb8dbea96b99d434af2c74",
       "chat.notice.memoryReclaimedTask": "dba7fcaec67b6efec3b4a221c8e1b2db7d3036d17c3aced17417ff186e774354",
+      "chat.notice.botMemoryCap": "7d88256ec92f8d6d8e0b8f044b59398d9047abdb75789877148e6cf9a7cfef43",
       "chat.notice.memoryReclaimedBrowserDetail": "29c781b36ba9bc63c701f8ac7c9488b0b116430c3e400ceaa51694c41e3d9050",
       "chat.notice.memoryReclaimedTaskDetail": "8692d2880c5425cd005f7002561ae2d7850e41209d0dcf40b1e098a9ea1725f8",
       "chat.notice.outOfProcesses": "7dd799040935793afd9a12757698c404c5b9d9a83d9a749dda145d05607a5a85",
@@ -36802,6 +36821,8 @@
       "settings.backTo": "ea37ec29c3865c359d3efb005bd252c35457976140bb718824f39d157ea32567",
       "devices.route.httpsAccount": "518ed79b3110cf735bc507bd796cf5c9cd701c3b2dc72bd764e599d411e3baf5",
       "server.cloudComputer.replaced": "e0ec6e4195dc08c42d74c7b0f3390d7b241ceca8d0280324173337f0909aa4e1",
+      "server.cloudComputer.setAside": "6b43a4dc5f13dea68137828c4781805ca9c9ba85434bb64c7d27a61dcec216ba",
+      "server.cloudComputer.noRoom": "6a327f6d7e483a0b68dd059cccd8f079f5f21d7c58b5f4248a8c9a7ca15094d1",
       "server.cloudComputer.restarted": "3ff09729f86d75da00e00609b26699ac77bf0327daf60a3241a085d7da01cfd9",
       "server.cloudComputer.capped": "22941aabec2e9f8dfa40ef7904908c1547db51a63a0a13fefce3bce421ced601",
       "server.cloudComputer.unreachable": "a2b10f14049f954c571f14a941134a8f19c6d5bd4fe0fc840faba484b5d137a6",
@@ -36983,7 +37004,50 @@
       "settings.vault.bitwarden.address": "8be89710b2f1d0c515eaff86dd4f049ec2447de5bfdb07d02d9720ff7fe017e1",
       "settings.vault.bitwarden.password": "f4c2ee7d031e215c194db822a9f9fdf6cde500330d58ec3bda09ab7330cca4c9",
       "settings.vault.bitwarden.note": "de354e48f4544eba3d26a90c9993c3db06bab7097af7ffe2d617171235235408",
-      "settings.vault.bitwarden.error": "dfb662fef386e7c8486cb9bb20268bd342c3423f53f6832cff0ae38564032f80"
+      "settings.vault.bitwarden.error": "dfb662fef386e7c8486cb9bb20268bd342c3423f53f6832cff0ae38564032f80",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.sectionLine": "90290e1b0d8446981dd393b13d26e5ccf0471426b1d697a3b9b3800a72093a15",
+      "alwaysOn.titleMac": "4b71793e02b00a3c7aadd8f3e997e17a658db8fdf57034255ab92dd1a44fa6d9",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.line": "1cbc9e4c4a7dbcbaa41db3d8d71de1568655556885b0dd011e98fd16e097fa41",
+      "alwaysOn.failed": "207bf92f96b96019f771dc2b800f2ac04effac68f397b1d96bd58c508643a886",
+      "alwaysOn.login.on": "e424b427b7dd77c737d36098554b59db458724a4bae4e59b9b042ab9cbaf7b79",
+      "alwaysOn.login.off": "4e175efee02ef44c1e01384dc20ec083139d53e248bc5b7f52b9289f94293d88",
+      "alwaysOn.login.unavailable": "dfe783859a38afd328e4e71a9b90052a0a28bea3c1f06528caa10bc44f8486fc",
+      "alwaysOn.awake.on": "ed3806a0c407139e1b67dc36414fafb331ae0a5dc4e924d9086178aa52ecc17d",
+      "alwaysOn.awake.battery": "c79b09e774e9dfe5a96377693d44252b7fd1ad9e98542dbefdcc74d3f801221c",
+      "alwaysOn.updates.byItself": "1c6f70d62563303a5b8c03649e8c11074014abbbc8b21ce69f8cb5ec28d11467",
+      "alwaysOn.updates.restart": "fd245765100c450e771df6316f44fb60888716cd779f11de2e6441188a850f3c",
+      "alwaysOn.updates.package": "b7a3223a298b3d6e38d7ecc9adae204be163cbb72b0b27e1631ce3aa3d6ee474",
+      "alwaysOn.updates.none": "3b60de73c55e1417014c2118aced667b7dddd598673f4fbed9851fedab8eb2eb",
+      "alwaysOn.restarts": "57635757ceb33b90a0ad530464b2295cc9002ea5aa00d8ec6f0b2a2c08eea519",
+      "alwaysOn.status.none": "3877f9c1134e0d50c362242589fbc5b544260a5412b9ab18f390dbb1922d9db5",
+      "alwaysOn.status.one": "95ec783bcc4f3801b3b2b8ed36fbcb7a0821893f79a7be6e338e0873cde3518a",
+      "alwaysOn.status.many": "629cdad8f5fe6c83a88c081f495924a0b7ba8c8e672d6c9ec479a2931292a33a",
+      "alwaysOn.next": "5693e770dd678bffd158319aca27ed013d23127d2b5c21d992ee0b8998ff09ca",
+      "alwaysOn.addPhone": "80c32b53b9b99ba5dd3f7ca9a01592d2ba857adced7fe0dc976860fcef36c133",
+      "alwaysOn.addComputer": "d4616c4a7371faeb9b4e1d3e5e07dffc9ac4b6dfc837b82efa0169bc8a0a7e47",
+      "alwaysOn.addComputerOn": "0f1af38d7e26d6fe84762550c2369aad4a6a0e76ddd23e6c2dc0c69e9bdcfc92",
+      "alwaysOn.mac.power": "13cc39026ab8c6cfbd3f59378eaf9650f8a53e034f98904c392f7508e238d1a1",
+      "alwaysOn.mac.login": "5572914a1e2f48a0080ff69e97a730623564251c77880658def20310204bdeef",
+      "alwaysOn.mac.locked": "c5df6557129982044df052d3970fd95ac573275548c4cdbb8e24fca280192c8f",
+      "alwaysOn.mac.permissions": "c9e7f8babbe10ffbde6f06a6e16652deb20447fff03543477170e69e13d07553",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc",
+      "alwaysOn.add.line": "a42a197a0197c6f335f34da0d6ad8a21b18e4a5b9da64c21a28180aa9db44b77",
+      "alwaysOn.add.step1": "c21b3c52881408ec8714498d0ced16f1785b48470dad1ff8de4e82942e81363f",
+      "alwaysOn.add.step2": "4c0c4fe0f60ff0fe12ddc2732c2e6de848bbe81a69c3676c52e6983b29f27eb5",
+      "alwaysOn.add.step3": "55bc07a75d3d312acfb6675421334103286479d5ff0a6a375e3d0288a29b829a",
+      "alwaysOn.add.connect": "f565358220deaa4272574ae68f1cd0b8bf98176a91f20bb94e9a1d360b1acbd7",
+      "alwaysOn.added.checking": "ec963ffc911b840134fc738b41a8bb0493489c402a4a761efd36c16dea7d984b",
+      "alwaysOn.added.online": "0d21bd52022ca7f7e97109d28d327da1e68cc0bedd9713b2dc2b49d3aa104392",
+      "alwaysOn.added.offline": "0aa512b230dc423eeff884b0e8817d131979ffc86ce4262f3122c21ea281d8d2",
+      "alwaysOn.added.open": "54fa2c5736e3bfa84971e5f8633e6ceb24581ff8e331821199c91166e4a4ac4b",
+      "alwaysOn.added.sidebar": "cafb172109aab11ddf052359ec34e36d4fba0ee0b5c3ba1c2b745bca75555551",
+      "alwaysOn.added.keepRunning": "2f6d89fad10924a215d8c72bb16028ffa402089d72ef8dfe3210630d388c0ea8",
+      "alwaysOn.added.screen": "91088ec57d9382c6061ef46ab4728bfc7fb0cacfd352082e8aa0eae13c4f6e7f",
+      "alwaysOn.windowClosed": "a285b55ca2730cbfca82ea5db3bae2494b5e0d67f206317fe5e192c5642bbc42",
+      "alwaysOn.windowClosedLinux": "ab533d218b5594e483156b0ab8c8c187584fa5f73ec7b53cae40cb4b68ab1b3d",
+      "alwaysOn.status.noWay": "30c9d5600a1178b88f86b8c8bd4ab1b2b9589d87c03e26904540d5f0981677a2"
     },
     "zh": {
       "hostedMcp.otherAppsSetup": "b1dbc7573965f26789d835d7476b43d982daa02816580baf60e11da042e0d071",
@@ -47058,7 +47122,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "zh-tw": {
       "connectedWorkspaces.localTitle": "7d6deafeab011d734c3fdd1bfd6f69544fbb746a004019269bdb48544b01164b",
@@ -57237,7 +57304,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "uk": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -61325,7 +61395,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "vi": {
       "connectedWorkspaces.localTitle": "7d6deafeab011d734c3fdd1bfd6f69544fbb746a004019269bdb48544b01164b",
@@ -69755,6 +69828,8 @@
       "chat.notice.followupInterrupted": "f371e87dd3ef7c64c46b93b9d515ecd290e18d3afd70cf587f6e97103a5601d6",
       "chat.notice.usageLimit": "428d0901e21186b98e7c6d41ded70e968e3dccffe8944dcd7419a336c8f67f1e",
       "server.cloudComputer.replaced": "e0ec6e4195dc08c42d74c7b0f3390d7b241ceca8d0280324173337f0909aa4e1",
+      "server.cloudComputer.setAside": "6b43a4dc5f13dea68137828c4781805ca9c9ba85434bb64c7d27a61dcec216ba",
+      "server.cloudComputer.noRoom": "6a327f6d7e483a0b68dd059cccd8f079f5f21d7c58b5f4248a8c9a7ca15094d1",
       "server.cloudComputer.restarted": "3ff09729f86d75da00e00609b26699ac77bf0327daf60a3241a085d7da01cfd9",
       "server.cloudComputer.capped": "22941aabec2e9f8dfa40ef7904908c1547db51a63a0a13fefce3bce421ced601",
       "server.cloudComputer.unreachable": "a2b10f14049f954c571f14a941134a8f19c6d5bd4fe0fc840faba484b5d137a6",
@@ -70996,6 +71071,7 @@
       "native.dialog.serverFailed.portsTaken": "45dc1bee4a23970e1ed635205209828af7ec7bb5c32d110f50e7a6239eec2fea",
       "native.dialog.serverFailed.slow": "f5e6d47eb0408bbf04f933075a38dbf281069a5de210ea780510f78ba052d3b1",
       "native.dialog.serverFailed.keepsHappening": "8ed70ef827a87a3de09a67c1a2963d1dc493bccededf30072a5b23314f20fbb4",
+      "native.dialog.serverFailed.keepTrying": "e26ffa8a0adaeb8add8bc6b4b9fbbac705bc3512e5eed236d81e671f4ca5975b",
       "native.viewer.title": "45cb028f0244c41926756d3a97e212b33bd07bfb53d94c40a99348ad70b76574",
       "native.viewer.heading": "0ac6ee25fdefa64a0cc81f8337eb44fed56fad783948402f4e0850fc8638f59d",
       "native.viewer.open": "62a2dc1bd5977c0304574b84ea7a998728daf2dee66e56a12d5ed4936d20fee5",
@@ -71564,6 +71640,7 @@
       "native.home.bringUnavailable": "bbab66afe2aedccbb47f32f9af1d3cc8a70d505e088ec37ddd1f41e9fe72b68f",
       "chat.notice.memoryReclaimedBrowser": "e3b5f1e517b404e5b6e35306170b64b05147a49e2acb8dbea96b99d434af2c74",
       "chat.notice.memoryReclaimedTask": "dba7fcaec67b6efec3b4a221c8e1b2db7d3036d17c3aced17417ff186e774354",
+      "chat.notice.botMemoryCap": "7d88256ec92f8d6d8e0b8f044b59398d9047abdb75789877148e6cf9a7cfef43",
       "chat.notice.memoryReclaimedBrowserDetail": "29c781b36ba9bc63c701f8ac7c9488b0b116430c3e400ceaa51694c41e3d9050",
       "chat.notice.memoryReclaimedTaskDetail": "8692d2880c5425cd005f7002561ae2d7850e41209d0dcf40b1e098a9ea1725f8",
       "chat.notice.outOfProcesses": "7dd799040935793afd9a12757698c404c5b9d9a83d9a749dda145d05607a5a85",
@@ -72439,6 +72516,49 @@
       "settings.vault.bitwarden.password": "f4c2ee7d031e215c194db822a9f9fdf6cde500330d58ec3bda09ab7330cca4c9",
       "settings.vault.bitwarden.note": "de354e48f4544eba3d26a90c9993c3db06bab7097af7ffe2d617171235235408",
       "settings.vault.bitwarden.error": "dfb662fef386e7c8486cb9bb20268bd342c3423f53f6832cff0ae38564032f80",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.sectionLine": "90290e1b0d8446981dd393b13d26e5ccf0471426b1d697a3b9b3800a72093a15",
+      "alwaysOn.titleMac": "4b71793e02b00a3c7aadd8f3e997e17a658db8fdf57034255ab92dd1a44fa6d9",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.line": "1cbc9e4c4a7dbcbaa41db3d8d71de1568655556885b0dd011e98fd16e097fa41",
+      "alwaysOn.failed": "207bf92f96b96019f771dc2b800f2ac04effac68f397b1d96bd58c508643a886",
+      "alwaysOn.login.on": "e424b427b7dd77c737d36098554b59db458724a4bae4e59b9b042ab9cbaf7b79",
+      "alwaysOn.login.off": "4e175efee02ef44c1e01384dc20ec083139d53e248bc5b7f52b9289f94293d88",
+      "alwaysOn.login.unavailable": "dfe783859a38afd328e4e71a9b90052a0a28bea3c1f06528caa10bc44f8486fc",
+      "alwaysOn.awake.on": "ed3806a0c407139e1b67dc36414fafb331ae0a5dc4e924d9086178aa52ecc17d",
+      "alwaysOn.awake.battery": "c79b09e774e9dfe5a96377693d44252b7fd1ad9e98542dbefdcc74d3f801221c",
+      "alwaysOn.updates.byItself": "1c6f70d62563303a5b8c03649e8c11074014abbbc8b21ce69f8cb5ec28d11467",
+      "alwaysOn.updates.restart": "fd245765100c450e771df6316f44fb60888716cd779f11de2e6441188a850f3c",
+      "alwaysOn.updates.package": "b7a3223a298b3d6e38d7ecc9adae204be163cbb72b0b27e1631ce3aa3d6ee474",
+      "alwaysOn.updates.none": "3b60de73c55e1417014c2118aced667b7dddd598673f4fbed9851fedab8eb2eb",
+      "alwaysOn.restarts": "57635757ceb33b90a0ad530464b2295cc9002ea5aa00d8ec6f0b2a2c08eea519",
+      "alwaysOn.status.none": "3877f9c1134e0d50c362242589fbc5b544260a5412b9ab18f390dbb1922d9db5",
+      "alwaysOn.status.one": "95ec783bcc4f3801b3b2b8ed36fbcb7a0821893f79a7be6e338e0873cde3518a",
+      "alwaysOn.status.many": "629cdad8f5fe6c83a88c081f495924a0b7ba8c8e672d6c9ec479a2931292a33a",
+      "alwaysOn.next": "5693e770dd678bffd158319aca27ed013d23127d2b5c21d992ee0b8998ff09ca",
+      "alwaysOn.addPhone": "80c32b53b9b99ba5dd3f7ca9a01592d2ba857adced7fe0dc976860fcef36c133",
+      "alwaysOn.addComputer": "d4616c4a7371faeb9b4e1d3e5e07dffc9ac4b6dfc837b82efa0169bc8a0a7e47",
+      "alwaysOn.addComputerOn": "0f1af38d7e26d6fe84762550c2369aad4a6a0e76ddd23e6c2dc0c69e9bdcfc92",
+      "alwaysOn.mac.power": "13cc39026ab8c6cfbd3f59378eaf9650f8a53e034f98904c392f7508e238d1a1",
+      "alwaysOn.mac.login": "5572914a1e2f48a0080ff69e97a730623564251c77880658def20310204bdeef",
+      "alwaysOn.mac.locked": "c5df6557129982044df052d3970fd95ac573275548c4cdbb8e24fca280192c8f",
+      "alwaysOn.mac.permissions": "c9e7f8babbe10ffbde6f06a6e16652deb20447fff03543477170e69e13d07553",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc",
+      "alwaysOn.add.line": "a42a197a0197c6f335f34da0d6ad8a21b18e4a5b9da64c21a28180aa9db44b77",
+      "alwaysOn.add.step1": "c21b3c52881408ec8714498d0ced16f1785b48470dad1ff8de4e82942e81363f",
+      "alwaysOn.add.step2": "4c0c4fe0f60ff0fe12ddc2732c2e6de848bbe81a69c3676c52e6983b29f27eb5",
+      "alwaysOn.add.step3": "55bc07a75d3d312acfb6675421334103286479d5ff0a6a375e3d0288a29b829a",
+      "alwaysOn.add.connect": "f565358220deaa4272574ae68f1cd0b8bf98176a91f20bb94e9a1d360b1acbd7",
+      "alwaysOn.added.checking": "ec963ffc911b840134fc738b41a8bb0493489c402a4a761efd36c16dea7d984b",
+      "alwaysOn.added.online": "0d21bd52022ca7f7e97109d28d327da1e68cc0bedd9713b2dc2b49d3aa104392",
+      "alwaysOn.added.offline": "0aa512b230dc423eeff884b0e8817d131979ffc86ce4262f3122c21ea281d8d2",
+      "alwaysOn.added.open": "54fa2c5736e3bfa84971e5f8633e6ceb24581ff8e331821199c91166e4a4ac4b",
+      "alwaysOn.added.sidebar": "cafb172109aab11ddf052359ec34e36d4fba0ee0b5c3ba1c2b745bca75555551",
+      "alwaysOn.added.keepRunning": "2f6d89fad10924a215d8c72bb16028ffa402089d72ef8dfe3210630d388c0ea8",
+      "alwaysOn.added.screen": "91088ec57d9382c6061ef46ab4728bfc7fb0cacfd352082e8aa0eae13c4f6e7f",
+      "alwaysOn.windowClosed": "a285b55ca2730cbfca82ea5db3bae2494b5e0d67f206317fe5e192c5642bbc42",
+      "alwaysOn.windowClosedLinux": "ab533d218b5594e483156b0ab8c8c187584fa5f73ec7b53cae40cb4b68ab1b3d",
+      "alwaysOn.status.noWay": "30c9d5600a1178b88f86b8c8bd4ab1b2b9589d87c03e26904540d5f0981677a2",
       "apps.catalog.canva.blurb": "2644c91cc0caa58d25db542b81131ab319776917d52a3794e5d49a6c821d2b18",
       "apps.catalog.facebook.blurb": "c2a99ed16e8d586077ba417acd4aa2e0e87139d74fdc29224a5140e214f7c31b",
       "apps.catalog.googleAnalytics.blurb": "2eb8899d88b0845e04aaca7541ee9dea7ac52f972a5e1a8c1ac0a23199cf1e56",
@@ -79058,7 +79178,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "pl": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -86172,7 +86295,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "ru": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -93340,7 +93466,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "it": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -100320,7 +100449,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     },
     "ko": {
       "voice.gemini.keyPlaceholder": "8c87ba2043a4a89d63c90cae8a6dafd5cbd193652e923b97988e381a74773e10",
@@ -107964,7 +108096,10 @@
       "voice.deepseek.description": "76fab61d1bc0ced7ec42819709b1d9245d759730f1ea0a68f62089283965ced7",
       "voice.deepseek.stella": "41ed78238af080605582bda7382b203ac2249352b3fb85ce7fd6b62a50a854c7",
       "voice.deepseek.tide": "de22476c59cc1e8190ae16bc172d1d78d1fc95f2d852129e8a747eac76335a5f",
-      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016"
+      "call.capability.turnsNeedDeepSeekKey": "25c423595ef7ff710ac27e4ca100ff9a1604bd316859152f2fcf9aa0e1388016",
+      "alwaysOn.section": "c644bcf39dd9ff15b27e1721290e8dbbc2ce390eeef9af32310090e9fa6de265",
+      "alwaysOn.title": "2006f993f0189bf13dac31689d811ebd7581f8889987927aa6f0f11bf6b4679d",
+      "alwaysOn.add.title": "007f4d7546061eba19c8b6edd78fc70404d2f745fb1f7f3aac83a22d216a9ccc"
     }
   }
 }
