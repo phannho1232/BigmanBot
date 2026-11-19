@@ -290,6 +290,40 @@ describe("a folder linked in a message", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("saves a regular file from the POST response blob without issuing an unrouted GET", async () => {
+    const fetchSpy = vi.fn(async () => new Response(
+      new Blob(["docx-bytes"], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }),
+      { status: 200, headers: { "content-disposition": "attachment; filename=\"Hop-dong-BASAN.docx\"" } },
+    ));
+    const createObjectURL = vi.fn(() => "blob:https://bot.bigmanbot.com/123");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    vi.stubGlobal("URL", Object.assign(function URL(...args: ConstructorParameters<typeof globalThis.URL>) {
+      return new globalThis.URL(...args);
+    }, { createObjectURL, revokeObjectURL }));
+    const clicked: { href: string; download: string }[] = [];
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      clicked.push({ href: this.href, download: this.download });
+    });
+    const seen: { current: ReturnType<typeof useLocalFileSave> | null } = { current: null };
+    const Probe = () => {
+      seen.current = useLocalFileSave("/work/Hop-dong-BASAN-BIG-MAN-ban-nhap.docx", undefined, { threadId: "thread-1", messageId: "message-1" });
+      return null;
+    };
+    const root = createRoot(document.createElement("div"));
+    try {
+      await act(async () => { root.render(createElement(Probe)); });
+      await act(async () => { await seen.current!.save(); });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(clicked).toEqual([{ href: "blob:https://bot.bigmanbot.com/123", download: "Hop-dong-BASAN.docx" }]);
+      expect(seen.current!.state).toBe("saved");
+    } finally {
+      clickSpy.mockRestore();
+      await act(async () => { root.unmount(); });
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe("local Markdown image lifecycle", () => {

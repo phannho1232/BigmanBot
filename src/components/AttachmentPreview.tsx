@@ -215,10 +215,8 @@ export async function messageImageOutsideWorkspace(src: string): Promise<boolean
   }
 }
 
-
-
-export function messageFileUrl(filePath: string, message: MessageAttachmentContext, download = false): string {
-  return `/api/threads/${encodeURIComponent(message.threadId)}/messages/${encodeURIComponent(message.messageId)}/file?path=${encodeURIComponent(filePath)}${download ? "&download=1" : ""}`;
+function revokeObjectUrlLater(url: string): void {
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 /** Security: never request a transcript path directly, even when it looks like a URL. */
@@ -300,62 +298,37 @@ export function useLocalFileSave(filePath: string, name?: string, message?: Mess
     const controller = new AbortController();
     request.current = controller;
     try {
-      if (entry === undefined) {
-        const response = await requestMessageFile(filePath, message, controller.signal, { list: true });
-        if (response.headers.get("x-openmausbot-folder") === "1") {
-          const listing = await response.json() as MessageFolderListing;
-          if (!mounted.current || controller.signal.aborted) return;
-          setState("idle");
-          if (!(await openLinkedFolder(filePath)) && !controller.signal.aborted) setFolder(listing); // Security: only a path this message's route just authorized reaches the desktop bridge.
-          return;
-        }
-        void response.body?.cancel().catch(() => undefined);
-      } else {
-        const response = await requestMessageFile(filePath, message, controller.signal, { entry });
-        const blob = await response.blob();
+      const response = await requestMessageFile(filePath, message, controller.signal, entry === undefined ? { list: true } : { entry });
+      if (response.headers.get("x-openmausbot-folder") === "1") {
+        const listing = await response.json() as MessageFolderListing;
         if (!mounted.current || controller.signal.aborted) return;
-        const url = URL.createObjectURL(blob);
-        const savedEntry = canonicalDownloadFilename({
-          contentDisposition: response.headers.get("content-disposition"),
-          fallback: name || entry || attachmentBasename(filePath),
-          source: filePath,
-          mime: blob.type || response.headers.get("content-type"),
-        });
-        try {
-          const entryLink = document.createElement("a");
-          entryLink.href = url;
-          entryLink.download = savedEntry;
-          entryLink.style.display = "none";
-          document.body.append(entryLink);
-          try {
-            entryLink.click();
-          } finally {
-            entryLink.remove();
-          }
-        } finally {
-          setTimeout(() => URL.revokeObjectURL(url), 0);
-        }
-        if (!mounted.current || controller.signal.aborted) return;
-        setSavedTo(savedEntry);
-        setState("saved");
-        if (resetTimer.current) clearTimeout(resetTimer.current);
-        resetTimer.current = setTimeout(() => {
-          if (mounted.current) setState("idle");
-        }, 4000);
+        setState("idle");
+        if (!(await openLinkedFolder(filePath)) && !controller.signal.aborted) setFolder(listing); // Security: only a path this message's route just authorized reaches the desktop bridge.
         return;
       }
+      const blob = await response.blob();
       if (!mounted.current || controller.signal.aborted) return;
-      const saved = name || entry || attachmentBasename(filePath);
-      const downloadUrl = messageFileUrl(filePath, message, true);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = saved;
-      link.style.display = "none";
-      document.body.append(link);
+      const url = URL.createObjectURL(blob);
+      const saved = canonicalDownloadFilename({
+        contentDisposition: response.headers.get("content-disposition"),
+        fallback: name || entry || attachmentBasename(filePath),
+        source: filePath,
+        mime: blob.type || response.headers.get("content-type"),
+      });
       try {
-        link.click();
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = saved;
+        link.style.display = "none";
+        document.body.append(link);
+        try {
+          link.click();
+        } finally {
+          link.remove();
+        }
       } finally {
-        link.remove();
+        // Chromium may not consume a blob URL until after the click task ends.
+        revokeObjectUrlLater(url);
       }
       if (!mounted.current || controller.signal.aborted) return;
       setSavedTo(saved);
