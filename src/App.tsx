@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeft, Loader2, Menu } from "lucide-react";
 import { CLOUD_LINK_SETTINGS, openBot, StoreProvider, useStore } from "@/state/store";
 import { nextShortcutBot, shortcutBots, shownBotIds } from "@/lib/sidebar-shortcut-order";
@@ -15,6 +15,8 @@ import { LiveCallHost } from "@/components/LiveCallHost";
 import { ThreadRefsProvider } from "@/components/ThreadRefs";
 import { initAnalytics } from "@/lib/analytics";
 import { appVersion } from "@/lib/app-links";
+import { useAppLoadSignal } from "@/lib/app-load";
+import { cloudAccountBridge, openCloudOnWeb } from "@/lib/cloud-add-web";
 import { parseComputerHelp } from "@/lib/computer-control";
 import { viewerClosedRelease } from "@/components/computer-takeover";
 import { Sidebar } from "@/components/Sidebar";
@@ -34,6 +36,7 @@ import { NotificationRail, NotificationsPanel } from "@/components/Notifications
 import { useNotificationFeed } from "@/lib/notification-preferences";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { AppNotices } from "@/components/AppNotices";
+import { CliLoginCard } from "@/components/CliLoginCard";
 import { AppGrantNotice } from "@/components/AppGrantPrompt";
 import { BotLimitPopup } from "@/components/BotLimitPopup";
 import { CloudAsleepStrip } from "@/components/CloudAsleepStrip";
@@ -66,7 +69,7 @@ import { EmptyChatShell } from "@/components/onboarding/EmptyChatShell";
 import { cloudFirstRun, cloudWelcomeVisible, useCloudWelcome } from "@/lib/cloud-welcome";
 import { engineReady } from "@/components/EngineLibrary";
 import { CommandPalette } from "@/components/CommandPalette";
-import { t } from "@/lib/i18n";
+import { activeLocale, t } from "@/lib/i18n";
 import { botCycleStep, shouldOpenKeyboardShortcuts } from "@/lib/keyboard-shortcuts";
 import { effectiveLanguage, useLanguageChoice, usePageLanguage } from "@/lib/language-preference";
 import { botUnreadCount, showBrowserUnread } from "@/lib/bot-unread";
@@ -151,7 +154,13 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Stays mounted once opened: a Cloud bought in it can arrive after the sheet is closed.
   const cloudAddOpened = useRef(false);
-  cloudAddOpened.current ||= Boolean(state.cloudAdd);
+  cloudAddOpened.current ||= Boolean(state.cloudAdd && (cloudAccountBridge() || activeLocale() === "vi"));
+  // A layout effect runs inside the tap that asked, so a browser lets it open a tab.
+  useLayoutEffect(() => {
+    if (!state.cloudAdd || cloudAccountBridge() || activeLocale() === "vi") return;
+    openCloudOnWeb(state.cloudAdd, { cloudHome: state.config?.cloudHome === true, teamCloudPage: state.config?.team?.cloudPage });
+    dispatch({ type: "closeCloudAdd" });
+  }, [state.cloudAdd]);
   const [localVmWorkspaceBotId, setLocalVmWorkspaceBotId] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const previousViewRef = useRef(state.activeView);
@@ -342,6 +351,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
     <CloudSendStrip cloudHome={state.config?.cloudHome === true} />
     <HomeLine />
     <AppNotices quiet={paletteOpen || drawerOpen || Boolean(localVmWorkspaceBotId)} viewer={viewer} />
+    <CliLoginCard />
   </>;
   return (
     <div data-look="app" className={cn("flex h-full flex-col", framed && "bg-frame")} onClickCapture={drawerOpen ? noteDrawerAction : undefined} onKeyDownCapture={drawerOpen ? noteDrawerAction : undefined}>
@@ -500,6 +510,11 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   );
 }
 
+function AppLoadSignal() {
+  useAppLoadSignal();
+  return null;
+}
+
 function Application() {
   useEffect(() => {
     initAnalytics();
@@ -508,6 +523,7 @@ function Application() {
   return (
     <DesktopCapabilitiesProvider>
       <StoreProvider>
+        <AppLoadSignal />
         <ThreadRefsProvider>
           <Shell viewer={viewer} />
         </ThreadRefsProvider>
