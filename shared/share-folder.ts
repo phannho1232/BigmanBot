@@ -177,13 +177,24 @@ function folderPicture(files: ShareFolderFiles, value: unknown, crop: unknown) {
 function packageFromFolder(metadata: Record<string, unknown>, files: ShareFolderFiles): unknown {
   const { botmrr: _version, skills: skillNames, skillFiles, ...definition } = metadata;
   const listedFiles = (skillFiles && typeof skillFiles === "object" && !Array.isArray(skillFiles) ? skillFiles : {}) as Record<string, unknown>;
+  const inlineList = skillNames && typeof skillNames === "object" && !Array.isArray(skillNames) && Array.isArray((skillNames as { entries?: unknown }).entries)
+    ? (skillNames as { entries: unknown[] }).entries.filter((entry): entry is Record<string, unknown> & { name: string } => Boolean(entry) && typeof entry === "object" && typeof (entry as { name?: unknown }).name === "string")
+    : [];
+  const inlineByName = new Map(inlineList.map((entry) => [entry.name, entry]));
   const agents = Array.isArray(definition.agents) ? definition.agents : [];
-  const named = new Set<unknown>(Array.isArray(skillNames) ? skillNames : []);
+  const named = new Set<unknown>(Array.isArray(skillNames) ? skillNames : inlineList.map((entry) => entry.name));
   for (const agent of agents) {
     const skills = (agent as { skills?: unknown })?.skills;
     if (Array.isArray(skills)) for (const name of skills) named.add(name);
   }
-  const entries = [...named].map((name) => folderSkill(files, name, typeof name === "string" && Object.hasOwn(listedFiles, name) ? listedFiles[name] : undefined));
+  const entries = [...named].map((name) => {
+    if (typeof name === "string" && files[`skills/${name}/SKILL.md`] === undefined && inlineByName.has(name)) {
+      const inline = inlineByName.get(name)!;
+      const parsed = typeof inline.instructions === "string" ? parseSkillMd(inline.instructions) : null;
+      return parsed && !("error" in parsed) ? { ...inline, description: parsed.description } : inline;
+    }
+    return folderSkill(files, name, typeof name === "string" && Object.hasOwn(listedFiles, name) ? listedFiles[name] : undefined);
+  });
   const withPictures = agents.map((raw) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
     const agent = raw as Record<string, unknown>;

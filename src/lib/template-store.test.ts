@@ -74,8 +74,32 @@ describe("template-store", () => {
                 template_id: "bot-ke-toan-vip",
                 soul: "Bạn là Kế toán trưởng 15 năm kinh nghiệm.",
                 notes: { "MEMORY.md": "- Hồ sơ mã số thuế doanh nghiệp\n" },
-                routines: [],
-                package_manifest: null,
+                routines: [
+                  {
+                    name: "Rà soát hóa đơn sáng",
+                    prompt: "Kiểm tra hóa đơn đầu vào mới.",
+                    schedule: { type: "daily", time: "08:30", weekdays: [1, 2, 3, 4, 5] },
+                    enabled: false,
+                    overlap: "skip",
+                  },
+                ],
+                package_manifest: {
+                  skills: {
+                    version: 1,
+                    entries: [
+                      {
+                        name: "vat-audit",
+                        description: "Kiểm tra thuế GTGT",
+                        instructions: "---\nname: vat-audit\ndescription: Kiểm tra thuế GTGT\n---\n\nĐối chiếu bảng kê.",
+                      },
+                      {
+                        name: "cit-report",
+                        description: "Quyết toán thuế TNDN",
+                        instructions: "---\nname: cit-report\ndescription: Quyết toán thuế TNDN\n---\n\nLập tờ khai.",
+                      },
+                    ],
+                  },
+                },
               },
             ]),
             { status: 200 }
@@ -108,5 +132,7 @@ describe("template-store", () => {
     registerRemoteReadyBot(bot);
     expect(readyBot("bot-ke-toan-vip")?.soul).toBe("Bạn là Kế toán trưởng 15 năm kinh nghiệm.");
     expect(readyBot("bot-ke-toan-vip")?.notes?.["MEMORY.md"]).toContain("Hồ sơ mã số thuế");
+    expect(readyBot("bot-ke-toan-vip")?.routines).toHaveLength(1);
+    expect(readyBot("bot-ke-toan-vip")?.skills?.map((s) => s.name)).toEqual(["vat-audit", "cit-report"]);
   });
 });

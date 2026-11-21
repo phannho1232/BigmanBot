@@ -1,5 +1,6 @@
 import type { WireBot } from "./wire";
 import type { RoutineInput } from "./routines";
+import type { SkillFile } from "./skill-files";
 import type { ToolScope } from "./tool-scope";
 
 /** Data shared by the default template and an individual creation draft. */
@@ -29,6 +30,7 @@ export interface BotSkillTemplate {
   text: string;
   enabled: boolean;
   warnings: string[];
+  files?: SkillFile[];
 }
 export interface NewBotDefaults {
   profile: BotDefaultsProfile;

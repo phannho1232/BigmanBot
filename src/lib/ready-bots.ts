@@ -1,4 +1,4 @@
-import type { BotRoutineTemplate, NewBotDefaults } from "../../shared/new-bot-defaults";
+import type { BotRoutineTemplate, BotSkillTemplate, NewBotDefaults } from "../../shared/new-bot-defaults";
 import type { MascotBodyId } from "../../shared/mascot-bodies";
 import type { MausColor } from "../../shared/wire";
 import { t, tFromServer } from "@/lib/i18n";
@@ -20,6 +20,7 @@ export interface ReadyBot {
   apps: string[];
   notes?: Record<string, string>;
   routines?: BotRoutineTemplate[];
+  skills?: BotSkillTemplate[];
 }
 
 const WEEKDAYS = [1, 2, 3, 4, 5];
@@ -458,6 +459,10 @@ export function readyBotTemplate(defaults: NewBotDefaults, bot: ReadyBot): NewBo
   for (const [path, text] of Object.entries(bot.notes ?? {})) {
     const own = template.memory[path]?.trimEnd();
     template.memory[path] = own ? `${own}\n${text}` : text;
+  }
+  if (bot.skills?.length) {
+    const existing = new Set(template.skills.map((skill) => skill.name));
+    template.skills = [...template.skills, ...bot.skills.filter((skill) => !existing.has(skill.name))];
   }
   template.routines = [...template.routines, ...(bot.routines ?? []).map((routine) => ({ ...routine, ...(bot.id === "social" ? { name: t("readyBots.routine.socialWeekly") } : {}), enabled: false }))];
   return template;

@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import type { MascotBodyId } from "../../shared/mascot-bodies";
-import type { BotRoutineTemplate } from "../../shared/new-bot-defaults";
+import type { BotRoutineTemplate, BotSkillTemplate } from "../../shared/new-bot-defaults";
 import type { MausColor } from "../../shared/wire";
 import { openExternalLink } from "./app-links";
-import { registerRemoteReadyBot, READY_BOT_CATEGORIES, type ReadyBot, type ReadyBotCategory } from "./ready-bots";
+import { READY_BOTS, registerRemoteReadyBot, READY_BOT_CATEGORIES, type ReadyBot, type ReadyBotCategory } from "./ready-bots";
 
 export const BIGMAN_WEB_ORIGIN = "https://bigmanbot.com";
 export const BIGMAN_SUPABASE_URL = "https://djokqsynkwoqpfyowbuz.supabase.co";
@@ -258,10 +258,46 @@ export async function fetchTemplatePayload(
   }
 }
 
+function extractPayloadSkills(manifest: unknown): BotSkillTemplate[] {
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) return [];
+  const root = manifest as Record<string, unknown>;
+  const pkg = root.package && typeof root.package === "object" && !Array.isArray(root.package)
+    ? (root.package as Record<string, unknown>)
+    : root;
+  const skillsObj = pkg.skills && typeof pkg.skills === "object" && !Array.isArray(pkg.skills)
+    ? (pkg.skills as Record<string, unknown>)
+    : null;
+  const entries = Array.isArray(skillsObj?.entries) ? skillsObj.entries : [];
+  return entries
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && typeof (entry as { name?: unknown }).name === "string")
+    .map((entry) => {
+      const rawFiles = Array.isArray(entry.files)
+        ? entry.files
+            .filter((f): f is { path: string; content: string } => Boolean(f) && typeof f === "object" && typeof (f as { path?: unknown }).path === "string" && typeof (f as { content?: unknown }).content === "string")
+            .map((f) => ({ path: f.path, content: f.content }))
+        : [];
+      return {
+        name: String(entry.name),
+        description: String(entry.description || entry.name),
+        source: "custom" as const,
+        text: String(entry.instructions || ""),
+        enabled: true,
+        warnings: [],
+        ...(rawFiles.length > 0 ? { files: rawFiles } : {}),
+      };
+    });
+}
+
 export function toReadyBot(
   entry: RemoteTemplateCatalogEntry,
   payload?: RemoteTemplatePayload | null
 ): ReadyBot {
+  const localBuiltin = READY_BOTS.find((bot) => bot.id === entry.id);
+  const routines =
+    payload?.routines && payload.routines.length > 0
+      ? payload.routines
+      : localBuiltin?.routines ?? [];
+  const skills = extractPayloadSkills(payload?.packageManifest);
   return {
     id: entry.id,
     category: entry.category,
@@ -272,8 +308,9 @@ export function toReadyBot(
     look: entry.look,
     tryAsking: entry.tryAsking.length > 0 ? entry.tryAsking : [entry.description],
     apps: entry.apps,
-    ...(payload?.notes && Object.keys(payload.notes).length > 0 ? { notes: payload.notes } : {}),
-    ...(payload?.routines && payload.routines.length > 0 ? { routines: payload.routines } : {}),
+    ...(payload?.notes && Object.keys(payload.notes).length > 0 ? { notes: payload.notes } : localBuiltin?.notes ? { notes: localBuiltin.notes } : {}),
+    ...(routines.length > 0 ? { routines } : {}),
+    ...(skills.length > 0 ? { skills } : {}),
   };
 }
 

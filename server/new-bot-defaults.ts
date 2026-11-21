@@ -4,6 +4,7 @@ import { profilePatchSchema, fitsOnOneLine } from "./bot-profile.ts";
 import { EFFORT_LEVELS, MAUS_COLOR_NAMES } from "../shared/wire.ts";
 import { isModelVariant } from "./contracts.ts";
 import { normalizeCronSchedule } from "../shared/routine-schedule.ts";
+import { skillFilesSchema } from "../shared/skill-files.ts";
 import { parseToolScope, type ToolScope } from "../shared/tool-scope.ts";
 
 const strings = (max: number, length: number) => z.array(z.string().max(length)).max(max);
@@ -100,6 +101,7 @@ export const botSkillTemplateSchema = z.object({
   source: z.string().min(1).max(2000),
   text: z.string().refine(value => Buffer.byteLength(value, "utf8") <= 262_144, "Skill exceeds 256 KiB"),
   enabled: z.boolean(),
+  files: skillFilesSchema,
 }).strict();
 
 export const newBotDefaultsSchema = z.object({
