@@ -107,6 +107,58 @@ export function writeStoredTemplateSession(session: StoredTemplateSession | null
   }
 }
 
+export async function signOutTemplateMarketplace(): Promise<void> {
+  if (activePollTimer) {
+    clearInterval(activePollTimer);
+    activePollTimer = null;
+  }
+  const current = readStoredTemplateSession();
+  writeStoredTemplateSession(null);
+  if (current?.accessToken) {
+    void fetch(`${BIGMAN_SUPABASE_URL}/auth/v1/logout`, {
+      method: "POST",
+      headers: supabaseHeaders(current.accessToken),
+    }).catch(() => {});
+  }
+  if (typeof window !== "undefined" && window.ogb?.cloudAccount?.signOut) {
+    await window.ogb.cloudAccount.signOut().catch(() => {});
+  }
+}
+
+export function useTemplateAccountEmail(): string | null {
+  const isTest = import.meta.env?.MODE === "test";
+  const [email, setEmail] = useState<string | null>(() =>
+    isTest ? null : readStoredTemplateSession()?.email ?? null
+  );
+  const [desktopEmail, setDesktopEmail] = useState<string | null>(null);
+  useEffect(() => {
+    if (isTest) return;
+    const sync = () => setEmail(readStoredTemplateSession()?.email ?? null);
+    sync();
+    window.addEventListener("bigman-template-session-changed", sync);
+    window.addEventListener("focus", sync);
+    const bridge = window.ogb?.cloudAccount;
+    let unsub: (() => void) | undefined;
+    if (bridge?.onState) {
+      unsub = bridge.onState((next) => {
+        setDesktopEmail(next.status === "connected" ? next.account?.email ?? null : null);
+      });
+      void bridge
+        .state()
+        .then((next) => {
+          setDesktopEmail(next.status === "connected" ? next.account?.email ?? null : null);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      window.removeEventListener("bigman-template-session-changed", sync);
+      window.removeEventListener("focus", sync);
+      unsub?.();
+    };
+  }, [isTest]);
+  return email || desktopEmail || null;
+}
+
 export async function ensureValidTemplateToken(): Promise<StoredTemplateSession | null> {
   const current = readStoredTemplateSession();
   if (!current) return null;

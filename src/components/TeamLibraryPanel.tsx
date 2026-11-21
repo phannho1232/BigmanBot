@@ -7,7 +7,7 @@ import type { PackageDocument } from "../../shared/package-format";
 import type { TemplateDetails } from "../../shared/share-card";
 import type { Routine } from "@/lib/routines";
 import { api, useStore, type Bot, type Group } from "@/state/store";
-import { ArrowLeft, Check, ExternalLink, Loader2, Lock, Plus, Search, UserCheck, Users, X } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Loader2, Lock, LogOut, Plus, Search, UserCheck, Users, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { catalogCopy, catalogMatches, type TeamCatalog, type TeamCatalogEntry } from "@/lib/team-catalog";
@@ -16,6 +16,7 @@ import {
   BIGMAN_WEB_ORIGIN,
   fetchTemplatePayload,
   openWebAuthOrTemplateCheckout,
+  signOutTemplateMarketplace,
   useRemoteTemplateMarketplace,
   type RemoteTemplateCatalogEntry,
 } from "@/lib/template-store";
@@ -389,21 +390,32 @@ export function TeamLibraryPanel({
           <div className="flex shrink-0 items-center gap-2">
             {!pending && (
               activeEmail ? (
-                <button
-                  type="button"
-                  onClick={() => void openExternalLink(`${BIGMAN_WEB_ORIGIN}/templates`)}
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12px] font-medium text-ink-secondary hover:bg-raised-hover hover:text-ink"
-                  title="Mở kho Mẫu Bot của bạn trên bigmanbot.com"
-                >
-                  <UserCheck size={14} className="text-success" />
-                  <span className="max-w-[180px] truncate">{activeEmail}</span>
-                  <ExternalLink size={12} />
-                </button>
+                <div className="inline-flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => void openExternalLink(`${BIGMAN_WEB_ORIGIN}/templates`)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12px] font-medium text-ink-secondary hover:bg-raised-hover hover:text-ink"
+                    title="Mở kho Mẫu Bot của bạn trên bigmanbot.com"
+                  >
+                    <UserCheck size={14} className="text-success" />
+                    <span className="max-w-[180px] truncate">{activeEmail}</span>
+                    <ExternalLink size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void signOutTemplateMarketplace()}
+                    className="inline-flex items-center gap-1 rounded-full bg-raised px-2.5 py-1.5 text-[12px] font-medium text-ink-secondary hover:bg-danger/10 hover:text-danger"
+                    title="Đăng xuất tài khoản Bigman Bot"
+                  >
+                    <LogOut size={13} />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => void openWebAuthOrTemplateCheckout({ onCompleted: () => void reloadMarketplace() })}
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-raised-hover"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-raised-hover"
                 >
                   <span>Đăng nhập Bigman Bot</span>
                   <ExternalLink size={12} />

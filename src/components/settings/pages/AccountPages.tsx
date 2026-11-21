@@ -1,7 +1,13 @@
 import { ArrowUpRight } from "lucide-react";
 import { t } from "@/lib/i18n";
-import { CLOUD_PLAN_URL } from "@/lib/app-links";
+import { CLOUD_PLAN_URL, openExternalLink } from "@/lib/app-links";
 import { productName } from "@/lib/brand";
+import {
+  BIGMAN_WEB_ORIGIN,
+  openWebAuthOrTemplateCheckout,
+  signOutTemplateMarketplace,
+  useTemplateAccountEmail,
+} from "@/lib/template-store";
 import { api } from "@/state/store";
 import { useStoreDispatch, useStoreSelector } from "@/state/store-select";
 import { useState } from "react";
@@ -25,6 +31,7 @@ export function AccountPage() {
   const linkRequest = useStoreSelector((state) => state.appSettingsCloudLink), dispatch = useStoreDispatch();
   const { profile, session } = useYou();
   const summary = useAccountSummary();
+  const templateEmail = useTemplateAccountEmail();
   const computer = useSwitchToComputer();
   const [signingOut, setSigningOut] = useState(false);
   const bridge = ctx.client ? undefined : window.ogb?.cloudAccount;
@@ -58,17 +65,41 @@ export function AccountPage() {
         </SettingsRows>
       </SettingsGroup>
     )}
-    {!ctx.desktop && (
-      <SettingsGroup block="mausbot-account">
-        <SettingsRows>
-          <SettingRow title={t("settings.account.signedInTo", { place: place.name })} subtitle={profile?.email}>{null}</SettingRow>
-          {session?.kind === "session" && (
-            <SettingRow title={t("settings.account.signOutBrowser")}>
-              <button type="button" data-danger="" className="settings-quiet cursor-pointer" onClick={() => setSigningOut(true)}>{t("settings.account.signOutShort")}</button>
+    {!bridge && !elsewhere && (
+      <SettingsGroup label={t("settings.account.mausbot", { app: productName() })} block="mausbot-account">
+        <SettingsRows icons>
+          {templateEmail ? (
+            <>
+              <SettingRow title={templateEmail} leading={<YouAvatar size={32} />} subtitle={t("settings.account.signedIn")}>
+                <button type="button" className="ui-button" onClick={() => void openExternalLink(`${BIGMAN_WEB_ORIGIN}/templates`)}>
+                  Kho mẫu Web
+                </button>
+              </SettingRow>
+              <SettingRow title={t("settings.account.signOut", { app: productName() })} leading={<span aria-hidden="true" />}>
+                <button type="button" data-danger="" className="settings-quiet cursor-pointer" onClick={() => void signOutTemplateMarketplace()}>
+                  {t("settings.account.signOutShort")}
+                </button>
+              </SettingRow>
+            </>
+          ) : (
+            <SettingRow title={t("settings.account.signInTitle", { app: productName() })} leading={<YouAvatar size={32} />} subtitle={t("settings.account.signInBody")}>
+              <button type="button" className="ui-button ui-button-primary" data-account-sign-in="" onClick={() => void openWebAuthOrTemplateCheckout()}>
+                {t("settings.account.signIn")}
+              </button>
             </SettingRow>
           )}
+          {!ctx.desktop && (
+            <>
+              <SettingRow title={t("settings.account.signedInTo", { place: place.name })} leading={<span aria-hidden="true" />} subtitle={templateEmail ?? profile?.email}>{null}</SettingRow>
+              {session?.kind === "session" && (
+                <SettingRow title={t("settings.account.signOutBrowser")} leading={<span aria-hidden="true" />}>
+                  <button type="button" data-danger="" className="settings-quiet cursor-pointer" onClick={() => setSigningOut(true)}>{t("settings.account.signOutShort")}</button>
+                </SettingRow>
+              )}
+            </>
+          )}
         </SettingsRows>
-        {signingOut && <SignOutConfirm browser here={place.name} onConfirm={() => api("/api/auth/logout", { method: "POST" }).finally(() => location.reload())} onClose={() => setSigningOut(false)} />}
+        {!ctx.desktop && signingOut && <SignOutConfirm browser here={place.name} onConfirm={() => api("/api/auth/logout", { method: "POST" }).finally(() => location.reload())} onClose={() => setSigningOut(false)} />}
       </SettingsGroup>
     )}
     {ctx.organization ? (

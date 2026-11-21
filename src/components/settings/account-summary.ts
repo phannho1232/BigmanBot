@@ -4,6 +4,7 @@ import { cloudPlanLabel, cloudPlanView } from "@/lib/cloud-plan";
 import { t } from "@/lib/i18n";
 import { profileForSession, type SessionState } from "@/lib/session";
 import { readSharedSessionState } from "@/lib/shared-session";
+import { readStoredTemplateSession } from "@/lib/template-store";
 import { useStoreSelector } from "@/state/store-select";
 
 export interface AccountSummary {
@@ -34,19 +35,57 @@ function fromPlan(plan: CloudPlanSnapshot | null): AccountSummary {
 export function useAccountSummary(): AccountSummary {
   const account = typeof window === "undefined" || window.ogb?.remoteClient?.active ? undefined : window.ogb?.cloudAccount;
   const planBridge = account ? undefined : typeof window === "undefined" ? undefined : window.ogb?.cloudPlan;
-  const [summary, setSummary] = useState<AccountSummary>({ signedIn: null, email: null, plan: null, paid: false });
+  const [summary, setSummary] = useState<AccountSummary>(() => {
+    const stored = typeof window !== "undefined" ? readStoredTemplateSession() : null;
+    return stored?.email ? { signedIn: true, email: stored.email, plan: null, paid: false } : { signedIn: null, email: null, plan: null, paid: false };
+  });
   useEffect(() => {
     let alive = true;
+    const withTemplateFallback = (base: AccountSummary): AccountSummary => {
+      if (base.email) return base;
+      const stored = typeof window !== "undefined" ? readStoredTemplateSession() : null;
+      if (stored?.email) return { ...base, signedIn: true, email: stored.email };
+      return base;
+    };
+    const syncTemplate = () => {
+      if (!alive) return;
+      const stored = typeof window !== "undefined" ? readStoredTemplateSession() : null;
+      setSummary((prev) => {
+        if (stored?.email) return { ...prev, signedIn: true, email: stored.email };
+        if (!account && !planBridge) return { signedIn: null, email: null, plan: null, paid: false };
+        return prev;
+      });
+    };
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+      window.addEventListener("bigman-template-session-changed", syncTemplate);
+    }
     if (account) {
-      const off = account.onState((next) => { if (alive) setSummary(fromAccount(next)); });
-      void account.state().then((next) => { if (alive) setSummary(fromAccount(next)); }).catch(() => {});
-      return () => { alive = false; off(); };
+      const off = account.onState((next) => { if (alive) setSummary(withTemplateFallback(fromAccount(next))); });
+      void account.state().then((next) => { if (alive) setSummary(withTemplateFallback(fromAccount(next))); }).catch(() => {});
+      return () => {
+        alive = false;
+        off();
+        if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
+          window.removeEventListener("bigman-template-session-changed", syncTemplate);
+        }
+      };
     }
     if (planBridge) {
-      void planBridge.state().then((next) => { if (alive) setSummary(fromPlan(next)); }).catch(() => {});
-      return () => { alive = false; };
+      void planBridge.state().then((next) => { if (alive) setSummary(withTemplateFallback(fromPlan(next))); }).catch(() => {});
+      return () => {
+        alive = false;
+        if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
+          window.removeEventListener("bigman-template-session-changed", syncTemplate);
+        }
+      };
     }
-    return () => { alive = false; };
+    syncTemplate();
+    return () => {
+      alive = false;
+      if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
+        window.removeEventListener("bigman-template-session-changed", syncTemplate);
+      }
+    };
   }, [account, planBridge]);
   return summary;
 }
@@ -65,8 +104,8 @@ export function useYou(): { profile: { name?: string; email?: string; avatarUrl?
 
 /** "Pro · ada@example.com", "Not signed in"; in a browser, "Signed in to My Cloud". */
 export function accountLine(summary: AccountSummary, { browser, place, openSource }: { browser: boolean; place: string; openSource: boolean }): string {
-  if (browser) return t("settings.account.signedInTo", { place });
-  if (openSource) return t("settings.account.onThisDevice");
+  if (browser) return summary.email ? `${summary.email} · ${t("settings.account.signedInTo", { place })}` : t("settings.account.signedInTo", { place });
+  if (openSource) return summary.email ?? t("settings.account.onThisDevice");
   if (summary.signedIn === false) return t("settings.account.notSignedIn");
   return [summary.plan, summary.email].filter(Boolean).join(" · ") || t("settings.account.signedIn");
 }

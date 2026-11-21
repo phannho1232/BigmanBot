@@ -22,6 +22,7 @@ import { CloudSetupSteps } from "./CloudSetupSteps";
 import { useCloudSendNotice } from "./CloudSendStrip";
 import { OpenFilesButton } from "./OpenFilesButton";
 import { useDesktopCapabilities } from "./DesktopCapabilities";
+import { writeStoredTemplateSession } from "@/lib/template-store";
 
 export { cloudPlanLabel };
 
@@ -449,7 +450,7 @@ export function CloudAccountSettings({ linkRequest = 0, cloudHome = false, teamH
       </SettingsGroup>
       {addingEmail && <AccountsSheet adding="" onClose={() => setAddingEmail(false)} />}
       {confirm && <SignOutConfirm here={t("rail.thisComputer")} cloud={confirm === "sign-out" && view.kind === "paid" ? t("cloudSetup.myCloud") : null}
-        onConfirm={() => perform(() => bridge.signOut())} onClose={() => setConfirm(false)} />}
+        onConfirm={() => perform(() => { writeStoredTemplateSession(null); return bridge.signOut(); })} onClose={() => setConfirm(false)} />}
     </>;
   }
   // Sign out is the account card's last row now; this part stays for callers that still ask for it.
