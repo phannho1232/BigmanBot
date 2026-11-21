@@ -1,7 +1,7 @@
 import type { CloudBackend } from "../../shared/wire";
 import { useEffect } from "react";
-import { useStore } from "@/state/store";
 import { t } from "@/lib/i18n";
+import { sameFields, useStoreSelector } from "@/state/store-select";
 
 export function CloudBackendPicker({
   value,
@@ -12,7 +12,7 @@ export function CloudBackendPicker({
   compact?: boolean;
   onChange: (backend: CloudBackend) => void;
 }) {
-  const { state } = useStore();
+  const state = useStoreSelector((s) => ({ config: s.config }), sameFields);
   useEffect(() => {
     if (!state.config?.cloudHome && value !== "vps") onChange("vps");
   }, [onChange, state.config?.cloudHome, value]);

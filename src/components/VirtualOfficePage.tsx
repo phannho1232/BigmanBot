@@ -72,7 +72,7 @@ function resolveLiveWorkKind(bot: Bot): LiveWorkKind | undefined {
   ];
   for (const threadId of candidateThreadIds) {
     const live = turnLive(threadId);
-    if (live.status) return live.status.activity;
+    if (live.status) return live.status.activity === "summarizing" ? "thinking" : live.status.activity;
   }
   const lastTool = bot.messages.findLast((msg) => msg.kind === "activity" && msg.tool)?.tool;
   if (lastTool?.step?.activity) return lastTool.step.activity;

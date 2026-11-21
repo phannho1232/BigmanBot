@@ -516,6 +516,7 @@ const bridge = {
     signInPassword: (email, password) => ipcRenderer.invoke("cloud-account:signInPassword", String(email), String(password)),
     signInGoogle: () => ipcRenderer.invoke("cloud-account:signInGoogle"),
     connectServer: serverId => ipcRenderer.invoke("cloud-account:connectServer", String(serverId ?? "")),
+    resetSaved: () => ipcRenderer.invoke("cloud-account:resetSaved"),
     reopenCheckout: (plan, source) => ipcRenderer.invoke("cloud-account:reopenCheckout", String(plan), String(source)),
     copyCheckoutLink: () => ipcRenderer.invoke("cloud-account:copyCheckoutLink"),
     interest: () => ipcRenderer.invoke("cloud-account:interest"),
@@ -727,7 +728,9 @@ const bridge = {
       ipcRenderer.on("home:state-changed", handler);
       return () => ipcRenderer.removeListener("home:state-changed", handler);
     },
-    retry: () => ipcRenderer.invoke("home:retry"),
+    // `pressed`: Try again's own press (only this computer's screen may ask), never its looks as it opens, comes online or
+    // comes to the front.
+    retry: pressed => ipcRenderer.invoke("home:retry", pressed === true),
     remove: () => ipcRenderer.invoke("home:remove"),
     signIn: () => isLocalPage || navigator.userActivation?.isActive === true
       ? ipcRenderer.invoke("home:sign-in") : Promise.reject(new Error("Choose Sign in to sign in again.")),

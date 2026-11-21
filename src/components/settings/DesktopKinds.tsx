@@ -3,7 +3,7 @@ import { Laptop, Server } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { productName } from "@/lib/brand";
 import { computerInventoryRequest } from "@/lib/computer-requests";
-import { useStore } from "@/state/store";
+import { useStoreSelector } from "@/state/store-select";
 import { LocalComputerSection } from "../LocalComputerSection";
 import { SettingRow, SettingsGroup, SettingsMark, SettingsRows, StatusDot } from "../SettingsPrimitives";
 import { SettingsDialog } from "./SettingsDialog";
@@ -58,8 +58,7 @@ function PrivateSetup({ status, onCheck, onClose }: { status: PrivateStatus; onC
 /** Desktops: what each kind is, its state first, and one Set up. */
 export function DesktopKinds() {
   const { place, go } = useSettingsShell();
-  const { state } = useStore();
-  const cloudHome = state.config?.cloudHome === true;
+  const cloudHome = useStoreSelector((state) => state.config?.cloudHome === true);
   const [local, setLocal] = useState<PrivateStatus>(null);
   const [vps, setVps] = useState<{ configured: boolean; available: boolean } | null>(null);
   const [setup, setSetup] = useState(false);
@@ -84,8 +83,8 @@ export function DesktopKinds() {
   return (
     <SettingsGroup label={t("settings.desktops.kinds")} block="desktops">
       <SettingsRows icons>
-        {!cloudHome && row(privateKind, t("settings.desktops.private"), t("settings.desktops.privateLine"), <Laptop strokeWidth={1.75} />, () => setSetup(true), "private")}
-        {row(serversKind, t("settings.desktops.servers"), t("settings.desktops.serversLine"), <Server strokeWidth={1.75} />, () => go("ai", "ai-keys"), "servers")}
+        {!cloudHome && row(privateKind, t("settings.desktops.private"), t("settings.desktops.privateLine"), <Laptop />, () => setSetup(true), "private")}
+        {row(serversKind, t("settings.desktops.servers"), t("settings.desktops.serversLine"), <Server />, () => go("ai", "ai-keys"), "servers")}
       </SettingsRows>
       {setup && <PrivateSetup status={local} onCheck={load} onClose={() => setSetup(false)} />}
     </SettingsGroup>

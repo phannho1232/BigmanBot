@@ -31,6 +31,7 @@ import {
 } from "../shared/share-folder.ts";
 import { admitSkillFiles, skillFileRefusalWords } from "../shared/skill-files.ts";
 import { writeFileAtomic } from "./atomic.ts";
+import { productName } from "./brand.ts";
 import { createTeamPackageExport, TeamExportError, type ExportablePackageSkill, type TeamExportSkip } from "./package-export.ts";
 import type { Routine } from "./routines.ts";
 import { COMMUNITY_MAX_BYTES, COMMUNITY_MAX_FILES, type CommunityPublisher } from "./share-publish.ts";
@@ -91,10 +92,10 @@ const SKIP_WORDS: Record<string, string> = {
   skill_conflict: "kỹ năng có nội dung khác nhau giữa hai bot", bot_skill_limit: "số kỹ năng vượt quá giới hạn của một bot", team_skill_limit: "số kỹ năng vượt quá giới hạn của phòng ban",
 };
 /** The line a template gets when its bot or department has no words of its own; a card leaves it out. */
-const plainTagline = (scope: TemplateScope) => `${scope === "bot" ? "Bot" : "Phòng ban"} được chia sẻ từ Bigman Bot.`;
+const plainTagline = (scope: TemplateScope) => `${scope === "bot" ? "Bot" : "Phòng ban"} được chia sẻ từ ${productName()}.`;
 const plainSummary = (scope: TemplateScope) => scope === "bot"
-  ? "Được chia sẻ từ Bigman Bot. Bot sẽ được thêm thành bản sao mới cùng kỹ năng và quy trình định kỳ; các quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm."
-  : "Được chia sẻ từ Bigman Bot. Các bot, kỹ năng, nhóm chat và quy trình định kỳ sẽ được thêm thành bản sao mới; các quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm.";
+  ? `Được chia sẻ từ ${productName()}. Bot sẽ được thêm thành bản sao mới cùng kỹ năng và quy trình định kỳ; các quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm.`
+  : `Được chia sẻ từ ${productName()}. Các bot, kỹ năng, nhóm chat và quy trình định kỳ sẽ được thêm thành bản sao mới; các quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm.`;
 const skipWords = (skip: TeamExportSkip) => `${SKIP_WORDS[skip.reason] ?? "mục không thể chia sẻ"} (${skip.part})`;
 
 const slugOf = (name: string) => name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "template";
@@ -344,7 +345,7 @@ export function createShareHost(deps: ShareHostDeps) {
         name: lead ? lead.name : target.scope === "department" ? target.section : undefined,
         tagline: (lead && firstLine(lead.title || lead.description, 160)) || plainTagline(target.scope),
         summary: lead?.description?.trim().slice(0, 2_000) || plainSummary(target.scope),
-        authorName: "Người dùng Bigman Bot",
+        authorName: `Người dùng ${productName()}`,
         bots,
         groups: target.scope === "bot" ? [] : deps.groups(),
         routines: target.scope === "bot" ? routines.filter((routine) => routine.botId === target.bot.id && routine.target !== "room-goal") : routines,

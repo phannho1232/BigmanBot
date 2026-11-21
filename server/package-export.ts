@@ -1,5 +1,6 @@
 import type { SkillFile } from "../shared/skill-files.ts";
 import { parseBotPackage, type BotPackageDefinition, type BotPackagePlaybook, type BotPackageSkill, type ParsedBotPackage } from "./bot-package.ts";
+import { productName } from "./brand.ts";
 import type { DefaultsPreset, PublishedLibrary } from "./presets.ts";
 import type { PublishedTeam } from "./published-teams.ts";
 import { nextPatchRelease } from "./published-teams.ts";
@@ -235,10 +236,10 @@ export function createBotPackageExport(input: {
     id,
     release: "1.0.0",
     name: input.name,
-    tagline: `Bộ mẫu Bigman Bot di động gồm ${bots.length} bot.`,
-    summary: "Được xuất từ Bigman Bot. Các vai trò, phòng chat, kỹ năng, yêu cầu ứng dụng và quy trình định kỳ được giữ ở trạng thái tạm dừng trước khi chia sẻ hoặc nhập.",
+    tagline: `Bộ mẫu ${productName()} di động gồm ${bots.length} bot.`,
+    summary: `Được xuất từ ${productName()}. Các vai trò, phòng chat, kỹ năng, yêu cầu ứng dụng và quy trình định kỳ được giữ ở trạng thái tạm dừng trước khi chia sẻ hoặc nhập.`,
     category: "Community",
-    author: { name: input.authorName?.trim() || "Người dùng Bigman Bot" },
+    author: { name: input.authorName?.trim() || `Người dùng ${productName()}` },
     license: "Unspecified",
     outcomes: ["Khởi tạo lại đội ngũ bot này mà không sao chép dữ liệu riêng tư."],
     setupMinutes: Math.min(240, Math.max(2, bots.length + requirements.size * 2)),
@@ -667,12 +668,12 @@ export function createTeamPackageExport(input: TeamExportInput): TeamExportResul
     id: packageId,
     release,
     name: displayName,
-    tagline: input.tagline?.trim() || `Bộ mẫu Bigman Bot di động gồm ${bots.length} bot.`,
+    tagline: input.tagline?.trim() || `Bộ mẫu ${productName()} di động gồm ${bots.length} bot.`,
     summary: input.summary?.trim() ||
-      "Được chia sẻ từ Bigman Bot. Các bot, kỹ năng, phòng chat và quy trình định kỳ sẽ được tạo thành bản sao mới; quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm.",
+      `Được chia sẻ từ ${productName()}. Các bot, kỹ năng, phòng chat và quy trình định kỳ sẽ được tạo thành bản sao mới; quy trình bắt đầu ở trạng thái tạm dừng và lịch sử trò chuyện không bao giờ bị gửi kèm.`,
     ...(notes ? { notes } : {}),
     category: "Community",
-    author: { name: input.authorName?.trim() || "Người dùng Bigman Bot" },
+    author: { name: input.authorName?.trim() || `Người dùng ${productName()}` },
     license: "Unspecified",
     outcomes: ["Khởi tạo lại đội ngũ bot này mà không sao chép lịch sử trò chuyện hay cài đặt riêng tư."],
     setupMinutes: Math.min(240, Math.max(2, bots.length + requirements.size * 2 + connections.length * 2)),
@@ -786,12 +787,12 @@ export function createLibraryPackageExport(input: LibraryExportInput): LibraryEx
     id: packageId,
     release,
     name: displayName,
-    tagline: input.tagline?.trim() || "A preset bot for OpenMausBot's New bot dialog.",
+    tagline: input.tagline?.trim() || `A preset bot for ${productName()}'s New bot dialog.`,
     summary: input.summary?.trim() ||
-      "Shared from OpenMausBot. Adds a preset bot to New bot. Its skills arrive switched off; model choices, computers, approval levels and connected apps never travel.",
+      `Shared from ${productName()}. Adds a preset bot to New bot. Its skills arrive switched off; model choices, computers, approval levels and connected apps never travel.`,
     ...(notes ? { notes } : {}),
     category: "Community",
-    author: { name: input.authorName?.trim() || "OpenMausBot user" },
+    author: { name: input.authorName?.trim() || `${productName()} user` },
     license: "Unspecified",
     outcomes: ["Start new bots from a shared preset."],
     setupMinutes: 2,

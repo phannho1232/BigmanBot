@@ -74,7 +74,8 @@ export function createSignInMail(options: { url: string; from?: string; now?: ()
       const sender = from();
       transport ??= import("nodemailer").then(({ createTransport }) => createTransport(smtpOptions(options.url)));
       const code = String(randomInt(0, 100_000_000)).padStart(8, "0");
-      pending.set(email, { hash: digest(code), sentAt: now(), tries: 0 });
+      const entry = { hash: digest(code), sentAt: now(), tries: 0 };
+      pending.set(email, entry);
       try {
         await (await transport).sendMail({
           from: sender, to: email, subject: target ? `Mã đăng nhập BigmanBot cho ${target}` : "Mã đăng nhập BigmanBot của bạn",
@@ -82,7 +83,7 @@ export function createSignInMail(options: { url: string; from?: string; now?: ()
             + "Nếu bạn không yêu cầu đăng nhập, vui lòng bỏ qua email này: không ai có thể truy cập nếu không có mã này.\n",
         });
       } catch (error) {
-        pending.delete(email);
+        if (pending.get(email) === entry) pending.delete(email);
         throw error;
       }
       return "sent";
