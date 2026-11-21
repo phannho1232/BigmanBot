@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { CHECKOUT_SOURCES, cloudMenuSublabel, cloudPlanSnapshot, createCloudAccountStore } from "./cloud-account.mjs";
 
 export { CHECKOUT_SOURCES, cloudMenuSublabel, cloudPlanSnapshot, createCloudAccountStore };
@@ -138,6 +138,7 @@ function normalizeBigmanServers(servers, orders) {
   if (Array.isArray(orders)) {
     for (const ord of orders) {
       if (!isPlainObject(ord) || !ord.id) continue;
+      if (String(ord.tier || "").toLowerCase() === "template" || ord.template_id) continue;
       if (ord.server_id && seenIds.has(String(ord.server_id))) continue;
       if (!["pending_setup", "provisioning"].includes(ord.status)) continue;
       const subdomain = typeof ord.subdomain === "string" && ord.subdomain.trim() ? ord.subdomain.trim() : null;
@@ -559,13 +560,10 @@ export function createBigmanCloudAccountClient({
       activeAuthAbort = null;
     }
 
-    const googleAuthUrl = `${BIGMAN_SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${BIGMAN_WEB_ORIGIN}/`)}`;
-    const targetUrl = options?.mode === "web" ? `${BIGMAN_WEB_ORIGIN}/login` : googleAuthUrl;
-
-    if (typeof openAuthWindow !== "function") {
-      await openBrowser(targetUrl);
-      return currentState;
-    }
+    const targetUrl =
+      options?.mode === "google"
+        ? `${BIGMAN_SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${BIGMAN_WEB_ORIGIN}/`)}`
+        : `${BIGMAN_WEB_ORIGIN}/login`;
 
     const previousState = currentState;
     const connectingState = publish({
@@ -578,6 +576,84 @@ export function createBigmanCloudAccountClient({
 
     void (async () => {
       try {
+        // 1. Try external browser Web-Redirect Handoff via Supabase RPC `create_app_auth_session`
+        if (options?.mode !== "google") {
+          const sessionId = `bmb_sess_${randomBytes(16).toString("hex")}`;
+          const pollSecret = randomBytes(24).toString("hex");
+          const pollSecretHash = createHash("sha256").update(pollSecret, "utf8").digest("hex");
+          const createRes = await requestJson(`${BIGMAN_SUPABASE_URL}/rest/v1/rpc/create_app_auth_session`, {
+            method: "POST",
+            headers: supabaseHeaders(null),
+            body: JSON.stringify({
+              p_session_id: sessionId,
+              p_poll_secret_hash: pollSecretHash,
+            }),
+          }).catch(() => ({ ok: false, body: null }));
+
+          if (createRes.ok && isPlainObject(createRes.body) && createRes.body.ok) {
+            let aborted = false;
+            activeAuthAbort = () => {
+              aborted = true;
+            };
+            const buyQuery = typeof options?.buy === "string" && options.buy.trim()
+              ? `&buy=${encodeURIComponent(options.buy.trim())}`
+              : "";
+            await openBrowser(`${BIGMAN_WEB_ORIGIN}/login?app_session=${encodeURIComponent(sessionId)}${buyQuery}`);
+
+            const deadline = clock() + 10 * 60_000;
+            while (!closed && !aborted && clock() < deadline) {
+              await new Promise(r => setTimeout(r, 2000));
+              if (closed || aborted) break;
+              const pollRes = await requestJson(`${BIGMAN_SUPABASE_URL}/rest/v1/rpc/consume_app_auth_session`, {
+                method: "POST",
+                headers: supabaseHeaders(null),
+                body: JSON.stringify({
+                  p_session_id: sessionId,
+                  p_poll_secret: pollSecret,
+                }),
+              }).catch(() => ({ ok: false, body: null }));
+
+              if (!pollRes.ok || !isPlainObject(pollRes.body)) continue;
+              const st = pollRes.body.status;
+              if (st === "expired" || st === "not_found" || st === "forbidden") break;
+              if (st === "completed" && typeof pollRes.body.accessToken === "string") {
+                activeAuthAbort = null;
+                const userRes = await requestJson(`${BIGMAN_SUPABASE_URL}/auth/v1/user`, {
+                  method: "GET",
+                  headers: supabaseHeaders(pollRes.body.accessToken),
+                });
+                const userObj =
+                  userRes.ok && isPlainObject(userRes.body) && typeof userRes.body.id === "string"
+                    ? userRes.body
+                    : { id: pollRes.body.userId || "user", email: pollRes.body.email || "" };
+                await saveSupabaseSession({
+                  accessToken: pollRes.body.accessToken,
+                  refreshToken: pollRes.body.refreshToken || "",
+                  expiresIn: pollRes.body.expiresIn || 3600,
+                  user: userObj,
+                });
+                await synchronize();
+                return;
+              }
+            }
+
+            activeAuthAbort = null;
+            if (!closed && currentState.status === "connecting") {
+              publish(storedCredential ? previousState : { status: "signed-out" });
+            }
+            return;
+          }
+        }
+
+        // 2. Fallback to embedded web auth window or external browser
+        if (typeof openAuthWindow !== "function") {
+          await openBrowser(targetUrl);
+          if (!closed && currentState.status === "connecting") {
+            publish(storedCredential ? previousState : { status: "signed-out" });
+          }
+          return;
+        }
+
         const sessionTokens = await openAuthWindow({
           url: targetUrl,
           onAbort: abortFn => {

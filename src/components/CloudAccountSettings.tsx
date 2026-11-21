@@ -178,99 +178,48 @@ function BigmanSignInForm({ bridge, busy, onSignedIn, onGoogle }: {
   onSignedIn: (state: CloudAccountState) => void;
   onGoogle: () => void;
 }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const disabled = busy || submitting;
 
-  const submit = async () => {
-    if (disabled || !bridge.signInPassword) return;
-    const trimmed = email.trim();
-    if (!trimmed || !password) return;
+  const openWebSignIn = async () => {
+    if (disabled) return;
     setSubmitting(true);
     setFormError(null);
     try {
-      const result = await bridge.signInPassword(trimmed, password);
-      if (result.outcome === "signed-in") {
-        setPassword("");
-        onSignedIn(result.state);
-      } else {
-        setFormError(result.message || "Email hoặc mật khẩu không chính xác.");
-      }
+      const next = await bridge.begin();
+      onSignedIn(next);
     } catch {
-      setFormError("Không thể kết nối tới máy chủ Bigman Bot. Vui lòng thử lại.");
+      setFormError("Không thể mở trang đăng nhập Bigman Bot. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div data-bigman-signin className="flex w-full max-w-[380px] flex-col gap-2.5">
-      <form
-        className="flex flex-col gap-2.5"
-        onSubmit={e => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <input
-          type="email"
-          dir="ltr"
-          autoComplete="email"
-          disabled={disabled}
-          value={email}
-          onChange={e => {
-            setEmail(e.target.value);
-            if (formError) setFormError(null);
-          }}
-          placeholder="Email tài khoản Bigman Bot (you@company.com)"
-          aria-label="Email"
-          className="ui-input w-full text-[13px]"
-        />
-        <input
-          type="password"
-          dir="ltr"
-          autoComplete="current-password"
-          disabled={disabled}
-          value={password}
-          onChange={e => {
-            setPassword(e.target.value);
-            if (formError) setFormError(null);
-          }}
-          placeholder="Mật khẩu"
-          aria-label="Mật khẩu"
-          className="ui-input w-full text-[13px]"
-        />
-        {formError && <p role="alert" className="text-[12px] text-danger">{formError}</p>}
-        <div className="flex flex-wrap items-center gap-2 pt-0.5">
-          <button
-            type="submit"
-            disabled={disabled || !email.trim() || !password}
-            className="ui-button ui-button-primary"
-          >
-            {submitting ? "Đang đăng nhập…" : t("cloudAccount.signIn")}
-          </button>
-          <button
-            type="button"
-            disabled={disabled}
-            className="ui-button"
-            onClick={onGoogle}
-          >
-            Tiếp tục với Google
-          </button>
-        </div>
-      </form>
-      <p className="text-[12px] text-ink-secondary">
-        Chưa có tài khoản Bigman Bot?{" "}
+    <div data-bigman-signin className="flex w-full max-w-[420px] flex-col gap-2.5">
+      <p className="text-[13px] leading-relaxed text-ink-secondary">
+        Mở trình duyệt web tới <code className="text-ink">bigmanbot.com</code> để đăng nhập hoặc đăng ký tài khoản rồi tự động đồng bộ máy chủ Cloud &amp; Mẫu Bot về ứng dụng.
+      </p>
+      {formError && <p role="alert" className="text-[12px] text-danger">{formError}</p>}
+      <div className="flex flex-wrap items-center gap-2 pt-0.5">
         <button
           type="button"
-          className="font-medium text-accent-text underline underline-offset-2 hover:text-ink"
-          onClick={() => void window.ogb?.openExternal?.("https://bigmanbot.com/login")}
+          disabled={disabled}
+          onClick={() => void openWebSignIn()}
+          className="ui-button ui-button-primary"
         >
-          Đăng ký hoặc quản lý tại bigmanbot.com
+          {submitting ? "Đang chờ trên trình duyệt…" : "Đăng nhập trên Website (bigmanbot.com)"}
         </button>
-      </p>
+        <button
+          type="button"
+          disabled={disabled}
+          className="ui-button"
+          onClick={onGoogle}
+        >
+          Tiếp tục với Google
+        </button>
+      </div>
     </div>
   );
 }

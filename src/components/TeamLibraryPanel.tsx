@@ -7,10 +7,18 @@ import type { PackageDocument } from "../../shared/package-format";
 import type { TemplateDetails } from "../../shared/share-card";
 import type { Routine } from "@/lib/routines";
 import { api, useStore, type Bot, type Group } from "@/state/store";
-import { ArrowLeft, Check, Loader2, Search, Users, X } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Loader2, Lock, Search, UserCheck, Users, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { catalogCopy, catalogMatches, type TeamCatalog, type TeamCatalogEntry } from "@/lib/team-catalog";
+import { openExternalLink } from "@/lib/app-links";
+import {
+  BIGMAN_WEB_ORIGIN,
+  fetchTemplatePayload,
+  openWebAuthOrTemplateCheckout,
+  useRemoteTemplateMarketplace,
+  type RemoteTemplateCatalogEntry,
+} from "@/lib/template-store";
 
 import { ReadyBotGallery } from "./ReadyBotGallery";
 import { OrgLibraryTab } from "./TeamLibraryPanelOrg";
@@ -23,7 +31,75 @@ export interface TeamImportResult {
   connections?: number;
 }
 
-/** What the preview is of: a community team (its file, added as a file) or a package from the organization's library. */
+const BUILTIN_SLUG_ALIASES: Record<string, string> = {
+  "marketing-100x": "100x-marketing",
+  "inbox-followup": "inbox-follow-up",
+};
+
+function toUpstreamTeamSlug(id: string): string {
+  const clean = id.replace(/^dept-/, "");
+  return BUILTIN_SLUG_ALIASES[clean] ?? clean;
+}
+
+function synthesizeFallbackDepartmentPackage(
+  entry: RemoteTemplateCatalogEntry,
+  soul?: string
+): Record<string, unknown> {
+  const safeId =
+    entry.id
+      .toLowerCase()
+      .replace(/^dept-/, "")
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^[^a-z0-9]+|-+$/g, "") || "department";
+  return {
+    format: "openmaus.package",
+    version: 2,
+    package: {
+      id: safeId,
+      release: "1.0.0",
+      name: entry.name.slice(0, 100),
+      tagline: (entry.title || entry.description || entry.name).slice(0, 160),
+      summary: (entry.description || entry.title || entry.name).slice(0, 2000),
+      category: entry.category || "work",
+      author: { name: "Bigman Bot", url: "https://bigmanbot.com" },
+      license: "Proprietary",
+      outcomes: entry.tryAsking.length > 0 ? entry.tryAsking.slice(0, 8) : [entry.description || entry.name],
+      setupMinutes: entry.setupMinutes || 3,
+      requirements: { apps: [], capabilities: [] },
+      team: {
+        name: entry.name.slice(0, 60),
+        brief: (soul || entry.description || "").trim(),
+        leader: "truong-phong",
+      },
+      agents: [
+        {
+          key: "truong-phong",
+          name: "Trưởng phòng Điều phối",
+          title: "Trưởng phòng & Điều phối viên",
+          description: entry.description || entry.title || "Điều phối công việc phòng ban",
+          soul: soul || entry.description || "Bạn là Trưởng phòng Điều phối.",
+          appearance: { color: entry.look.color || "purple", mascotBody: "star" },
+        },
+        {
+          key: "chuyen-vien",
+          name: "Chuyên viên Thực thi",
+          title: "Chuyên viên Chuyên môn",
+          description: "Thực thi các hạng mục chuyên sâu trong phòng ban",
+          soul: soul || entry.description || "Bạn là Chuyên viên Thực thi.",
+          appearance: { color: "blue", mascotBody: "star" },
+        },
+      ],
+      rooms: [
+        {
+          key: `${safeId.slice(0, 40)}-room`,
+          name: `Phòng họp ${entry.name.slice(0, 70)}`,
+          members: ["truong-phong", "chuyen-vien"],
+          defaultResponder: { kind: "agent", agent: "truong-phong" },
+        },
+      ],
+    },
+  };
+}
 type Pending = { details: TemplateDetails; manifest: unknown; org?: undefined } | { details: TemplateDetails; manifest?: undefined; org: OrgLibraryPackage };
 
 function TeamGlyph() {
@@ -60,6 +136,41 @@ export function TeamLibraryPanel({
   const [orgBusy, setOrgBusy] = useState<string | null>(null);
   const [orgNotice, setOrgNotice] = useState("");
   const [orgError, setOrgError] = useState("");
+  const { departmentEntries, unlockedIds, activeEmail, reload: reloadMarketplace } = useRemoteTemplateMarketplace();
+
+  const loadRemoteDepartment = async (entry: RemoteTemplateCatalogEntry) => {
+    const isUnlocked = !entry.isPaid || unlockedIds.has(entry.id);
+    if (!isUnlocked) {
+      await openWebAuthOrTemplateCheckout({
+        buyTemplateId: entry.id,
+        onCompleted: () => void reloadMarketplace(),
+      });
+      return;
+    }
+    setBusySlug(entry.id);
+    setError("");
+    try {
+      const payload = await fetchTemplatePayload(entry.id);
+      let manifest: unknown = payload?.packageManifest ?? null;
+      if (!manifest) {
+        const cleanSlug = toUpstreamTeamSlug(entry.id);
+        const isBuiltinSlug = (catalog?.teams ?? []).some((team) => team.slug === cleanSlug);
+        if (isBuiltinSlug) {
+          manifest = await api(`/api/team-library/teams/${cleanSlug}`);
+        } else {
+          manifest = synthesizeFallbackDepartmentPackage(entry, payload?.soul);
+        }
+      }
+      setPending({
+        details: templateDetailsOf(manifest),
+        manifest,
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusySlug(null);
+    }
+  };
 
   const loadCatalog = useCallback(async () => {
     setCatalogLoading(true);
@@ -216,7 +327,30 @@ export function TeamLibraryPanel({
   };
 
   const normalizedSearch = search.trim().toLowerCase();
-  const visibleTeams = (catalog?.teams ?? []).filter((entry) => !normalizedSearch || catalogMatches(entry, normalizedSearch));
+  const builtinTeamSlugs = new Set((catalog?.teams ?? []).map((t) => t.slug));
+  const remoteDepartmentSlugs = new Set(
+    departmentEntries.flatMap((entry) => [
+      entry.id,
+      entry.id.replace(/^dept-/, ""),
+      toUpstreamTeamSlug(entry.id),
+    ])
+  );
+  const hasSeededBuiltinDepts =
+    departmentEntries.filter((d) => builtinTeamSlugs.has(toUpstreamTeamSlug(d.id))).length >= 3;
+  const visibleTeams = hasSeededBuiltinDepts
+    ? []
+    : (catalog?.teams ?? []).filter(
+        (entry) =>
+          !remoteDepartmentSlugs.has(entry.slug) &&
+          (!normalizedSearch || catalogMatches(entry, normalizedSearch))
+      );
+  const visibleRemoteDepartments = departmentEntries.filter(
+    (entry) =>
+      !normalizedSearch ||
+      `${entry.name} ${entry.title} ${entry.description} ${entry.apps.join(" ")}`
+        .toLowerCase()
+        .includes(normalizedSearch)
+  );
   const primary = "flex shrink-0 items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-[14px] font-medium text-accent-ink hover:bg-accent/90 disabled:opacity-60";
 
   return createPortal(
@@ -252,7 +386,30 @@ export function TeamLibraryPanel({
             </div>
             {!pending && <p className="mt-1 text-[13px] text-ink-secondary">{t("templates.subtitle")}</p>}
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-2">
+            {!pending && (
+              activeEmail ? (
+                <button
+                  type="button"
+                  onClick={() => void openExternalLink(`${BIGMAN_WEB_ORIGIN}/templates`)}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12px] font-medium text-ink-secondary hover:bg-raised-hover hover:text-ink"
+                  title="Mở kho Mẫu Bot của bạn trên bigmanbot.com"
+                >
+                  <UserCheck size={14} className="text-success" />
+                  <span className="max-w-[180px] truncate">{activeEmail}</span>
+                  <ExternalLink size={12} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void openWebAuthOrTemplateCheckout({ onCompleted: () => void reloadMarketplace() })}
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-raised px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-raised-hover"
+                >
+                  <span>Đăng nhập Bigman Bot</span>
+                  <ExternalLink size={12} />
+                </button>
+              )
+            )}
             <button
               onClick={onClose}
               disabled={importing}
@@ -334,8 +491,58 @@ export function TeamLibraryPanel({
                   <button onClick={() => void loadCatalog()} className="mt-3 rounded-full bg-raised px-3.5 py-2 text-ink hover:bg-raised-hover">{t("common.tryAgain")}</button>
                 </div>
               )}
-              {!catalogLoading && catalog && (
+              {(!catalogLoading && (catalog || visibleRemoteDepartments.length > 0)) && (
                 <div className="grid grid-cols-1 gap-x-10 md:grid-cols-2">
+                  {visibleRemoteDepartments.map((entry) => {
+                    const isUnlocked = !entry.isPaid || unlockedIds.has(entry.id);
+                    return (
+                      <article key={entry.id} className="flex min-h-[104px] items-center gap-3 border-b border-hairline/35 px-1 py-4">
+                        <TeamGlyph />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="truncate text-[13px] font-medium text-ink">{entry.name}</h3>
+                            {entry.isPaid && (
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                  isUnlocked
+                                    ? "bg-success/15 text-success"
+                                    : "bg-accent/15 text-accent-text"
+                                }`}
+                              >
+                                {isUnlocked ? "Đã sở hữu" : `${entry.priceVnd.toLocaleString("vi-VN")}đ`}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-0.5 truncate text-[13px] text-ink-secondary">{entry.description}</p>
+                          <p className="mt-1 truncate text-[12px] text-ink-tertiary">
+                            {t("templates.botCount", { count: entry.membersCount })} · {t("templates.playbookCount", { count: entry.skillsCount })}
+                            {entry.apps.length > 0 && ` · ${entry.apps.join(", ")}`}
+                            {entry.setupMinutes && ` · ${t("templates.minutes", { count: entry.setupMinutes })}`}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => void loadRemoteDepartment(entry)}
+                          disabled={busySlug !== null}
+                          className={`flex min-w-[72px] items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] disabled:opacity-40 ${
+                            isUnlocked
+                              ? "bg-raised text-ink hover:bg-raised-hover"
+                              : "bg-accent font-medium text-accent-ink hover:bg-accent/90"
+                          }`}
+                        >
+                          {busySlug === entry.id ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : !isUnlocked ? (
+                            <Lock size={13} />
+                          ) : null}
+                          {busySlug === entry.id
+                            ? t("templates.loadingShort")
+                            : isUnlocked
+                            ? t("templates.load")
+                            : "Mua mẫu"}
+                        </button>
+                      </article>
+                    );
+                  })}
                   {visibleTeams.map((entry) => {
                     const copy = catalogCopy(entry);
                     return (
@@ -363,7 +570,7 @@ export function TeamLibraryPanel({
                   })}
                 </div>
               )}
-              {!catalogLoading && catalog && visibleTeams.length === 0 && (
+              {!catalogLoading && catalog && visibleTeams.length === 0 && visibleRemoteDepartments.length === 0 && (
                 <div className="flex min-h-56 flex-col items-center justify-center text-center">
                   <div className="text-[13px] font-medium text-ink">{t("templates.noneFound")}</div>
                   <div className="mt-1 text-[13px] text-ink-secondary">{t("templates.tryDifferentSearch")}</div>

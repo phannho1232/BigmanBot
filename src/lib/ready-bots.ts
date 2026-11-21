@@ -433,8 +433,14 @@ export const READY_BOTS: ReadyBot[] = [
 
 export const CLASSIC_ROLE_IDS = ["tiktok-shop-manager", "tiktok-seo-pricing", "assistant", "inbox", "research", "coder", "community", "ops"] as const;
 
+const remoteReadyBots = new Map<string, ReadyBot>();
+
+export function registerRemoteReadyBot(bot: ReadyBot): void {
+  remoteReadyBots.set(bot.id, bot);
+}
+
 export function readyBot(id: string): ReadyBot | undefined {
-  return READY_BOTS.find((bot) => bot.id === id);
+  return remoteReadyBots.get(id) ?? READY_BOTS.find((bot) => bot.id === id);
 }
 
 /** Only who the bot is changes: model, approval level, computer, folder, apps and permissions stay the person's own. */
@@ -458,6 +464,13 @@ export function readyBotTemplate(defaults: NewBotDefaults, bot: ReadyBot): NewBo
 }
 
 export function readyBotCopy(bot: ReadyBot): { title: string; description: string; tryAsking: string } {
+  if (remoteReadyBots.has(bot.id)) {
+    return {
+      title: bot.title,
+      description: bot.description,
+      tryAsking: bot.tryAsking[0] ?? "",
+    };
+  }
   const copy = (field: string, english: string) => tFromServer(`readyBots.bot.${bot.id}.${field}`, english);
   return { title: copy("title", bot.title), description: copy("description", bot.description), tryAsking: copy("try", bot.tryAsking[0]!) };
 }
