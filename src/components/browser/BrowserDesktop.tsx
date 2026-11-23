@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Hand, Keyboard, MoveVertical } from "lucide-react";
 import type RFB from "@novnc/novnc";
 import { openDesktop, socketUrl, typeOnDesktop } from "@/lib/desktop-connection";
 import { t } from "@/lib/i18n";
@@ -34,6 +35,10 @@ export function BrowserDesktop({ botId, scope, controlling, label, onUnavailable
   const rfb = useRef<RFB | null>(null);
   const composing = useRef(false);
   const [attempt, setAttempt] = useState(0);
+  const [isTouch, setIsTouch] = useState(() => typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0));
+  const [touchMode, setTouchMode] = useState<"drag" | "scroll">("drag");
+  const touchModeRef = useRef(touchMode);
+  touchModeRef.current = touchMode;
   const controllingNow = useRef(controlling);
   controllingNow.current = controlling;
   const unavailable = useRef(onUnavailable);
@@ -53,6 +58,7 @@ export function BrowserDesktop({ botId, scope, controlling, label, onUnavailable
     const client = openDesktop(screen.current!, socket, { signal: controller.signal, events: { connected: () => {}, disconnected: () => {} } });
     client.viewOnly = !controllingNow.current;
     client.resizeSession = controllingNow.current;
+    (client as unknown as { touchScrollMode?: boolean }).touchScrollMode = touchModeRef.current === "scroll";
     rfb.current = client;
     return () => {
       controller.abort();
@@ -67,8 +73,9 @@ export function BrowserDesktop({ botId, scope, controlling, label, onUnavailable
     if (!client) return;
     client.viewOnly = !controlling;
     client.resizeSession = controlling;
+    (client as unknown as { touchScrollMode?: boolean }).touchScrollMode = touchMode === "scroll";
     if (controlling) client.focus({ preventScroll: true });
-  }, [controlling, attempt]);
+  }, [controlling, attempt, touchMode]);
 
   const reset = (field: HTMLTextAreaElement) => {
     field.value = SENTINEL;
@@ -100,12 +107,42 @@ export function BrowserDesktop({ botId, scope, controlling, label, onUnavailable
         aria-label={label}
         className="absolute inset-0"
         onPointerDown={(event) => {
-          if (event.pointerType !== "touch" || !controllingNow.current) return;
-          // noVNC focuses its canvas on the tap that follows, which would close the keyboard just opened.
-          if (rfb.current) rfb.current.focusOnClick = false;
-          keyboard.current?.focus({ preventScroll: true });
+          if (event.pointerType === "touch") setIsTouch(true);
         }}
       />
+      {controlling && isTouch ? (
+        <div className=" absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1 rounded-full border border-hairline/60 bg-card/90 p-1 text-[11px] text-ink shadow-lg backdrop-blur-sm">
+          <button
+            type="button"
+            aria-pressed={touchMode === "drag"}
+            onClick={() => setTouchMode("drag")}
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors ${touchMode === "drag" ? "bg-accent text-accent-ink" : "text-ink-secondary hover:text-ink"}`}
+          >
+            <Hand size={12} aria-hidden="true" />
+            <span>Kéo thả</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={touchMode === "scroll"}
+            onClick={() => setTouchMode("scroll")}
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors ${touchMode === "scroll" ? "bg-accent text-accent-ink" : "text-ink-secondary hover:text-ink"}`}
+          >
+            <MoveVertical size={12} aria-hidden="true" />
+            <span>Cuộn</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (rfb.current) rfb.current.focusOnClick = false;
+              keyboard.current?.focus({ preventScroll: true });
+            }}
+            className="flex items-center gap-1 rounded-full px-2.5 py-1 font-medium text-ink-secondary hover:bg-inset hover:text-ink"
+          >
+            <Keyboard size={12} aria-hidden="true" />
+            <span>Phím</span>
+          </button>
+        </div>
+      ) : null}
       <textarea
         ref={keyboard}
         aria-label={t("browser.panel.typeTextField")}

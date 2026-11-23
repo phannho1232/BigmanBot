@@ -81,14 +81,21 @@ describe("the browser desktop view", () => {
     expect(opened).toHaveLength(1);
   });
 
-  it("opens the phone's keyboard on a tap while the person holds the browser, and sends what they type as keys", () => {
+  it("opens the phone's keyboard from the touch toolbar while the person holds the browser, and sends what they type as keys", () => {
     render({ controlling: false });
     const screen = host.querySelector<HTMLElement>("[data-browser-desktop]")!;
     const field = host.querySelector<HTMLTextAreaElement>("textarea")!;
-    screen.dispatchEvent(Object.assign(new Event("pointerdown", { bubbles: true }), { pointerType: "touch" }));
+    flushSync(() => {
+      screen.dispatchEvent(Object.assign(new Event("pointerdown", { bubbles: true }), { pointerType: "touch" }));
+    });
     expect(document.activeElement).not.toBe(field);
     render({ controlling: true });
-    screen.dispatchEvent(Object.assign(new Event("pointerdown", { bubbles: true }), { pointerType: "touch" }));
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>("button")];
+    const keyboardBtn = buttons.find((b) => b.textContent?.includes("Phím"))!;
+    expect(keyboardBtn).toBeDefined();
+    flushSync(() => {
+      keyboardBtn.click();
+    });
     expect(document.activeElement).toBe(field);
     expect(opened[0]!.client.focusOnClick).toBe(false);
     typeInto(field, "\u200bhé😀");

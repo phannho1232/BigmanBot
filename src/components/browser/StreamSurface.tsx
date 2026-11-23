@@ -4,7 +4,7 @@
 // first press takes the browser, Shift+Escape returns to the address bar, a larger frame cap is sent in place rather
 // than by reconnecting, so the person keeps the browser they hold, and the page's dropdown lists, cursor shape and HTTP
 // sign-in are drawn here.
-import { Download, FileUp, Loader2, X } from "lucide-react";
+import { Download, FileUp, Hand, Keyboard, Loader2, MoveVertical, X } from "lucide-react";
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -62,7 +62,7 @@ const PROBE_REUSE_MS = 10_000;
 const INPUT_SENTINEL = "​";
 const BACKSPACE = { key: "Backspace", code: "Backspace", keyCode: 8 } as const;
 const DELETE = { key: "Delete", code: "Delete", keyCode: 46 } as const;
-const TAP_SLOP_PX = 8;
+const TAP_SLOP_PX = 6;
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_SLOP_PX = 4;
 const WHEEL_LINE_PX = 16;
@@ -84,9 +84,12 @@ interface TouchGesture {
   readonly pointerId: number;
   readonly startX: number;
   readonly startY: number;
+  readonly startPoint: PagePoint | null;
   lastX: number;
   lastY: number;
+  lastPoint: PagePoint | null;
   panning: boolean;
+  dragging: boolean;
 }
 
 /** Whether the page point under a touch takes text; null until the server answers. */
@@ -225,6 +228,9 @@ export function StreamSurface(props: {
   const [authPrompt, setAuthPrompt] = useState<{ tabId: string; id: string; origin: string; realm: string } | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [hostSetup, setHostSetup] = useState<PreviewStreamHostSetup | null>(null);
+  const [isTouch, setIsTouch] = useState(() => typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0));
+  const [touchMode, setTouchMode] = useState<"drag" | "scroll">("drag");
+  const touchesRef = useRef(new Map<number, { x: number; y: number }>());
   const noticeId = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingMoveRef = useRef<MouseInput | null>(null);
@@ -259,6 +265,7 @@ export function StreamSurface(props: {
     mouseClicksRef.current = { left: 1, middle: 1, right: 1, none: 1 };
     lastClickRef.current = null;
     touchRef.current = probeRef.current = lastProbeRef.current = null;
+    touchesRef.current.clear();
     earlyPressRef.current = null;
     keySentRef.current = false;
     if (inputRef.current) inputRef.current.value = INPUT_SENTINEL;
@@ -515,32 +522,92 @@ export function StreamSurface(props: {
     const { type, pointerId, clientX, clientY } = event;
     const cancelled = type === "pointercancel";
     const touch = touchRef.current;
+    if (cancelled && event.pointerType === "touch") {
+      touchesRef.current.delete(pointerId);
+    }
     if (cancelled && touch?.pointerId === pointerId) {
+      if (touch.dragging) {
+        flushInput();
+        const endPt = touch.lastPoint ?? touch.startPoint;
+        if (endPt) send({ type: "mouse", action: "up", x: endPt.x, y: endPt.y, modifiers: 0, button: "left", buttons: 0, clickCount: 1 });
+      }
       touchRef.current = probeRef.current = null;
       return;
     }
     if (event.pointerType === "touch" && !cancelled) {
-      const point = pagePoint(clientX, clientY, type === "pointermove");
+      const point = pagePoint(clientX, clientY, type === "pointermove" || type === "pointerup");
       if (type === "pointerdown") {
+        setIsTouch(true);
+        touchesRef.current.set(pointerId, { x: clientX, y: clientY });
+        if (touchesRef.current.size >= 2 && touch) {
+          if (touch.dragging) {
+            flushInput();
+            const endPt = touch.lastPoint ?? touch.startPoint;
+            if (endPt) send({ type: "mouse", action: "up", x: endPt.x, y: endPt.y, modifiers: 0, button: "left", buttons: 0, clickCount: 1 });
+            touch.dragging = false;
+          }
+          touch.panning = true;
+          probeRef.current = null;
+          return;
+        }
         if (!event.isPrimary) return;
-        touchRef.current = { pointerId, startX: clientX, startY: clientY, lastX: clientX, lastY: clientY, panning: false };
+        try { event.currentTarget.setPointerCapture(pointerId); } catch {}
+        touchRef.current = { pointerId, startX: clientX, startY: clientY, startPoint: point, lastX: clientX, lastY: clientY, lastPoint: point, panning: false, dragging: false };
         const last = lastProbeRef.current;
         const reusable = point && last && performance.now() - last.at < PROBE_REUSE_MS && Math.hypot(point.x - last.x, point.y - last.y) < PROBE_REUSE_PX;
         probeRef.current = point ? { x: point.x, y: point.y, editable: reusable ? last.editable : null, answered: false, tapped: false } : null;
         if (point) send({ type: "probe", x: point.x, y: point.y });
         return;
       }
+      if (type === "pointermove") {
+        touchesRef.current.set(pointerId, { x: clientX, y: clientY });
+      } else if (type === "pointerup") {
+        touchesRef.current.delete(pointerId);
+      }
       if (!touch || touch.pointerId !== pointerId) return;
       if (type === "pointermove") {
-        if (!touch.panning && Math.hypot(clientX - touch.startX, clientY - touch.startY) < TAP_SLOP_PX) return;
-        touch.panning = true;
-        if (point) queueWheel(point, (touch.lastX - clientX) * point.scale, (touch.lastY - clientY) * point.scale, 0);
+        if (!touch.panning && !touch.dragging && Math.hypot(clientX - touch.startX, clientY - touch.startY) < TAP_SLOP_PX) return;
+        if (touchMode === "scroll" || touchesRef.current.size >= 2 || touch.panning) {
+          touch.panning = true;
+          if (point) {
+            touch.lastPoint = point;
+            queueWheel(point, (touch.lastX - clientX) * point.scale, (touch.lastY - clientY) * point.scale, 0);
+          }
+          touch.lastX = clientX;
+          touch.lastY = clientY;
+          return;
+        }
+        if (!touch.dragging) {
+          touch.dragging = true;
+          probeRef.current = null;
+          const sp = touch.startPoint ?? point;
+          if (sp) {
+            const startAt = { x: sp.x, y: sp.y, modifiers: 0 };
+            send({ type: "mouse", action: "move", ...startAt, button: "none", buttons: 0, clickCount: 0 });
+            send({ type: "mouse", action: "down", ...startAt, button: "left", buttons: 1, clickCount: 1 });
+            if (point) {
+              send({ type: "mouse", action: "move", x: (sp.x + point.x) / 2, y: (sp.y + point.y) / 2, modifiers: 0, button: "left", buttons: 1, clickCount: 0 });
+            }
+          }
+        }
+        if (point) {
+          touch.lastPoint = point;
+          pendingMoveRef.current = { type: "mouse", action: "move", x: point.x, y: point.y, modifiers: 0, button: "left", buttons: 1, clickCount: 0 };
+          scheduleFlush();
+        }
         touch.lastX = clientX;
         touch.lastY = clientY;
         return;
       }
       touchRef.current = null;
       const probe = probeRef.current;
+      if (touch.dragging) {
+        probeRef.current = null;
+        flushInput();
+        const endPt = point ?? touch.lastPoint ?? touch.startPoint;
+        if (endPt) send({ type: "mouse", action: "up", x: endPt.x, y: endPt.y, modifiers: 0, button: "left", buttons: 0, clickCount: 1 });
+        return;
+      }
       if (touch.panning) {
         probeRef.current = null;
         return;
@@ -797,6 +864,36 @@ export function StreamSurface(props: {
               setAuthPrompt(null);
             }}
           />
+        ) : null}
+        {you && isTouch ? (
+          <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1 rounded-full border border-hairline/60 bg-card/90 p-1 text-[11px] text-ink shadow-lg backdrop-blur-sm">
+            <button
+              type="button"
+              aria-pressed={touchMode === "drag"}
+              onClick={() => setTouchMode("drag")}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors ${touchMode === "drag" ? "bg-accent text-accent-ink" : "text-ink-secondary hover:text-ink"}`}
+            >
+              <Hand size={12} aria-hidden="true" />
+              <span>Kéo thả</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={touchMode === "scroll"}
+              onClick={() => setTouchMode("scroll")}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition-colors ${touchMode === "scroll" ? "bg-accent text-accent-ink" : "text-ink-secondary hover:text-ink"}`}
+            >
+              <MoveVertical size={12} aria-hidden="true" />
+              <span>Cuộn</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => focusInput()}
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 font-medium text-ink-secondary hover:bg-inset hover:text-ink"
+            >
+              <Keyboard size={12} aria-hidden="true" />
+              <span>Phím</span>
+            </button>
+          </div>
         ) : null}
         {notices.length ? (
           <div className="absolute inset-x-3 bottom-3 z-20 flex flex-col items-center gap-2" role="status">
