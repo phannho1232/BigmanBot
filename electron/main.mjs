@@ -2607,7 +2607,7 @@ for (const method of ["state", "begin", "signInAgain", "reopen", "cancel", "refr
   ipcMain.handle(`cloud-account:${method}`, localWorkspaceOnly(`cloud-account:${method}`, () => (method === "signOut" ? accounts.signOutActive() : ensureCloudAccount()[method]())));
 }
 ipcMain.handle("cloud-account:signInPassword", localWorkspaceOnly("cloud-account:signInPassword", (_event, email, password) =>
-  ensureCloudAccount().signInPassword(typeof email === "string" ? email.slice(0, 254) : "", typeof password === "string" ? password.slice(0, 256) : "")));
+  ensureCloudAccount().signInPassword(typeof email === "string" ? email.slice(0, 254) : "", typeof password === "string" ? password.slice(0, 8192) : "")));
 ipcMain.handle("cloud-account:connectServer", localWorkspaceOnly("cloud-account:connectServer", async (_event, serverId) => {
   const client = ensureCloudAccount();
   const state = client.state();

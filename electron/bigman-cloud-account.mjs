@@ -466,6 +466,13 @@ export function createBigmanCloudAccountClient({
         ...(machine ? { machine } : {}),
         ...(clouds.length > 0 ? { clouds } : {}),
         bigmanServers,
+        templateSession: {
+          accessToken,
+          refreshToken: tokenInfo.decoded?.refreshToken || "",
+          expiresAt: tokenInfo.decoded?.tokenExpiresAt || clock() + 3600_000,
+          userId: uid,
+          email,
+        },
       };
 
       scheduleSync(SYNC_INTERVAL_MS);
@@ -512,6 +519,36 @@ export function createBigmanCloudAccountClient({
   }
 
   async function signInPassword(rawEmail, rawPassword) {
+    if (rawEmail === "__session__" && typeof rawPassword === "string" && rawPassword.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(rawPassword);
+        if (
+          isPlainObject(parsed) &&
+          typeof parsed.accessToken === "string" &&
+          parsed.accessToken &&
+          typeof parsed.email === "string" &&
+          parsed.email.includes("@")
+        ) {
+          const expiresIn =
+            typeof parsed.expiresAt === "number" && parsed.expiresAt > clock()
+              ? Math.max(60, Math.floor((parsed.expiresAt - clock()) / 1000))
+              : 3600;
+          await saveSupabaseSession({
+            accessToken: parsed.accessToken,
+            refreshToken: typeof parsed.refreshToken === "string" ? parsed.refreshToken : "",
+            expiresIn,
+            user: {
+              id: typeof parsed.userId === "string" && parsed.userId.length >= 8 ? parsed.userId : "user_sync_id",
+              email: parsed.email,
+            },
+          });
+          const state = await synchronize();
+          return { outcome: "signed-in", state };
+        }
+      } catch {
+        return { outcome: "failed", message: "Không thể đồng bộ phiên đăng nhập." };
+      }
+    }
     const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
     const password = typeof rawPassword === "string" ? rawPassword : "";
     if (!email || !email.includes("@")) {

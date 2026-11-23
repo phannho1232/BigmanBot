@@ -163,6 +163,7 @@ export function CloudAddDialog({ now = Date.now }: { now?: () => number }) {
   const close = () => {
     if (signIn) void bridge?.signInCancel?.().catch(() => {});
     dispatch({ type: "closeCloudAdd" });
+    if (activeLocale() === "vi") setAccount(null);
     setError(null); setConflict(false); setChoosing(false); setOpenFailed(false); setReported([]); setChosen(null);
     setSignIn(null); setForm({ email: "", code: "" }); setLook(null); setAuto(null); setNote(null); setArrived(false); setTerms(false);
   };
@@ -272,10 +273,10 @@ export function CloudAddDialog({ now = Date.now }: { now?: () => number }) {
     return () => window.removeEventListener("blur", stop);
   }, [counting]);
   useEffect(() => {
-    if (request?.signIn && account?.status === "connected") {
+    if (activeLocale() === "vi" && open && request?.signIn && account?.status === "connected") {
       close();
     }
-  }, [request?.signIn, account?.status]);
+  }, [open, request?.signIn, account?.status]);
   if (request && activeLocale() === "vi") {
     if (request.signIn && bridge) {
       return <CloudAddSheet kind="sign-in" staging={false} onClose={close}>

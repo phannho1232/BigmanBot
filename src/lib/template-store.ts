@@ -94,16 +94,83 @@ export function readStoredTemplateSession(): StoredTemplateSession | null {
   }
 }
 
-export function writeStoredTemplateSession(session: StoredTemplateSession | null): void {
+export function writeStoredTemplateSession(
+  session: StoredTemplateSession | null,
+  options?: { fromCloudAccount?: boolean }
+): void {
   try {
     if (!session) {
       localStorage.removeItem(SESSION_STORAGE_KEY);
     } else {
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+      if (!options?.fromCloudAccount && typeof window !== "undefined" && window.ogb?.cloudAccount?.signInPassword) {
+        void window.ogb.cloudAccount.signInPassword("__session__", JSON.stringify(session)).catch(() => {});
+      }
     }
     window.dispatchEvent(new Event("bigman-template-session-changed"));
   } catch {
     // ignore storage errors
+  }
+}
+
+let cloudBridgeSyncInstalled = false;
+let cloudAccountSawConnected = false;
+
+function handleCloudAccountStateForTemplates(state: unknown, isInitialRead = false): void {
+  if (!state || typeof state !== "object") return;
+  const record = state as {
+    status?: string;
+    message?: string;
+    templateSession?: Partial<StoredTemplateSession>;
+  };
+  if (record.status === "connected" && record.templateSession && typeof record.templateSession.accessToken === "string" && record.templateSession.accessToken && typeof record.templateSession.email === "string") {
+    cloudAccountSawConnected = true;
+    const incoming: StoredTemplateSession = {
+      accessToken: record.templateSession.accessToken,
+      refreshToken: typeof record.templateSession.refreshToken === "string" ? record.templateSession.refreshToken : "",
+      expiresAt: typeof record.templateSession.expiresAt === "number" ? record.templateSession.expiresAt : Date.now() + 3600_000,
+      userId: typeof record.templateSession.userId === "string" ? record.templateSession.userId : "",
+      email: record.templateSession.email.toLowerCase(),
+    };
+    const current = readStoredTemplateSession();
+    if (!current || current.accessToken !== incoming.accessToken || current.email !== incoming.email) {
+      writeStoredTemplateSession(incoming, { fromCloudAccount: true });
+    }
+    return;
+  }
+  if (record.status === "signed-out" && record.message !== "restoring") {
+    if (cloudAccountSawConnected) {
+      cloudAccountSawConnected = false;
+      if (readStoredTemplateSession()) {
+        writeStoredTemplateSession(null, { fromCloudAccount: true });
+      }
+    } else if (isInitialRead && readStoredTemplateSession() && typeof window !== "undefined" && window.ogb?.cloudAccount?.signInPassword) {
+      void ensureValidTemplateToken().then((valid) => {
+        if (valid && window.ogb?.cloudAccount?.signInPassword) {
+          void window.ogb.cloudAccount.signInPassword("__session__", JSON.stringify(valid)).catch(() => {});
+        }
+      });
+    }
+  }
+}
+
+export function ensureCloudAccountSessionBridge(): void {
+  if (cloudBridgeSyncInstalled || import.meta.env?.MODE === "test") return;
+  if (typeof window === "undefined" || !window.ogb?.cloudAccount) return;
+  cloudBridgeSyncInstalled = true;
+  const bridge = window.ogb.cloudAccount;
+  try {
+    bridge.onState((next) => {
+      handleCloudAccountStateForTemplates(next, false);
+    });
+    void bridge
+      .state()
+      .then((next) => {
+        handleCloudAccountStateForTemplates(next, true);
+      })
+      .catch(() => {});
+  } catch {
+    // ignore bridge init errors
   }
 }
 
@@ -132,6 +199,7 @@ export function useTemplateAccountEmail(): string | null {
   );
   useEffect(() => {
     if (isTest) return;
+    ensureCloudAccountSessionBridge();
     const sync = () => {
       void ensureValidTemplateToken().then((valid) => {
         setEmail(valid?.email ?? null);
@@ -554,6 +622,7 @@ export function useRemoteTemplateMarketplace() {
 
   useEffect(() => {
     if (isTest) return;
+    ensureCloudAccountSessionBridge();
     void reload();
     const onChanged = () => void reload();
     const onFocus = () => void reload();

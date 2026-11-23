@@ -4,7 +4,7 @@ import { cloudPlanLabel, cloudPlanView } from "@/lib/cloud-plan";
 import { t } from "@/lib/i18n";
 import { profileForSession, type SessionState } from "@/lib/session";
 import { readSharedSessionState } from "@/lib/shared-session";
-import { readStoredTemplateSession } from "@/lib/template-store";
+import { ensureCloudAccountSessionBridge, readStoredTemplateSession } from "@/lib/template-store";
 import { useStoreSelector } from "@/state/store-select";
 
 export interface AccountSummary {
@@ -41,6 +41,7 @@ export function useAccountSummary(): AccountSummary {
   });
   useEffect(() => {
     let alive = true;
+    ensureCloudAccountSessionBridge();
     const withTemplateFallback = (base: AccountSummary): AccountSummary => {
       if (base.email) return base;
       const stored = typeof window !== "undefined" ? readStoredTemplateSession() : null;
