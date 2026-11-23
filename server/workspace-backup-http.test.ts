@@ -264,7 +264,7 @@ it("does not broaden maintenance exemptions beyond the three exact session route
 it("keeps a validated stage after rejecting a malformed or oversized upload", async () => {
   const uploaded = await fetch(`${url}/api/workspace-backup/upload`, { method: "POST", headers: { authorization: `Bearer ${admin.token}` }, body: "fixture bytes" }).then((response) => response.json()) as { id: string };
   const preview = await post("/api/workspace-backup/preview", { id: uploaded.id, password: PASSWORD }).then((response) => response.json()) as { id: string };
-  for (const length of ["0", String(11 * 1024 ** 3)]) {
+  for (const length of ["0", String(31 * 1024 ** 3)]) {
     const status = await new Promise<number>((resolve, reject) => {
       const upload = request(`${url}/api/workspace-backup/upload`, { method: "POST", headers: { authorization: `Bearer ${admin.token}`, "content-length": length }, signal: AbortSignal.timeout(5000) }, (response) => { response.resume(); resolve(response.statusCode!); });
       upload.on("error", reject);

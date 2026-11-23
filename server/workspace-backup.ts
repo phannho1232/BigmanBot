@@ -22,8 +22,8 @@ import { DATA_TABLES, foldLegacySidecars, LEGACY_SIDECARS, LIVE_DATABASE_SIDECAR
 import type { WorkspaceBackupClientState, WorkspaceBackupPrivateMetadata, WorkspaceBackupSummary, WorkspaceLeftBehind } from "../shared/workspace-backup.ts";
 
 export type { WorkspaceBackupSummary, WorkspaceBackupPrivateMetadata } from "../shared/workspace-backup.ts";
-export const MAX_WORKSPACE_BACKUP_BYTES = 10 * 1024 ** 3;
-export const MAX_WORKSPACE_BACKUP_FILES = 100_000;
+export const MAX_WORKSPACE_BACKUP_BYTES = 30 * 1024 ** 3;
+export const MAX_WORKSPACE_BACKUP_FILES = 300_000;
 export const MAX_WORKSPACE_BACKUP_UPLOAD_BYTES = MAX_WORKSPACE_BACKUP_BYTES + 256 * 1024 ** 2;
 const MAX_METADATA_BYTES = 16 * 1024 ** 2;
 const MAGIC = Buffer.from("OMB-WORKSPACE-1\n");

@@ -5,7 +5,7 @@ import { isAbsolute, join, parse, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
-const MAX_BYTES = 10 * 1024 ** 3;
+const MAX_BYTES = 30 * 1024 ** 3;
 const PART_BYTES = 64 * 1024 ** 2;
 const SPACE_MARGIN = 64 * 1024 ** 2;
 const MAGIC = Buffer.from("OMB-WORKSPACE-1\n");
