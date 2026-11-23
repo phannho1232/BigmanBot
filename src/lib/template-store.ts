@@ -115,7 +115,7 @@ export async function signOutTemplateMarketplace(): Promise<void> {
   const current = readStoredTemplateSession();
   writeStoredTemplateSession(null);
   if (current?.accessToken) {
-    void fetch(`${BIGMAN_SUPABASE_URL}/auth/v1/logout`, {
+    void fetch(`${BIGMAN_SUPABASE_URL}/auth/v1/logout?scope=local`, {
       method: "POST",
       headers: supabaseHeaders(current.accessToken),
     }).catch(() => {});
@@ -130,67 +130,81 @@ export function useTemplateAccountEmail(): string | null {
   const [email, setEmail] = useState<string | null>(() =>
     isTest ? null : readStoredTemplateSession()?.email ?? null
   );
-  const [desktopEmail, setDesktopEmail] = useState<string | null>(null);
   useEffect(() => {
     if (isTest) return;
-    const sync = () => setEmail(readStoredTemplateSession()?.email ?? null);
+    const sync = () => {
+      void ensureValidTemplateToken().then((valid) => {
+        setEmail(valid?.email ?? null);
+      });
+    };
     sync();
     window.addEventListener("bigman-template-session-changed", sync);
     window.addEventListener("focus", sync);
-    const bridge = window.ogb?.cloudAccount;
-    let unsub: (() => void) | undefined;
-    if (bridge?.onState) {
-      unsub = bridge.onState((next) => {
-        setDesktopEmail(next.status === "connected" ? next.account?.email ?? null : null);
-      });
-      void bridge
-        .state()
-        .then((next) => {
-          setDesktopEmail(next.status === "connected" ? next.account?.email ?? null : null);
-        })
-        .catch(() => {});
-    }
     return () => {
       window.removeEventListener("bigman-template-session-changed", sync);
       window.removeEventListener("focus", sync);
-      unsub?.();
     };
   }, [isTest]);
-  return email || desktopEmail || null;
+  return email;
 }
 
-export async function ensureValidTemplateToken(): Promise<StoredTemplateSession | null> {
+let activeRefreshPromise: Promise<StoredTemplateSession | null> | null = null;
+
+export async function ensureValidTemplateToken(
+  forceRefresh = false
+): Promise<StoredTemplateSession | null> {
   const current = readStoredTemplateSession();
   if (!current) return null;
-  if (current.expiresAt - Date.now() > 90_000 || !current.refreshToken) {
+  if (!forceRefresh && current.expiresAt - Date.now() > 90_000) {
     return current;
   }
-  try {
-    const res = await fetch(`${BIGMAN_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: "POST",
-      headers: supabaseHeaders(null),
-      body: JSON.stringify({ refresh_token: current.refreshToken }),
-    });
-    if (!res.ok) return current;
-    const data = (await res.json()) as {
-      access_token?: string;
-      refresh_token?: string;
-      expires_in?: number;
-      user?: { id?: string; email?: string };
-    };
-    if (typeof data?.access_token !== "string") return current;
-    const next: StoredTemplateSession = {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token || current.refreshToken,
-      expiresAt: Date.now() + Number(data.expires_in || 3600) * 1000,
-      userId: data.user?.id || current.userId,
-      email: (data.user?.email || current.email).toLowerCase(),
-    };
-    writeStoredTemplateSession(next);
-    return next;
-  } catch {
-    return current;
+  if (!current.refreshToken) {
+    writeStoredTemplateSession(null);
+    return null;
   }
+  if (activeRefreshPromise) {
+    return activeRefreshPromise;
+  }
+  activeRefreshPromise = (async () => {
+    try {
+      const res = await fetch(`${BIGMAN_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: supabaseHeaders(null),
+        body: JSON.stringify({ refresh_token: current.refreshToken }),
+      });
+      if (!res.ok) {
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          writeStoredTemplateSession(null);
+          return null;
+        }
+        return current;
+      }
+      const data = (await res.json()) as {
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+        user?: { id?: string; email?: string };
+      };
+      if (typeof data?.access_token !== "string" || !data.access_token) {
+        writeStoredTemplateSession(null);
+        return null;
+      }
+      const next: StoredTemplateSession = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || current.refreshToken,
+        expiresAt: Date.now() + Number(data.expires_in || 3600) * 1000,
+        userId: data.user?.id || current.userId,
+        email: (data.user?.email || current.email).toLowerCase(),
+      };
+      writeStoredTemplateSession(next);
+      return next;
+    } catch {
+      return current;
+    } finally {
+      activeRefreshPromise = null;
+    }
+  })();
+  return activeRefreshPromise;
 }
 
 function normalizeCategory(raw: unknown): ReadyBotCategory {
@@ -258,13 +272,28 @@ export async function fetchRemoteTemplateCatalog(): Promise<RemoteTemplateCatalo
 export async function fetchUnlockedTemplateIds(
   accessToken?: string | null
 ): Promise<Set<string>> {
-  const token = accessToken || (await ensureValidTemplateToken())?.accessToken;
+  let token = accessToken || (await ensureValidTemplateToken())?.accessToken;
   if (!token) return new Set();
   try {
-    const res = await fetch(
+    let res = await fetch(
       `${BIGMAN_SUPABASE_URL}/rest/v1/user_template_unlocks?select=template_id`,
       { method: "GET", headers: supabaseHeaders(token) }
     );
+    if (res.status === 401 || res.status === 403) {
+      const refreshed = await ensureValidTemplateToken(true);
+      if (!refreshed?.accessToken) {
+        return new Set();
+      }
+      token = refreshed.accessToken;
+      res = await fetch(
+        `${BIGMAN_SUPABASE_URL}/rest/v1/user_template_unlocks?select=template_id`,
+        { method: "GET", headers: supabaseHeaders(token) }
+      );
+      if (res.status === 401 || res.status === 403) {
+        writeStoredTemplateSession(null);
+        return new Set();
+      }
+    }
     if (!res.ok) return new Set();
     const rows = (await res.json()) as unknown;
     if (!Array.isArray(rows)) return new Set();
@@ -283,14 +312,22 @@ export async function fetchUnlockedTemplateIds(
 export async function fetchTemplatePayload(
   templateId: string
 ): Promise<RemoteTemplatePayload | null> {
-  const session = await ensureValidTemplateToken();
+  let session = await ensureValidTemplateToken();
   try {
-    const res = await fetch(
-      `${BIGMAN_SUPABASE_URL}/rest/v1/template_payloads?template_id=eq.${encodeURIComponent(
-        templateId
-      )}&select=*&limit=1`,
-      { method: "GET", headers: supabaseHeaders(session?.accessToken) }
-    );
+    const url = `${BIGMAN_SUPABASE_URL}/rest/v1/template_payloads?template_id=eq.${encodeURIComponent(
+      templateId
+    )}&select=*&limit=1`;
+    let res = await fetch(url, {
+      method: "GET",
+      headers: supabaseHeaders(session?.accessToken),
+    });
+    if ((res.status === 401 || res.status === 403) && session) {
+      session = await ensureValidTemplateToken(true);
+      res = await fetch(url, {
+        method: "GET",
+        headers: supabaseHeaders(session?.accessToken),
+      });
+    }
     if (!res.ok) return null;
     const rows = (await res.json()) as unknown;
     if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -483,7 +520,6 @@ export function useRemoteTemplateMarketplace() {
   const [session, setSession] = useState<StoredTemplateSession | null>(() =>
     isTest ? null : readStoredTemplateSession()
   );
-  const [desktopEmail, setDesktopEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const reload = useCallback(async () => {
@@ -503,7 +539,9 @@ export function useRemoteTemplateMarketplace() {
       }
       if (curSession) {
         const unl = await fetchUnlockedTemplateIds(curSession.accessToken);
-        setUnlockedIds(unl);
+        const latestSession = readStoredTemplateSession();
+        setSession(latestSession);
+        setUnlockedIds(latestSession ? unl : new Set());
       } else {
         setUnlockedIds(new Set());
       }
@@ -520,31 +558,13 @@ export function useRemoteTemplateMarketplace() {
     window.addEventListener("bigman-template-session-changed", onChanged);
     window.addEventListener("focus", onFocus);
 
-    const bridge = window.ogb?.cloudAccount;
-    let unsub: (() => void) | undefined;
-    if (bridge?.onState) {
-      unsub = bridge.onState((next) => {
-        const email = next.status === "connected" ? next.account?.email ?? null : null;
-        setDesktopEmail(email);
-        void reload();
-      });
-      void bridge
-        .state()
-        .then((next) => {
-          const email = next.status === "connected" ? next.account?.email ?? null : null;
-          setDesktopEmail(email);
-        })
-        .catch(() => {});
-    }
-
     return () => {
       window.removeEventListener("bigman-template-session-changed", onChanged);
       window.removeEventListener("focus", onFocus);
-      unsub?.();
     };
   }, [isTest, reload]);
 
-  const activeEmail = session?.email || desktopEmail || null;
+  const activeEmail = session?.email || null;
 
   return {
     entries,

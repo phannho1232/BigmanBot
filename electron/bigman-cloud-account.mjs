@@ -740,7 +740,7 @@ export function createBigmanCloudAccountClient({
     if (current) {
       const decoded = decodeSessionToken(current.token);
       if (decoded?.accessToken) {
-        void requestJson(`${BIGMAN_SUPABASE_URL}/auth/v1/logout`, {
+        void requestJson(`${BIGMAN_SUPABASE_URL}/auth/v1/logout?scope=local`, {
           method: "POST",
           headers: supabaseHeaders(decoded.accessToken),
         }).catch(() => {});
@@ -823,7 +823,7 @@ export function createBigmanCloudAccountClient({
     if (!isStoredCredential(record)) return;
     const decoded = decodeSessionToken(record.token);
     if (!decoded?.accessToken) return;
-    await requestJson(`${BIGMAN_SUPABASE_URL}/auth/v1/logout`, {
+    await requestJson(`${BIGMAN_SUPABASE_URL}/auth/v1/logout?scope=local`, {
       method: "POST",
       headers: supabaseHeaders(decoded.accessToken),
     }).catch(() => {});

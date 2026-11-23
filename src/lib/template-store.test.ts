@@ -135,4 +135,62 @@ describe("template-store", () => {
     expect(readyBot("bot-ke-toan-vip")?.routines).toHaveLength(1);
     expect(readyBot("bot-ke-toan-vip")?.skills?.map((s) => s.name)).toEqual(["vat-audit", "cit-report"]);
   });
+
+  it("retries fetchUnlockedTemplateIds with a refreshed token on 401 and clears session if refresh is revoked", async () => {
+    writeStoredTemplateSession({
+      accessToken: "expired-jwt",
+      refreshToken: "valid-refresh",
+      expiresAt: Date.now() + 3600_000,
+      userId: "u-1",
+      email: "doanhoang1910@bigmanbot.com",
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const auth = (init?.headers as Record<string, string> | undefined)?.Authorization ?? "";
+        if (url.startsWith(`${BIGMAN_SUPABASE_URL}/rest/v1/user_template_unlocks`)) {
+          if (auth === "Bearer expired-jwt") {
+            return new Response(JSON.stringify({ message: "JWT expired" }), { status: 401 });
+          }
+          if (auth === "Bearer fresh-jwt") {
+            return new Response(JSON.stringify([{ template_id: "aaaa" }]), { status: 200 });
+          }
+        }
+        if (url.startsWith(`${BIGMAN_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`)) {
+          return new Response(
+            JSON.stringify({
+              access_token: "fresh-jwt",
+              refresh_token: "fresh-refresh",
+              expires_in: 3600,
+              user: { id: "u-1", email: "doanhoang1910@bigmanbot.com" },
+            }),
+            { status: 200 }
+          );
+        }
+        return new Response("[]", { status: 200 });
+      })
+    );
+
+    const unlocked = await fetchUnlockedTemplateIds("expired-jwt");
+    expect(unlocked.has("aaaa")).toBe(true);
+    expect(readStoredTemplateSession()?.accessToken).toBe("fresh-jwt");
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.startsWith(`${BIGMAN_SUPABASE_URL}/rest/v1/user_template_unlocks`)) {
+          return new Response(JSON.stringify({ message: "JWT expired" }), { status: 401 });
+        }
+        if (url.startsWith(`${BIGMAN_SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`)) {
+          return new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 });
+        }
+        return new Response("[]", { status: 200 });
+      })
+    );
+
+    const afterRevoked = await fetchUnlockedTemplateIds("fresh-jwt");
+    expect(afterRevoked.size).toBe(0);
+    expect(readStoredTemplateSession()).toBeNull();
+  });
 });
