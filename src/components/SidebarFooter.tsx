@@ -67,7 +67,7 @@ function SimpleSidebarFooter({ owner, archived }: { owner: string | null; archiv
         <SidebarProfileMenu simple={account} />
         <SidebarConnectApps />
         <SidebarVirtualOfficeButton />
-        <UpdateIndicator className="size-9" />
+        <UpdateIndicator />
         <span className="ms-auto select-none font-mono text-[10px] text-ink-tertiary/70" title={`Bigman Bot v${appVersion()}`}>
           v{appVersion()}
         </span>

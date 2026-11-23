@@ -340,6 +340,8 @@ export const CLIENT_ALLOW: ReadonlyArray<{ methods: readonly string[]; path: Reg
   { methods: ["GET"], path: /^\/api\/team-map$/ },
   // a link into the organisation's Admin: identifiers only, and Admin authorizes its own visitor
   { methods: ["GET"], path: /^\/api\/bots\/[\w-]+\/slack-management$/ },
+  // what a bot made in the conversations this viewer can read, the same rows those conversations' messages show (routes/bot-library.ts)
+  { methods: ["GET"], path: /^\/api\/bots\/[\w-]+\/library$/ },
   { methods: ["GET"], path: /^\/api\/search$/ },
   { methods: ["GET"], path: /^\/api\/threads\/[\w-]+\/messages$/ },
   { methods: ["GET"], path: /^\/api\/threads\/[\w-]+\/messages\/[\w-]+\/image$/ },
@@ -624,7 +626,7 @@ function mutatingPublicRoute(method: string, path: string): boolean {
   // Hands out what a Grok Bot wrote about the person, from their Downloads folder.
   if (upper === "GET" && path === "/api/setup-import/grok") return true;
   // Drives a bot's browser: a WebSocket upgrade is a GET, but what it carries is input.
-  if (/^\/api\/bots\/[\w-]+\/browser\/stream$/.test(path)) return true;
+  if (/^\/api\/bots\/[\w-]+\/browser\/(?:stream|desktop)$/.test(path)) return true;
   // Shows the bots' USB phone: a WebSocket upgrade is a GET that a local process could send without an Origin.
   if (/^\/api\/usb-phones\/[^/]+\/stream$/.test(path)) return true;
   if (["GET", "HEAD", "OPTIONS"].includes(upper)) return false;

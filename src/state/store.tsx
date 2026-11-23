@@ -1,5 +1,5 @@
 import { cloudAsleep, onCloudPower } from "../lib/cloud-power";
-import { api, ApiError, retryRequest, snapshotArrays } from "./api";
+import { api, ApiError, retryRequest, snapshotArrays } from "./api"; import { serverFetch } from "@/lib/relay-server";
 import { capHeldInBackground, loadOlderPage, MESSAGE_PAGE_SIZE, olderThanHeld, reduceOlderMessages, reduceTrimHeldMessages } from "./message-history";
 import { readChatSnapshot } from "./chat-snapshot";
 import { followHeldTails, noteAppPagePatch } from "./held-tails";
@@ -329,7 +329,7 @@ export interface Bot extends DefaultBotFields, Pick<WireBot, "mascotFaceColor" |
   recordBrowserSteps?: boolean;
   memoryUpkeep?: boolean;
   cacheKeepWarm?: boolean | null;
-  helperModel?: boolean;
+  helperModel?: boolean; checkWork?: import("../../shared/check-work").CheckWork | null;
   mcpServers?: string[] | null;
   browserProfile?: string | null;
   visibility?: BotVisibility;
@@ -461,7 +461,7 @@ export interface InstanceInfo extends InstanceEndpointInfo {
   cliDefault?: string;
   cliCandidates?: string[];
   claudeAccount?: { configDir: string; signInCommand: string; signInShell: "powershell" | "sh"; isDefault: boolean };
-  freeUpSpace?: boolean; replyWaitMinutes?: number; modelsUnconfirmed?: true; /** The app updated its own copy of this engine to this version lately. */ autoUpdated?: { version: string; at: number };
+  freeUpSpace?: boolean; replyWaitMinutes?: number; modelsUnconfirmed?: true; /** Why the engine's last read of its list failed. */ modelsUnreadable?: "signedOut" | "timedOut" | "failed"; /** The app updated its own copy of this engine to this version lately. */ autoUpdated?: { version: string; at: number };
 }
 
 /** A Settings page (`SettingsPageId`) or an older page name that `settings-index.ts` sends to its new page and section. */
@@ -550,7 +550,7 @@ export interface AppState {
   dataSheets: Record<string, DataSheet>;
   dataTables: Record<string, DataTable[]>;
   dataResultFocus: { botId: string; id: string; requestId: number; consumed: boolean } | null;
-  signInFocus: { botId: string; messageId: string; url: string; site: string; place: import("../../shared/wire").Surface; requestId: number; consumed: boolean } | null;
+  signInFocus: { botId: string; messageId: string; url: string; site: string; place: import("../../shared/wire").Surface; expand?: boolean; threadId?: string; requestId: number; consumed: boolean } | null;
   dataView: import("@/lib/composer-attachments").DataViewContext | null;
   focusMessage: { threadId: string; messageId: string; matchText?: string; nonce: number; consumed: boolean } | null;
   unreadDivider: UnreadDivider | null;
@@ -735,7 +735,7 @@ export type Action =
   | { type: "toggleComputer"; open?: boolean; botId?: string }
   | { type: "openDataResult"; botId: string; cardId: string }
   | { type: "dataResultFocusConsumed"; requestId: number }
-  | { type: "openSignIn"; botId: string; messageId: string; url: string; site: string; place: import("../../shared/wire").Surface }
+  | { type: "openSignIn"; botId: string; messageId: string; url: string; site: string; place: import("../../shared/wire").Surface; expand?: boolean; threadId?: string }
   | { type: "signInFocusConsumed"; requestId: number }
   | { type: "toggleInspector"; open?: boolean }
   | { type: "toggleActivity"; open?: boolean }
@@ -2114,7 +2114,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return { host, card: cardMessages(stateRef.current, action.botId, action.groupId, action.threadId)?.find((m) => m.id === action.messageId)?.card, inRoom: !!action.groupId };
     };
     const persistCard = (botId: string, messageId: string, patch: Partial<OptionCardData>, threadId?: string) => {
-      fetch(`/api/bots/${botId}/cards/${messageId}`, {
+      serverFetch(`/api/bots/${botId}/cards/${messageId}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...patch, threadId }),
@@ -3035,7 +3035,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const readsInFlight = new Map<string, { covers: number; again: boolean }>();
     const sendRead = (botId: string, threadId: string | undefined, key: string, covers: number): void => {
       readsInFlight.set(key, { covers, again: false });
-      void fetch(`/api/bots/${botId}/read`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ threadId }) }).catch(() => {}).finally(() => {
+      void serverFetch(`/api/bots/${botId}/read`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ threadId }) }).catch(() => {}).finally(() => {
         const open = readsInFlight.get(key); readsInFlight.delete(key);
         if (open?.again && alive) sendRead(botId, threadId, key, open.covers);
       });

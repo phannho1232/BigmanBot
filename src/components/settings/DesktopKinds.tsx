@@ -8,12 +8,13 @@ import { LocalComputerSection } from "../LocalComputerSection";
 import { SettingRow, SettingsGroup, SettingsMark, SettingsRows, StatusDot } from "../SettingsPrimitives";
 import { SettingsDialog } from "./SettingsDialog";
 import { useSettingsShell } from "./settings-shell";
+import { serverFetch } from "@/lib/relay-server";
 
 type PrivateStatus = { runtime: string | null; daemonUp: boolean; image: boolean; ready: boolean } | null;
 type Kind = "ready" | "setup" | "none" | "attention" | "elsewhere";
 
 const read = async <T,>(which: "status" | "cloud" | "vps"): Promise<T | null> => {
-  const response = await fetch(...computerInventoryRequest(which)).catch(() => null);
+  const response = await serverFetch(...computerInventoryRequest(which)).catch(() => null);
   if (!response?.ok) return null;
   return await response.json().catch(() => null) as T | null;
 };
