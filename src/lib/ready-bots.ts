@@ -502,11 +502,13 @@ export function readyBot(id: string): ReadyBot | undefined {
 /** Only who the bot is changes: model, approval level, computer, folder, apps and permissions stay the person's own. */
 export function readyBotTemplate(defaults: NewBotDefaults, bot: ReadyBot): NewBotDefaults {
   const template = structuredClone(defaults);
+  const copy = readyBotCopy(bot);
+  const useCatalogCopy = bot.id === "editor" || bot.id === "checker";
   template.profile = {
     ...template.profile,
     name: bot.name,
-    title: bot.title,
-    description: bot.description,
+    title: useCatalogCopy ? copy.title : bot.title,
+    description: useCatalogCopy ? copy.description : bot.description,
     soul: bot.soul,
     color: bot.look.color,
     mascotBody: bot.look.mascotBody,

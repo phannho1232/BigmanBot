@@ -75,14 +75,17 @@ export function ReadyBotGallery({ search, onDialog, onAdded }: {
       setBusyRemoteId(null);
     }
   };
+  const NEW_BUILTIN_IDS = new Set(["editor", "checker"]);
   const builtinIds = new Set(READY_BOTS.map((b) => b.id));
   const remoteBotIds = new Set(botEntries.map((b) => b.id));
   const hasSeededBuiltins = botEntries.filter((b) => builtinIds.has(b.id)).length >= 10;
-  const visible = hasSeededBuiltins
-    ? []
-    : READY_BOTS.filter(
-        (bot) => !remoteBotIds.has(bot.id) && (!category || bot.category === category) && matchesReadyBot(bot, search)
-      );
+  const visible = READY_BOTS.filter(
+    (bot) =>
+      !remoteBotIds.has(bot.id) &&
+      (!hasSeededBuiltins || NEW_BUILTIN_IDS.has(bot.id)) &&
+      (!category || bot.category === category) &&
+      matchesReadyBot(bot, search)
+  );
   const visibleRemote = botEntries.filter(
     (entry) =>
       (!category || entry.category === category) &&
@@ -126,6 +129,8 @@ export function ReadyBotGallery({ search, onDialog, onAdded }: {
       {visibleRemote.map((entry) => {
         const isUnlocked = !entry.isPaid || unlockedIds.has(entry.id);
         const isBusy = busyRemoteId === entry.id;
+        const builtin = READY_BOTS.find((b) => b.id === entry.id);
+        const partner = builtin?.partner ? readyBot(builtin.partner) : undefined;
         return (
           <article key={entry.id} data-ready-bot={entry.id} className="flex flex-col rounded-2xl border border-hairline/40 bg-card p-4">
             <div className="flex items-center gap-3">
@@ -166,11 +171,12 @@ export function ReadyBotGallery({ search, onDialog, onAdded }: {
             {entry.tryAsking[0] && (
               <p className="mt-2 text-[12px] italic text-ink-tertiary">{t("readyBots.try", { prompt: entry.tryAsking[0] })}</p>
             )}
-            {(entry.apps.length > 0 || entry.hasPausedRoutine) && (
+            {(entry.apps.length > 0 || entry.hasPausedRoutine || partner) && (
               <p className="mt-auto pt-2 text-[12px] text-ink-tertiary">
                 {[
                   entry.apps.length > 0 && t("readyBots.worksWith", { apps: entry.apps.map((app) => APP_LABELS[app] ?? app).join(", ") }),
                   entry.hasPausedRoutine && t("readyBots.pausedRoutine"),
+                  partner && t("readyBots.pairsWith", { name: partner.name, title: readyBotCopy(partner).title }),
                 ]
                   .filter(Boolean)
                   .join(" · ")}

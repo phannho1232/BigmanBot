@@ -400,6 +400,8 @@ export function toReadyBot(
     ...(payload?.notes && Object.keys(payload.notes).length > 0 ? { notes: payload.notes } : localBuiltin?.notes ? { notes: localBuiltin.notes } : {}),
     ...(routines.length > 0 ? { routines } : {}),
     ...(skills.length > 0 ? { skills } : {}),
+    ...(localBuiltin?.partner ? { partner: localBuiltin.partner } : {}),
+    ...(localBuiltin?.checker ? { checker: true as const } : {}),
   };
 }
 
