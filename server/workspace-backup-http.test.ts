@@ -147,7 +147,7 @@ it("finds the original export after a lost response and allows only its own sess
     expect((await post("/api/workspace-backup/export", { password: PASSWORD })).status).toBe(409);
     expect(maintenance.active).toBe(true);
   } finally { release(); }
-  const ready = { state: "ready", id: artifact.id, filename: "OpenMausBot-2026-09-11.ombbackup" };
+  const ready = { state: "ready", id: artifact.id, filename: "BigmanBot-2026-09-11.bmbbackup" };
   await expect.poll(async () => (await get(path)).json()).toMatchObject(ready);
   expect(await (await post(path, { password: PASSWORD })).json()).toMatchObject(ready);
   expect(archive.create).toHaveBeenCalledOnce();

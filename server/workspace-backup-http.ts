@@ -139,7 +139,7 @@ export function createWorkspaceBackupRoutes(options: {
         check(req, auth);
         const bytes = statSync(result.path).size, expiresAt = Date.now() + EXPIRES_MS;
         artifacts.set(result.id, { owner: owner(auth), kind: "download", path: result.path, summary: result.summary, expires: expiresAt, keepUntilExpiry });
-        return { id: result.id, filename: `OpenMausBot-${result.summary.createdAt.slice(0, 10)}.ombbackup`, bytes, summary: result.summary, expiresAt };
+        return { id: result.id, filename: `BigmanBot-${result.summary.createdAt.slice(0, 10)}.bmbbackup`, bytes, summary: result.summary, expiresAt };
       } catch (error) {
         removeWorkspaceBackupJob(options.dataDir, result.id);
         throw error;
@@ -219,7 +219,7 @@ export function createWorkspaceBackupRoutes(options: {
         res.writeHead(200, {
           "content-type": "application/octet-stream",
           "content-length": statSync(file).size,
-          "content-disposition": `attachment; filename="OpenMausBot-${artifact.summary!.createdAt.slice(0, 10)}.ombbackup"`,
+          "content-disposition": `attachment; filename="BigmanBot-${artifact.summary!.createdAt.slice(0, 10)}.bmbbackup"`,
           "x-content-type-options": "nosniff",
         });
         await pipeline(createReadStream(file), res);
