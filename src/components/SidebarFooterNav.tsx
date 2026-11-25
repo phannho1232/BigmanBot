@@ -1,4 +1,4 @@
-import { AppWindow, Building2, FolderOpen, FolderTree, Globe, Puzzle, Rocket, UsersRound, Zap } from "lucide-react";
+import { AppWindow, Building2, FolderOpen, FolderTree, Globe, Hamburger, Puzzle, Rocket, UsersRound, Zap } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 
 import { useAppTriggers } from "@/lib/app-triggers";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { useCloudFilesReady } from "@/lib/cloud-files";
 import { t } from "@/lib/i18n";
 import { useAdvancedMode } from "@/lib/interface-mode";
+import { useFeature } from "@/lib/use-feature";
 import { useWebPanels } from "@/lib/web-panel-preferences";
 import { useSidebarToolsLayout, type SidebarDensity } from "@/lib/sidebar-preferences";
 import { useStore } from "@/state/store";
@@ -119,6 +120,7 @@ export function SidebarFooterNav({
 }) {
   const { state, dispatch } = useStore();
   const advanced = useAdvancedMode();
+  const skillBurger = useFeature("skillBurger");
   const webPanels = useWebPanels();
   const iconsOnly = density === "icons";
   const toolsLayout = useSidebarToolsLayout();
@@ -193,6 +195,16 @@ export function SidebarFooterNav({
         icon={(active) => <Rocket size={iconSize} className={tone(active)} />}
         onClick={() => dispatch({ type: "showPublishedApps" })}
       />
+      {skillBurger && (
+        <NavRow
+          id="skill-burgers"
+          label={t("skillBurger.list.title")}
+          iconsOnly={iconsOnly || toolbar}
+          active={state.activeView === "skill-burgers"}
+          icon={(active) => <Hamburger size={iconSize} className={tone(active)} />}
+          onClick={() => dispatch({ type: "showSkillBurgers" })}
+        />
+      )}
       <NavRow
         id="team-files"
         label={t("sidebar.nav.teamFiles")}
