@@ -335,7 +335,7 @@ it("Connect to another computer takes an address and a code typed apart: a code 
   expect(form.querySelector("[data-connect-problem]")).toBeNull();
   const button = form.querySelector("[data-own-server-connect]") as HTMLButtonElement;
   expect([button.disabled, button.textContent]).toEqual([false, "Connect to kitchen-box"]);
-  expect(form.textContent).toContain("npx bigmanbot pair");
+  expect(form.textContent).toContain("npx openmausbot pair");
   workspaces.add.mockResolvedValueOnce({ outcome: "problem", problem: "unreachable", host: "192.168.1.20:8799" });
   await submit(form);
   expect(form.querySelector('[role="alert"]')?.textContent).toBe("Can't reach 192.168.1.20:8799. Check the server is running and reachable from this computer.");

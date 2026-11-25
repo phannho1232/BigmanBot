@@ -667,7 +667,7 @@ describe("Add a device, in the page", () => {
     await click("[data-add-device]");
     await click("[data-add-kind=server]");
     expect([...document.querySelectorAll("[data-server-command]")].map((line) => line.textContent)).toEqual([
-      "npx bigmanbot account login && npx bigmanbot serve --tunnel", "npx bigmanbot serve --tailscale",
+      "npx openmausbot account login && npx openmausbot serve --tunnel", "npx openmausbot serve --tailscale",
     ]);
     const why = $("[data-add-server-why]")!;
     expect(why.textContent).toBe("These start MausBot on that machine. They need Node.js 24 or later; a terminal is the window where you type commands.");
