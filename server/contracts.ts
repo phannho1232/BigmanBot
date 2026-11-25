@@ -150,6 +150,9 @@ export interface SendTurnInput {
   resumeCursor?: unknown;
   /** Start without the previous native context or retained process; wins over resumeCursor. */
   sessionReset?: boolean;
+  /** No later turn resumes this session (a room turn that sends the whole conversation each time), so a driver whose engine
+   * can skip saving it does: the engine's own apps list every saved session as the person's history. */
+  ephemeral?: boolean;
   /** Hold the startup ACK until prompt dispatch (Claude: first model activity); a retired transient setup failure or sign-in refusal may reject with TurnNotStartedError. */
   startupRecovery?: boolean;
   /** Given to a driver with `capabilities.engineAdmission`: awaited right before it starts an engine process ("process") or
@@ -393,6 +396,10 @@ export interface ProviderSnapshot {
   authenticated?: boolean;
   /** The CLI path runs another program: it answered --version as something other than this engine's own CLI. */
   notEngineCli?: true;
+  /** The account runs Google's native Antigravity CLI, not the pinned (Classic) runtime. */
+  nativeCli?: true;
+  /** Not ready because its runtime is being installed on this computer right now. */
+  installing?: true;
   /** Display identity from the provider CLI, never credentials; `method` is a personal login or the workspace API key. */
   account?: { email?: string; organization?: string; method?: "login" | "api-key" };
   version?: string | null;
@@ -431,10 +438,12 @@ export interface EngineInstall {
   /** The vendor's npm package, for an engine whose `command` is its own installer script: Settings installs it on the
    * server when npm is there, while a terminal keeps the vendor's command. */
   npmPackage?: string;
-  /** The app downloads and verifies a pinned provider runtime itself. */
+  /** The app downloads and verifies a provider runtime itself. `downloadBytes` is a number for every client; with
+   * `sizeUnknown` it is not the size of what will be downloaded, and a client shows no size. */
   managed?: {
     label: string;
     downloadBytes: number;
+    sizeUnknown?: true;
   };
   /** The engine needs a key saved in the app rather than a terminal step. */
   settings?: "connections";
@@ -502,6 +511,9 @@ export interface ProviderAuthenticationStart {
   expiresAt: string | null;
   /** A short-lived code to enter only at the provider's authorization URL. */
   userCode?: string;
+  /** `pasted-code`: the page the link leads to ends on a code (or an address holding it) that the person pastes back, and
+   * not on a redirect to this computer. */
+  kind?: "pasted-code";
 }
 
 export interface ProviderAuthenticationStatus extends Omit<ProviderAuthenticationStart, "phase"> {
@@ -524,6 +536,8 @@ export interface ModelCatalog {
     contextWindow?: number;
     /** Discovery hints; the native session revalidates these before each turn. */
     variants?: ModelVariantOption[];
+    /** Effort levels this model accepts when narrower/wider than the engine default. */
+    effortLevels?: readonly EffortLevel[];
     /** The organization of the signed-in account turned this model off: the engine would answer with another. */
     orgBlocked?: true;
     /** The installed CLI is too old for this model: the version it needs. */
@@ -580,6 +594,8 @@ export interface TextGenerationOptions {
   /** One of this instance's models instead of the driver's quick-call choice: the helper model setting, and the setup
    * card's quick model (side-jobs.ts). */
   model?: string;
+  /** A one-shot call can reject the resolved model before sending the prompt. */
+  checkModel?: (model: string) => void;
   /** How long the caller will wait; drivers with their own process timer use it instead of their default. */
   timeoutMs?: number;
   /** For a bot's own engine whose driver picks a small model of its own. */
@@ -600,6 +616,8 @@ export interface ProviderInstance {
   readonly displayName: string | undefined;
   readonly enabled: boolean;
   readonly models: ModelCatalog;
+  /** An unmanaged OpenRouter connection, where upkeep can name a model from this account's catalog. */
+  readonly openRouter?: true;
   /** True while the catalog is the driver's fixed list or a failed read's leftover, not a list the engine gave. */
   readonly modelsUnconfirmed?: boolean;
   /** Set with modelsUnconfirmed when the engine's last read of its list failed: why, for the picker to say. */
@@ -620,6 +638,8 @@ export interface ProviderInstance {
   readonly cancelAuthentication?: () => Promise<void>;
   /** Remove the provider CLI's stored sign-in on this server; never touches another instance's home. */
   readonly signOut?: () => Promise<void>;
+  /** Drops what was last learned about this instance's sign-in, so the next read asks the engine again. */
+  readonly forgetAuthentication?: () => void;
   readonly adapter: ProviderAdapter;
   snapshot(): Promise<ProviderSnapshot>;
   /** Cheap one-shot text call (titles, summaries); the signal is a best-effort cap. */
@@ -643,6 +663,8 @@ export interface ProviderDriver<Config = unknown> {
     displayName: string;
     supportsMultipleInstances?: boolean;
     access?: EngineAccess;
+    /** Set when the app's sign-in uses a subscription on this account (Google, ChatGPT, Claude): bots may say no API key is needed. */
+    signInAccount?: string;
     /** What the engine's own CLI answers to `--version`; another answer means the CLI path runs another program. */
     cliVersion?: RegExp;
   };

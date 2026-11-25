@@ -2,6 +2,8 @@ import { AppWindow, Brain, ChevronDown, FileText, Folder, Globe, Zap } from "luc
 import { useMemo, useState, type ReactNode } from "react";
 
 import { t } from "@/lib/i18n";
+import { useFeature } from "@/lib/use-feature";
+import { isBurgerSource } from "../../../shared/skill-burger/saved";
 import { usePageOpener } from "@/lib/page-open";
 import { shortPath } from "@/lib/short-path";
 import { useShowThreads } from "@/lib/thread-preferences";
@@ -38,7 +40,7 @@ export function LibraryTab({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePag
   const { capabilities } = useDesktopCapabilities();
   const openPage = usePageOpener();
   const phone = !useMediaQuery(SIDEBAR_INLINE, true);
-  const skills = useManagedSkills(bot);
+  const skills = useManagedSkills(bot), skillBurger = useFeature("skillBurger");
   const memory = useMemoryDoc(bot);
   const showThreads = useShowThreads();
   const remote = useBotLibrary(bot);
@@ -53,12 +55,10 @@ export function LibraryTab({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePag
     dispatch({ type: "focusMessage", threadId, messageId });
     if (phone) dispatch({ type: "toggleSettings", open: false });
   };
-  const skillsOn = skills.skills.filter(skillSwitchOn).length;
-  const notes = memory.docs ? panelMemoryNotes(memory.docs).length : null;
+  const skillsOn = skills.skills.filter((skill) => skillSwitchOn(skill) && (skillBurger || !isBurgerSource(skill.source))).length;
+  const remembers = memory.docs ? panelMemoryNotes(memory.docs).length > 0 || Boolean(memory.thread?.text.trim()) : null;
   const memoryValue = bot.memoryEnabled === false ? t("botPanel.memory.off")
-    : notes === null ? (memory.error ? t("botPanel.memory.nothingYet") : undefined)
-    : notes === 0 ? t("botPanel.memory.nothingYet")
-    : notes === 1 ? t("botPanel.memory.note") : t("botPanel.memory.notes", { count: notes });
+    : remembers === false || (remembers === null && memory.error) ? t("botPanel.memory.nothingYet") : undefined;
   const keeps = (
     <Card anchor="keeps">
       <NavRow data-panel-page="memory" icon={Brain} title={t("botPanel.memoryRow")} value={memoryValue} onClick={() => onOpen("memory")} />

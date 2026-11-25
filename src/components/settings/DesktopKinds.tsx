@@ -4,6 +4,7 @@ import { t } from "@/lib/i18n";
 import { productName } from "@/lib/brand";
 import { computerInventoryRequest } from "@/lib/computer-requests";
 import { useStoreSelector } from "@/state/store-select";
+import { KEYS_ANCHOR_FOR_FOCUS, requestKeyFocus } from "../keys/key-focus";
 import { LocalComputerSection } from "../LocalComputerSection";
 import { SettingRow, SettingsGroup, SettingsMark, SettingsRows, StatusDot } from "../SettingsPrimitives";
 import { SettingsDialog } from "./SettingsDialog";
@@ -68,6 +69,7 @@ export function DesktopKinds() {
     void read<{ configured: boolean; available: boolean }>("vps").then(setVps);
   }, [cloudHome]);
   useEffect(load, [load]);
+  const openKey = (id: "vps") => { requestKeyFocus(id); go("ai", KEYS_ANCHOR_FOR_FOCUS); };
   const privateKind: Kind = local?.ready ? "ready" : local?.runtime ? "setup" : "none";
   const serversKind: Kind = vps?.configured ? (vps.available ? "ready" : "attention") : "none";
   const row = (kind: Kind, title: string, line: string, icon: React.ReactNode, onSetUp: () => void, data: string) => {
@@ -85,7 +87,7 @@ export function DesktopKinds() {
     <SettingsGroup label={t("settings.desktops.kinds")} block="desktops">
       <SettingsRows icons>
         {!cloudHome && row(privateKind, t("settings.desktops.private"), t("settings.desktops.privateLine"), <Laptop />, () => setSetup(true), "private")}
-        {row(serversKind, t("settings.desktops.servers"), t("settings.desktops.serversLine"), <Server />, () => go("ai", "ai-keys"), "servers")}
+        {row(serversKind, t("settings.desktops.servers"), t("settings.desktops.serversLine"), <Server />, () => openKey("vps"), "servers")}
       </SettingsRows>
       {setup && <PrivateSetup status={local} onCheck={load} onClose={() => setSetup(false)} />}
     </SettingsGroup>
