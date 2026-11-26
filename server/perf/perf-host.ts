@@ -143,8 +143,8 @@ export function createPerfHost(deps: PerfHostDeps) {
   /** Stall records right under the heading: a @devs report keeps only the first lines of this part. */
   const stallsFirst = (lines: string[]) => { const stalls = caught(); return lines[0]?.startsWith("## ") ? [lines[0], ...stalls, ...lines.slice(1)] : [...stalls, ...lines]; };
   const disk: DiskUsage | null = deps.disk ?? (deps.storage ? createDiskUsage({ roots: [{ path: deps.storage.home, scope: "home" }, { path: deps.dataDir, scope: "data" }], volume: deps.storage.home,
-    busy: () => timings.running(), knownBot: deps.storage.knownBot, file: join(deps.dataDir, STORAGE_FILE),
-    progressFile: join(deps.dataDir, STORAGE_PROGRESS_FILE), ...(process.env.VITEST ? {} : { firstPassAfterMs: 5_000 }), now }) : null);
+    busy: () => Boolean(process.env.VITEST) && timings.running(), knownBot: deps.storage.knownBot, file: join(deps.dataDir, STORAGE_FILE),
+    progressFile: join(deps.dataDir, STORAGE_PROGRESS_FILE), ...(process.env.VITEST ? {} : { firstPassAfterMs: 1_000, tickMs: 100, tickBudgetMs: 80, tickEntries: 5_000 }), now }) : null);
   if (deps.timer !== false) disk?.start();
   const measure = disk ? createStorageMeasure({ passNow: disk.passNow, tick: disk.tick, running: disk.running, lastPassAt: () => disk.report().at, now }) : null;
   if (deps.timer !== false && linux) guarded("limits", () => (deps.log ?? ((line: string) => console.warn(line)))(processes.startLine()), undefined);

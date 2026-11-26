@@ -54,7 +54,7 @@ export function StorageView({ answer, fetchedAt, now, nameOf, team = false, meas
   const cleanAction = onClean
     ? cleaning
       ? <span role="status" className="flex items-center gap-1.5 text-[13px] leading-[18px] text-ink-secondary"><Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />{t("settings.storage.cleaning")}</span>
-      : <button type="button" onClick={onClean} disabled={running} data-storage-clean="" className="settings-quiet flex cursor-pointer items-center gap-1.5 disabled:opacity-50"><Trash2 size={14} aria-hidden="true" />{t("settings.storage.cleanUp")}</button>
+      : <button type="button" onClick={onClean} data-storage-clean="" className="settings-quiet flex cursor-pointer items-center gap-1.5"><Trash2 size={14} aria-hidden="true" />{t("settings.storage.cleanUp")}</button>
     : null;
   const action = measureAction || cleanAction ? <div className="flex items-center gap-3">{cleanAction}{measureAction}</div> : undefined;
   const summary = storageSummary(answer);
