@@ -1,6 +1,7 @@
 import { track } from "@/lib/analytics";
 import { t } from "@/lib/i18n";
 import { addTemplate } from "@/lib/template-add";
+import { addImport, previewImport } from "@/lib/template-share";
 import { templateDetailsOf } from "@/lib/template-details";
 import { orgCardAction, orgPackagePreview, type OrgLibraryListing, type OrgLibraryPackage } from "@/lib/org-library";
 import type { PackageDocument } from "../../shared/package-format";
@@ -10,7 +11,7 @@ import { api, useStore, type Bot, type Group } from "@/state/store";
 import { ArrowLeft, Check, ExternalLink, Loader2, Lock, LogOut, Plus, Search, UserCheck, Users, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { catalogCopy, catalogMatches, type TeamCatalog, type TeamCatalogEntry } from "@/lib/team-catalog";
+import { catalogCopy, catalogFolderLink, catalogMatches, type TeamCatalog, type TeamCatalogEntry } from "@/lib/team-catalog";
 import { openExternalLink } from "@/lib/app-links";
 import {
   BIGMAN_WEB_ORIGIN,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/template-store";
 
 import { ReadyBotGallery } from "./ReadyBotGallery";
+import { TeamCatalogCard } from "./TeamCatalogCard";
 import { OrgLibraryTab } from "./TeamLibraryPanelOrg";
 import { TemplateDetailsBody } from "./TemplateCard";
 
@@ -101,7 +103,13 @@ function synthesizeFallbackDepartmentPackage(
     },
   };
 }
-type Pending = { details: TemplateDetails; manifest: unknown; org?: undefined } | { details: TemplateDetails; manifest?: undefined; org: OrgLibraryPackage };
+
+/** What the preview is of: a community template folder (added through Import, as its link), an older community team
+ * (its file, added as a file) or a package from the organization's library. */
+type Pending =
+  | { details: TemplateDetails; link: string; manifest?: undefined; org?: undefined }
+  | { details: TemplateDetails; manifest: unknown; link?: undefined; org?: undefined }
+  | { details: TemplateDetails; manifest?: undefined; link?: undefined; org: OrgLibraryPackage };
 
 function TeamGlyph() {
   return (
@@ -124,6 +132,7 @@ export function TeamLibraryPanel({
 }) {
   const { dispatch } = useStore();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const galleryErrorRef = useRef<HTMLDivElement>(null);
   const [catalog, setCatalog] = useState<TeamCatalog | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
@@ -190,6 +199,11 @@ export function TeamLibraryPanel({
     void loadCatalog();
   }, [loadCatalog]);
 
+  // A failed Add shows its message above the cards, out of view when the card was further down.
+  useEffect(() => {
+    if (error) galleryErrorRef.current?.scrollIntoView({ block: "nearest" });
+  }, [error]);
+
   const loadOrgLibrary = useCallback(async () => {
     try {
       // SAFETY: this endpoint is owned by the app and returns OrgLibraryListing.
@@ -244,6 +258,12 @@ export function TeamLibraryPanel({
     setBusySlug(entry.slug);
     setError("");
     try {
+      // A folder goes through Import, which adds a one-bot template without making it a department.
+      const link = catalog ? catalogFolderLink(catalog.repositoryUrl, entry) : null;
+      if (link) {
+        setPending({ details: await previewImport({ url: link }), link });
+        return;
+      }
       const manifest: unknown = await api(`/api/team-library/teams/${entry.slug}`);
       setPending({ details: templateDetailsOf(manifest), manifest });
     } catch (cause) {
@@ -253,17 +273,27 @@ export function TeamLibraryPanel({
     }
   };
 
-  const importTeam = async (manifest: unknown, name: string) => {
+  const importTeam = async (from: { manifest: unknown } | { link: string }, name: string) => {
     setImporting(true);
     setError("");
     try {
-      const response = await addTemplate(manifest, dispatch);
-      track("team_imported", { members: response.bots.length, source: "library", mode: "add", format: "package" });
+      let added: { bots: unknown[] }, connections = 0, presets = 0;
+      if ("link" in from) {
+        const response = await addImport({ url: from.link }, dispatch);
+        added = response;
+        connections = response.appsToConnect ?? 0;
+      } else {
+        const response = await addTemplate(from.manifest, dispatch);
+        added = response;
+        connections = response.connections?.length ?? 0;
+        presets = response.presets?.length ?? 0;
+      }
+      track("team_imported", { members: added.bots.length, source: "library", mode: "add", format: "package" });
       onImported({
         name,
-        members: response.bots.length,
-        ...(response.connections?.length ? { connections: response.connections.length } : {}),
-        ...(response.presets?.length ? { presets: response.presets.length } : {}),
+        members: added.bots.length,
+        ...(connections ? { connections } : {}),
+        ...(presets ? { presets } : {}),
       });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -452,7 +482,7 @@ export function TeamLibraryPanel({
                   </span>
                 )
               ) : (
-                <button onClick={() => void importTeam(pending.manifest, pending.details.name)} disabled={importing} className={primary}>
+                <button onClick={() => void importTeam(pending.link ? { link: pending.link } : { manifest: pending.manifest }, pending.details.name)} disabled={importing} className={primary}>
                   {importing && <Loader2 size={15} className="animate-spin" />}
                   {importing ? t("templates.importing") : t("templates.addTeam")}
                 </button>
@@ -491,7 +521,7 @@ export function TeamLibraryPanel({
               <div className="mb-3 text-[12px] font-medium text-ink-tertiary">
                 {search ? t("templates.searchResults") : t("templates.communityTemplates")}
               </div>
-              {error && <div role="alert" className="mb-3 rounded-lg bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>}
+              {error && <div ref={galleryErrorRef} role="alert" className="mb-3 rounded-lg bg-danger/10 px-3 py-2 text-[13px] text-danger">{error}</div>}
               {catalogLoading && (
                 <div className="flex items-center justify-center gap-2 py-24 text-[13px] text-ink-secondary">
                   <Loader2 size={16} className="animate-spin" /> {t("templates.loading")}
@@ -556,6 +586,9 @@ export function TeamLibraryPanel({
                     );
                   })}
                   {visibleTeams.map((entry) => {
+                    if (entry.avatars && entry.avatars.length > 0) {
+                      return <TeamCatalogCard key={entry.slug} entry={entry} busy={busySlug === entry.slug} disabled={busySlug !== null} onAdd={() => void loadLibraryTeam(entry)} />;
+                    }
                     const copy = catalogCopy(entry);
                     return (
                       <article key={entry.slug} className="flex min-h-[104px] items-center gap-3 border-b border-hairline/35 px-1 py-4">

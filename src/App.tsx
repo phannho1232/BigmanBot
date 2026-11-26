@@ -26,6 +26,7 @@ import { GroupView } from "@/components/GroupView";
 import { ForkPanel } from "@/components/ForkPanel";
 import { RoomFeedView } from "@/components/room-feed/RoomFeedView";
 import { useRoomFeed } from "@/components/room-feed/use-room-feed";
+import { useFeedThreadFull } from "@/components/room-feed/feed-fit";
 import { PHONE_LAYOUT, SIDEBAR_AND_BOT_PANEL_FIT, SIDEBAR_AND_NARROW_PANEL_FIT, SIDEBAR_AND_PANEL_FIT, SIDEBAR_INLINE, TWO_SIDE_PANELS_FIT, useMediaQuery } from "@/lib/use-media-query";
 import { anySidePanel, botPanelFloats, panelsMovingSidebar, sidebarFoldsForPanel, type OpenSidePanels } from "@/lib/sidebar-fold";
 import { preloadConnectedApps } from "@/lib/connected-apps";
@@ -191,6 +192,8 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const closeDrawer = useCallback(() => { hideDrawer(); menuButtonRef.current?.focus(); }, [hideDrawer]);
   const notificationFeed = useNotificationFeed() && !remoteClient;
   const skillBurger = useFeature("skillBurger"), roomFeed = useRoomFeed(group);
+  // A thread opened from a room's feed sits beside it while both fit, and takes the feed's place when they don't.
+  const feedThreadFull = useFeedThreadFull(group && roomFeed && sidebarInline && state.forkPanel?.kind === "group" && state.forkPanel.ownerId === group.id ? state.forkPanel.threadId : null);
   const roomPanelOpen = useRoomPanelShown({ group, state, simple: !remoteClient });
   const sidePanels: OpenSidePanels = {
     simple: true, remoteClient, bot: Boolean(bot) && state.settingsOpen, room: roomPanelOpen, inbox: inboxShown, inboxWide: inboxPanel.wide === true,
@@ -476,7 +479,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
       ) : chiefStep ? (
         <EmptyChatShell />
       ) : group && roomFeed ? (
-        <RoomFeedView key={group.id} group={group} />
+        feedThreadFull ? <ForkPanel full /> : <RoomFeedView key={group.id} group={group} />
       ) : group ? (
         <GroupView key={group.id} group={group} />
       ) : bot ? (
@@ -515,7 +518,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
       )}
       <AppPreviewPanel />
       <FilePreviewPanel threadId={group?.threadId ?? bot?.threadId} />
-      {state.forkPanel && sidebarInline && <ForkPanel />}
+      {state.forkPanel && sidebarInline && !feedThreadFull && <ForkPanel />}
       {!state.forkPanel && roomPanelOpen && group && (
         <RoomPanel key={`room:${group.id}`} group={group} overlay={notificationFeed && state.notificationsOpen && !twoSidePanelsFit} />
       )}
