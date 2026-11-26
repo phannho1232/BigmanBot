@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { activeLocale, t } from "@/lib/i18n";
@@ -36,22 +36,32 @@ export interface StorageViewProps {
   measuring: boolean;
   /** "Measure again", when the server takes one now. */
   onMeasure?: () => void;
+  cleaning?: boolean;
+  cleanNote?: string | null;
+  onClean?: () => void;
 }
 
 /** Settings → Storage: how full this place's disk is, by plain group, its largest bots, and when it was measured. */
-export function StorageView({ answer, fetchedAt, now, nameOf, team = false, measuring, onMeasure }: StorageViewProps) {
+export function StorageView({ answer, fetchedAt, now, nameOf, team = false, measuring, onMeasure, cleaning = false, cleanNote, onClean }: StorageViewProps) {
   const report = answer?.storage ?? null;
   if (!report) return <SettingsGroup label={t("settings.storage.section")} block="storage-used"><SettingsRows><SettingsSkeletonRows /></SettingsRows></SettingsGroup>;
   const running = report.running || measuring;
   const canMeasure = Boolean(onMeasure) && !running && answer?.measureInS === 0;
-  const action = running
+  const measureAction = running
     ? <span role="status" className="flex items-center gap-1.5 text-[13px] leading-[18px] text-ink-secondary"><Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />{t("settings.storage.measuring")}</span>
     : canMeasure ? <button type="button" onClick={onMeasure} className="settings-quiet flex cursor-pointer items-center gap-1.5"><RefreshCw size={14} aria-hidden="true" />{t("settings.storage.measureAgain")}</button>
-    : undefined;
+    : null;
+  const cleanAction = onClean
+    ? cleaning
+      ? <span role="status" className="flex items-center gap-1.5 text-[13px] leading-[18px] text-ink-secondary"><Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />{t("settings.storage.cleaning")}</span>
+      : <button type="button" onClick={onClean} disabled={running} data-storage-clean="" className="settings-quiet flex cursor-pointer items-center gap-1.5 disabled:opacity-50"><Trash2 size={14} aria-hidden="true" />{t("settings.storage.cleanUp")}</button>
+    : null;
+  const action = measureAction || cleanAction ? <div className="flex items-center gap-3">{cleanAction}{measureAction}</div> : undefined;
   const summary = storageSummary(answer);
   const full = storageFullness(answer);
   const measuredAt = report.ageS === null ? null : fetchedAt - report.ageS * 1000;
   const notes = [
+    cleanNote,
     measuredAt !== null && t("settings.storage.measured", { when: localizedRelativeTime(measuredAt, activeLocale(), now) }),
     report.failed && (report.at === null ? t("settings.storage.failedFirst") : t("settings.storage.failed")),
     summary && summary.overcountBytes > 0 && t("settings.storage.overcount", { size: storageSize(summary.overcountBytes) }),

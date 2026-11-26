@@ -13,6 +13,7 @@ export const PERF_DIAGNOSTICS_PATH = "/api/diagnostics/performance";
 export const BOT_FOOTPRINT_PATH = "/api/diagnostics/bots";
 export const STORAGE_PATH = "/api/diagnostics/storage";
 export const STORAGE_MEASURE_PATH = "/api/diagnostics/storage/measure";
+export const STORAGE_CLEAN_PATH = "/api/diagnostics/storage/clean";
 
 export const LAUNCH_PATH = "/api/diagnostics/launch";
 const LAUNCH_BODY_MAX = 16 * 1024;
@@ -24,6 +25,7 @@ export interface StorageViewDeps {
   storageNow?(): Promise<VolumeBytes | null>;
   storageMeasureInS?(): number | null;
   measureStorage?(): MeasureAnswer | null;
+  cleanStorage?(): { ok: boolean; busy?: boolean; freedBytes: number; removedEntries: number } | null;
 }
 
 export function createPerfDiagnosticsRoutes(deps: { text(): string; bots?(): BotFootprintReport | null; storage?(): StorageReport | null; launch?(part: unknown): { ok: boolean; complete: boolean } | null } & StorageViewDeps): RouteHandler {
@@ -32,6 +34,11 @@ export function createPerfDiagnosticsRoutes(deps: { text(): string; bots?(): Bot
       res.setHeader("cache-control", "no-store");
       const answer = deps.measureStorage?.() ?? null;
       return json(res, answer ? 200 : 404, answer ?? { started: false, running: false, inS: 0 });
+    }
+    if (method === "POST" && path === STORAGE_CLEAN_PATH) {
+      res.setHeader("cache-control", "no-store");
+      const answer = deps.cleanStorage?.() ?? null;
+      return json(res, answer ? (answer.busy ? 409 : 200) : 404, answer ?? { ok: false, freedBytes: 0, removedEntries: 0 });
     }
     if (method === "POST" && path === LAUNCH_PATH) {
       res.setHeader("cache-control", "no-store");

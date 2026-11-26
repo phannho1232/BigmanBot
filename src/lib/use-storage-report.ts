@@ -11,6 +11,14 @@ const pageOrigin = (): string => { try { return globalThis.location?.origin ?? "
 
 export const STORAGE_PATH = "/api/diagnostics/storage";
 export const STORAGE_MEASURE_PATH = "/api/diagnostics/storage/measure";
+export const STORAGE_CLEAN_PATH = "/api/diagnostics/storage/clean";
+
+export interface CleanStorageResult {
+  ok: boolean;
+  busy?: boolean;
+  freedBytes: number;
+  removedEntries: number;
+}
 
 export type StorageState =
   | { status: "unknown" }
@@ -63,6 +71,17 @@ export async function measureStorage(): Promise<boolean> {
     return answer.started === true;
   } catch {
     return false;
+  }
+}
+
+export async function cleanStorage(): Promise<CleanStorageResult | null> {
+  try {
+    const answer = await api<CleanStorageResult>(STORAGE_CLEAN_PATH, { method: "POST" });
+    await loadStorage(false);
+    return answer;
+  } catch (error: unknown) {
+    if (statusOf(error) === 409) return { ok: false, busy: true, freedBytes: 0, removedEntries: 0 };
+    return null;
   }
 }
 

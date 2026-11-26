@@ -29,7 +29,9 @@ export const STORAGE_PROGRESS_FILE = join("cache", "storage-progress.json");
 /** The storage sampler's part of the perf host's options: only on a Cloud home, whose HOME is its volume, never on a
  * person's own computer (the desktop app, a self-hosted server). */
 export function cloudStorage(cloudHome: unknown, home: string, knownBot: (id: string) => boolean): { storage?: NonNullable<PerfHostDeps["storage"]> } {
-  return cloudHome ? { storage: { home, knownBot } } : {};
+  if (cloudHome) return { storage: { home, knownBot } };
+  if (process.env.VITEST) return {};
+  return { storage: { home: process.platform === "linux" && process.env.OMB_DESKTOP_PARENT !== "1" ? home : (process.env.OMB_DATA_DIR || join(home, ".openmausbot")), knownBot } };
 }
 /** One line per kind of slow event at most this often; the ones held back are counted on the next. */
 export const LOG_EVERY_MS = 60_000;
@@ -142,7 +144,7 @@ export function createPerfHost(deps: PerfHostDeps) {
   const stallsFirst = (lines: string[]) => { const stalls = caught(); return lines[0]?.startsWith("## ") ? [lines[0], ...stalls, ...lines.slice(1)] : [...stalls, ...lines]; };
   const disk: DiskUsage | null = deps.disk ?? (deps.storage ? createDiskUsage({ roots: [{ path: deps.storage.home, scope: "home" }, { path: deps.dataDir, scope: "data" }], volume: deps.storage.home,
     busy: () => timings.running(), knownBot: deps.storage.knownBot, file: join(deps.dataDir, STORAGE_FILE),
-    progressFile: join(deps.dataDir, STORAGE_PROGRESS_FILE), now }) : null);
+    progressFile: join(deps.dataDir, STORAGE_PROGRESS_FILE), ...(process.env.VITEST ? {} : { firstPassAfterMs: 5_000 }), now }) : null);
   if (deps.timer !== false) disk?.start();
   const measure = disk ? createStorageMeasure({ passNow: disk.passNow, tick: disk.tick, running: disk.running, lastPassAt: () => disk.report().at, now }) : null;
   if (deps.timer !== false && linux) guarded("limits", () => (deps.log ?? ((line: string) => console.warn(line)))(processes.startLine()), undefined);

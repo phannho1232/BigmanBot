@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { settleSeen, storageBand, storageBotNames, storageFullness, storageScope } from "@/lib/storage-report";
-import { measureStorage, rememberStorageSeen, useStorageReport, useStorageSeen } from "@/lib/use-storage-report";
+import { t } from "@/lib/i18n";
+import { settleSeen, storageBand, storageBotNames, storageFullness, storageScope, storageSize } from "@/lib/storage-report";
+import { cleanStorage, measureStorage, rememberStorageSeen, useStorageReport, useStorageSeen } from "@/lib/use-storage-report";
 import { useStoreSelector } from "@/state/store-select";
 import { useTeamPeople } from "@/state/team-people";
 import { StorageView } from "../StorageView";
@@ -18,6 +19,8 @@ export function StoragePage() {
   const me = teamPeople?.me?.email ?? null;
   const names = useMemo(() => storageBotNames(bots, ctx.team ? { me } : null), [bots, ctx.team, me]);
   const [measuring, setMeasuring] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanNote, setCleanNote] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
   const answer = read.status === "ready" ? read.answer : null;
   const scope = answer ? storageScope(answer) : null;
@@ -36,6 +39,16 @@ export function StoragePage() {
     setMeasuring(true);
     void measureStorage().finally(() => setMeasuring(false));
   };
+  const clean = () => {
+    setCleaning(true);
+    setCleanNote(null);
+    void cleanStorage().then((res) => {
+      if (!res) return;
+      if (res.busy) setCleanNote(t("settings.storage.cleanBusy"));
+      else if (res.freedBytes > 0) setCleanNote(t("settings.storage.cleaned", { size: storageSize(res.freedBytes) }));
+      else setCleanNote(t("settings.storage.cleanedEmpty"));
+    }).finally(() => setCleaning(false));
+  };
   return <StorageView answer={answer} fetchedAt={read.status === "ready" ? read.fetchedAt : now} now={now} nameOf={(id) => names.get(id)}
-    team={ctx.team} measuring={measuring} onMeasure={measure} />;
+    team={ctx.team} measuring={measuring} onMeasure={measure} cleaning={cleaning} cleanNote={cleanNote} onClean={clean} />;
 }

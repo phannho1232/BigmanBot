@@ -104,4 +104,12 @@ describe("Settings → Storage", () => {
     expect(dot("other")).toContain("var(--color-ink-tertiary)");
     expect(dot("unmeasured")).toContain("var(--color-ink-tertiary)");
   });
+
+  it("offers Clean up cache when onClean is provided and shows the cleanup note", async () => {
+    const clean = vi.fn();
+    await show({ storage: storageReport(), now: used(50), measureInS: 0 }, { onClean: clean, cleanNote: "Cleaned up and freed 2.4 GB." });
+    button("Clean up cache")!.click();
+    expect(clean).toHaveBeenCalledTimes(1);
+    expect(footnote()).toContain("Cleaned up and freed 2.4 GB.");
+  });
 });
