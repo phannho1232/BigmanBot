@@ -875,6 +875,7 @@ function prepareRestore(dataDir: string, id: string, manifest: Manifest): string
   const leftBehind = paths.leftBehind();
   if (leftBehind) writeJson(join(job, "left-behind.json"), leftBehind);
   else rmSync(join(job, "left-behind.json"), { force: true });
+  writeJson(join(job, "apply", "prepared.json"), { id, dataDir: resolve(dataDir) });
   return prepared;
 }
 
@@ -939,9 +940,10 @@ export function applyPendingWorkspaceRestore(dataDir: string): WorkspaceRestoreR
     rmSync(pendingFile, { force: true });
     return { restored: false, rolledBack: true, id: pending.id, safetyCopyPath };
   }
-  const staged = join(jobPath(dataDir, pending.id), "staged");
-  const manifest = validateStaged(staged);
-  const prepared = prepareRestore(dataDir, pending.id, manifest);
+  const job = jobPath(dataDir, pending.id), prebuilt = join(job, "apply", "data");
+  const prepared = existsSync(join(job, "apply", "prepared.json")) && existsSync(prebuilt)
+    ? (assertLocalAuthOutsideSnapshot(dataDir), prebuilt)
+    : prepareRestore(dataDir, pending.id, validateStaged(join(job, "staged")));
   folder(join(safetyCopyPath, "data"));
   const journal: RestoreJournal = {
     id: pending.id, phase: "applying",
