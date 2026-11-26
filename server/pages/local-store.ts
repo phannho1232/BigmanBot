@@ -8,7 +8,15 @@ import type { PagesCall, PagesClient, PagesFailure, Published, Unpublished } fro
 
 const LOCAL_PAGE_LIMIT = 1_000;
 const PUBLIC_PAGE_ROUTE = /^\/api\/published-pages\/([a-z0-9]{20,63})(?:\/(.*))?$/;
-const SANDBOX_CSP = "sandbox allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox; default-src * data: blob: 'unsafe-inline' 'unsafe-eval'";
+const SANDBOX_CSP = "sandbox allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox; default-src * data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src * data: blob:";
+const PUBLIC_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-expose-headers": "Content-Length, Content-Range, Accept-Ranges",
+  "cross-origin-resource-policy": "cross-origin",
+  "x-content-type-options": "nosniff",
+  "cache-control": "no-cache",
+  "content-security-policy": SANDBOX_CSP,
+} as const;
 
 function makePageId(): string {
   return randomBytes(16).toString("hex").slice(0, 24);
@@ -124,10 +132,8 @@ export function createLocalPagesHost(options: {
       const contentType = PAGE_FILE_TYPES[ext] ?? "application/octet-stream";
       const body = method === "HEAD" ? undefined : readFileSync(target);
       res.writeHead(200, {
+        ...PUBLIC_HEADERS,
         "content-type": contentType,
-        "x-content-type-options": "nosniff",
-        "cache-control": "no-cache",
-        "content-security-policy": SANDBOX_CSP,
       });
       res.end(body);
       return true;
