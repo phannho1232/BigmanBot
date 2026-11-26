@@ -1,10 +1,12 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { join } from "node:path";
 import type { PublishedPageCard } from "../../shared/published-page.ts";
 import type { ChatApps } from "../chat-apps.ts";
 import { createPagesInternalRoutes, createPublishedPageRoutes } from "../routes/published-pages.ts";
 import type { Store } from "../store.ts";
 import { applyIncludedPagesMessage, pagesAccess, pagesNotOffered } from "./access.ts";
-import { createPagesClient } from "./client.ts";
+import { createPagesClient, type PagesClient } from "./client.ts";
+import { createLocalPagesHost } from "./local-store.ts";
 import { createPagePublisher } from "./publisher.ts";
 import { PublishedPagesStore } from "./store.ts";
 
@@ -19,6 +21,8 @@ export function createPublishedPages(options: {
   cloudHome: { adminOrigin: string; machineId: string; bootstrapSecret: string } | null;
   /** True for `openmausbot serve`: no desktop app hands over a MausBot sign-in and there is no Cloud home. */
   selfHosted?: boolean;
+  /** Public origin for self-hosted/local page publishing when no cloud pages access is present. */
+  localOrigin?: () => string;
   patch: (threadId: string, messageId: string, text: string, card: PublishedPageCard) => void;
   /** Live pages stop when their bot can no longer read the folder, and wait while the workspace is backed up or moved. */
   liveRoots?(botId: string, threadId: string): readonly string[] | null;
@@ -30,9 +34,18 @@ export function createPublishedPages(options: {
   };
 }) {
   const store = new PublishedPagesStore(join(options.dataDir, "published-pages.json"));
-  const client = createPagesClient({ access: () => pagesAccess(options.cloudHome), notOffered: () => pagesNotOffered(options.cloudHome),
+  const remoteClient = createPagesClient({ access: () => pagesAccess(options.cloudHome), notOffered: () => pagesNotOffered(options.cloudHome),
     selfHosted: options.selfHosted === true,
     ...(options.fetch ? { fetch: options.fetch } : {}) });
+  const localHost = options.localOrigin
+    ? createLocalPagesHost({ dataDir: options.dataDir, origin: options.localOrigin, count: () => store.list().length })
+    : null;
+  const client: PagesClient = localHost
+    ? {
+        publish: (input, call) => (pagesAccess(options.cloudHome) ? remoteClient.publish(input, call) : localHost.publish(input, call)),
+        unpublish: (pageId, call) => (pagesAccess(options.cloudHome) ? remoteClient.unpublish(pageId, call) : localHost.unpublish(pageId, call)),
+      }
+    : remoteClient;
   const apps = options.apps;
   const pageRow = (threadId: string, messageId: string) => apps?.store.messagesFor(threadId).find((message) => message.id === messageId && message.kind === "app");
   // A page card keeps its own text, the page's: only the card's link changes.
@@ -58,5 +71,6 @@ export function createPublishedPages(options: {
     store, publisher, internal: createPagesInternalRoutes(publisher), routes: createPublishedPageRoutes(publisher, appPages), receive: applyIncludedPagesMessage,
     /** publish_page's card as the page itself, inline; null when it can't be shown so (the caller posts the link). */
     show: (args: Parameters<ChatApps["showPublishedPage"]>[0]) => apps?.chat.showPublishedPage(args) ?? null,
+    servePublic: (req: IncomingMessage, res: ServerResponse, path: string) => localHost?.servePublic(req, res, path) ?? false,
   };
 }

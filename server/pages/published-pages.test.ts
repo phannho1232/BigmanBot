@@ -745,5 +745,44 @@ describe("a live published page", () => {
     expect(await f.pages.publisher.refreshLive(start + 662_000)).toBe(1);
     expect(f.service.minted.map((call) => call.action)).toEqual(["create", "update"]);
   });
+
+  it("publishes, serves, updates and unpublishes locally when localOrigin is configured without a Cloud account", async () => {
+    const work = join(dir, "work-local"), data = join(dir, "data-local");
+    mkdirSync(work, { recursive: true });
+    writeSite(join(work, "site"));
+    const cards: PublishedPageCard[] = [];
+    const pages = createPublishedPages({
+      dataDir: data,
+      cloudHome: null,
+      selfHosted: true,
+      localOrigin: () => "https://hoangduc.bigmanbot.com",
+      patch: (_t, _m, _text, card) => { cards.push(card); },
+    });
+    const outcome = await pages.publisher.publish({
+      botId: "bot-1",
+      threadId: "thread-1",
+      path: "site",
+      title: "SEO Dashboard",
+      roots: [work],
+      post: (_text, card) => { cards.push(card); return "m1"; },
+    });
+    expect(outcome.status).toBe(200);
+    const record = pages.store.list()[0]!;
+    expect(record.url).toBe(`https://hoangduc.bigmanbot.com/api/published-pages/${record.pageId}/`);
+    expect(outcome.text).toContain(`Published “SEO Dashboard” at ${record.url}`);
+    let status = 0;
+    let body = "";
+    const res = {
+      writeHead: (code: number) => { status = code; },
+      end: (buf?: Buffer | string) => { body = buf ? Buffer.from(buf).toString("utf8") : ""; },
+    } as any;
+    expect(pages.servePublic({ method: "GET" } as any, res, `/api/published-pages/${record.pageId}/`)).toBe(true);
+    expect(status).toBe(200);
+    expect(body).toContain("<h1>Bake sale</h1>");
+    const unpub = await pages.publisher.unpublish({ pageId: record.pageId });
+    expect(unpub.status).toBe(200);
+    expect(pages.servePublic({ method: "GET" } as any, res, `/api/published-pages/${record.pageId}/`)).toBe(true);
+    expect(status).toBe(404);
+  });
 });
 
