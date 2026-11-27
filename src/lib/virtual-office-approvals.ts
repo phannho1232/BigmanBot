@@ -1,8 +1,8 @@
 import type { InboxRow, InboxView } from "../../shared/inbox";
 import { openPersonWait } from "../../shared/person-wait";
 import { pendingApprovals, type Pending } from "@/components/PendingApproval";
-import { answerKindOf, asMessage, headlineOf, snippetOf } from "@/components/inbox/inbox-answer";
-import { answerThread, rowsIn } from "@/components/inbox/inbox-view";
+import { answerKindOf, asMessage, headlineOf } from "@/components/inbox/inbox-answer";
+import { answerThread, rowsIn, textOf } from "@/components/inbox/inbox-view";
 import { t } from "@/lib/i18n";
 import { visibleMessages, type Bot, type Message } from "@/state/store";
 
@@ -55,6 +55,13 @@ function firstNonEmptyLine(text: string): string {
       .map((line) => line.replace(/^[#>*\-\s]+/, "").trim())
       .find(Boolean) ?? ""
   );
+}
+
+function snippetOf(row: InboxRow): string | null {
+  const text = textOf(row).replace(/\s+/g, " ").trim();
+  const headline = headlineOf(row);
+  if (!text || text === headline) return null;
+  return text.startsWith(headline) ? text.slice(headline.length).trim() || null : text;
 }
 
 function rankKind(kind: OfficeApprovalKind): number {

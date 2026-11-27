@@ -4,8 +4,8 @@ import type { ManagedPolicySummary } from "@/state/config-status";
 export type ModelgoOfferAction = "shown" | "get_key" | "add_key" | "not_now" | "close";
 export type ModelgoOfferPlace = "popup" | "onboarding" | "settings";
 
-export function reportModelgoOffer(action: ModelgoOfferAction, place: ModelgoOfferPlace) {
-  track("modelgo_offer", { action, place });
+export function reportModelgoOffer(action: ModelgoOfferAction, place: ModelgoOfferPlace, campaign?: string) {
+  track("modelgo_offer", { action, place, ...(campaign ? { campaign } : {}) });
 }
 
 export function modelgoOfferable(_policy: ManagedPolicySummary | null | undefined): boolean {
