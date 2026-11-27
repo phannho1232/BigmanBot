@@ -2232,7 +2232,7 @@
   "team.deleteKeepBotsSimple": "Các bot và group chat của phòng ban vẫn được giữ cùng các cuộc trò chuyện, chỉ không thuộc phòng ban nào nữa. Phòng ban và các hướng dẫn chia sẻ của phòng ban sẽ bị xóa. Hành động này không thể hoàn tác.",
   "team.delete": "Xóa phòng ban",
   "team.actions": "Thao tác cho phòng ban {name}",
-  "teamSettings.menu": "Thiết lập cho tất cả bot trong phòng ban này…",
+  "teamSettings.menu": "Cài đặt cho tất cả bot…",
   "teamSettings.title": "Thiết lập cho tất cả bot trong {name}",
   "teamSettings.general": "Chung",
   "teamSettings.close": "Đóng cài đặt phòng ban",
